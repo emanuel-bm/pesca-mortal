@@ -40,7 +40,7 @@ static func select_asset(data: Dictionary, name_value: String, repo: String) -> 
   var digest := str(entry.get("digest", ""))
   var expression := RegEx.new()
   expression.compile("^sha256:[0-9a-fA-F]{64}$")
-  if url.begins_with("https://github.com/" + repo + "/releases/download/") and expression.search(digest) != null:
+  if url.to_lower().begins_with("https://github.com/" + repo.to_lower() + "/releases/download/") and expression.search(digest) != null:
    return entry
  return {}
 

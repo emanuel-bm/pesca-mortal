@@ -20,7 +20,7 @@ pois o executável aberto não pode substituir a si mesmo.
 ## Conectar ao GitHub
 
 O repositório público atual é
-[emanuel-bm/Pesca-Mortal](https://github.com/emanuel-bm/Pesca-Mortal).
+[emanuel-bm/pesca-mortal](https://github.com/emanuel-bm/pesca-mortal).
 `updates.cfg` já está configurado para ele. A primeira versão é `v0.1.0`;
 para as próximas atualizações, incrementar a versão e publicar uma nova
 release seguindo os passos de exportação abaixo.

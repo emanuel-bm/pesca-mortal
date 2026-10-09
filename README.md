@@ -36,7 +36,7 @@ Créditos e autorização do autor preservados em `assets/fonts`.
 
 A abertura verifica versões publicadas e permite **Jogar offline**.
 A instalação automática integrada para Windows consulta as
-[Releases do projeto](https://github.com/emanuel-bm/Pesca-Mortal/releases).
+[Releases do projeto](https://github.com/emanuel-bm/pesca-mortal/releases).
 Baixe o ZIP, extraia e execute `Pesca Mortal.exe`. Consulte
 [distribuição e atualizações](docs/atualizacoes.md).
 
