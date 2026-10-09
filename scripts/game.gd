@@ -1013,9 +1013,9 @@ func _input(event: InputEvent) -> void:
    return
  if state != "upgrade" or not event is InputEventKey or not event.pressed or event.echo: return
  var key: int = event.keycode
- if key in [KEY_UP, KEY_LEFT, KEY_W, KEY_A]:
+ if key in [KEY_UP, KEY_LEFT]:
   select_upgrade(posmod(selected_upgrade - 1, choices.size()))
- elif key in [KEY_DOWN, KEY_RIGHT, KEY_S, KEY_D]:
+ elif key in [KEY_DOWN, KEY_RIGHT]:
   select_upgrade((selected_upgrade + 1) % choices.size())
  elif key in [KEY_ENTER, KEY_KP_ENTER]:
   choose_upgrade(choices[selected_upgrade])

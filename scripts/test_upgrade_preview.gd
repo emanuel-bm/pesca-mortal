@@ -58,10 +58,20 @@ func run() -> void:
  assert(game.format_stat("rate", 1.53846) == "1,54")
  var navigation := InputEventKey.new()
  navigation.pressed = true
- navigation.keycode = KEY_S
+ for movement_key in [KEY_W, KEY_A, KEY_S, KEY_D]:
+  navigation.keycode = movement_key
+  game._input(navigation)
+  assert(game.selected_upgrade == 0 and game.preview_upgrade == game.choices[0], "WASD must not navigate menus")
+ navigation.keycode = KEY_DOWN
  game._input(navigation)
  assert(game.selected_upgrade == 1 and game.preview_upgrade == game.choices[1])
- navigation.keycode = KEY_W
+ navigation.keycode = KEY_UP
+ game._input(navigation)
+ assert(game.selected_upgrade == 0)
+ navigation.keycode = KEY_RIGHT
+ game._input(navigation)
+ assert(game.selected_upgrade == 1)
+ navigation.keycode = KEY_LEFT
  game._input(navigation)
  assert(game.selected_upgrade == 0)
  var picked: String = game.choices[0]
