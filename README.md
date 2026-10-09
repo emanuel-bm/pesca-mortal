@@ -1,6 +1,6 @@
 # Pesca Mortal — protótipo
 
-Beta atual: **0.2.0**. Código, arte, áudio, scripts de servidor e testes estão
+Beta atual: **0.2.1**. Código, arte, áudio, scripts de servidor e testes estão
 incluídos no projeto. Ferramentas locais, caches e builds exportadas ficam
 fora do Git; pacotes para jogar são distribuídos pelas Releases.
 
@@ -37,7 +37,7 @@ Créditos e autorização do autor preservados em `assets/fonts`.
 A abertura verifica versões publicadas e permite **Jogar offline**.
 A instalação automática integrada para Windows consulta as
 [Releases do projeto](https://github.com/emanuel-bm/pesca-mortal/releases).
-Na release 0.2.0, baixe e execute `pesca-mortal-windows-v0.2.0.exe` diretamente. Consulte
+Na release 0.2.1, baixe e execute `pesca-mortal-windows-v0.2.1.exe` diretamente. Consulte
 [distribuição e atualizações](docs/atualizacoes.md).
 
 Os formatos e o comando para preparar Windows, macOS Apple Silicon e Linux
@@ -85,10 +85,10 @@ A investida atravessa o trajeto em 0,5 s; movimento à superfície de 54.
 Enterrado, não recebe dano nem atrai disparos. Emergência causa 25 de dano
 na área anunciada; contato mantém a invulnerabilidade de 0,8 s do jogador.
 Velocidade inicial do jogador: 190; melhorias de 4%, com teto de 250.
-O inimigo comum mais rápido chega a 162 (jogador no máximo 54,32% acima).
+Peixes comuns têm velocidade limitada a 90% da velocidade atual do jogador (171 no início; 225 quando o jogador chega a 250). O teto acompanha as melhorias de velocidade do jogador.
 Resistentes se movem a 78; perseguidores começam a 126. Todas as velocidades
 de movimento aumentaram 20% em relação à versão anterior.
-A velocidade inicial do jogador foi ajustada posteriormente para 190.
+A velocidade máxima do jogador pode ser configurada no Inspector (`max_player_speed`, padrão 250). Movimentos na superfície e investidas do Minhocão recebem no máximo +50% de velocidade por buffs, independentemente da velocidade do jogador.
 Melhorias de vida máxima e dano de ataque aumentam o valor atual em 20% por escolha.
 Valores exibidos são arredondados para inteiros; cálculos mantêm a precisão.
 Experiência por inimigo escala com sua área: pequenos dão 1 XP e laranjas 3 XP.

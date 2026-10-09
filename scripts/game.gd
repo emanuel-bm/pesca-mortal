@@ -15,6 +15,8 @@ const MOVEMENT_MULTIPLIER := 1.2
 const FASTEST_ENEMY_SPEED := 135.0 * MOVEMENT_MULTIPLIER
 const BASE_PLAYER_SPEED := 190.0
 const MAX_PLAYER_SPEED := 250.0
+const ENEMY_SPEED_RATIO := 0.9
+@export_range(190.0, 1000.0, 1.0, "or_greater") var max_player_speed: float = MAX_PLAYER_SPEED
 const MINHOCAO = preload("res://scripts/minhocao.gd")
 const FISH_VISUALS = preload("res://scripts/fish_visuals.gd")
 const RUN_HISTORY = preload("res://scripts/run_history.gd")
@@ -520,7 +522,7 @@ func projected_stats(id: String = "") -> Dictionary:
   "damage": values.damage = damage * 1.20
   "rate": values.rate = 1.2 / attack_delay
   "shots": values.shots = shot_count + 1
-  "speed": values.speed = minf(MAX_PLAYER_SPEED, speed * 1.04)
+  "speed": values.speed = minf(max_player_speed, speed * 1.04)
   "magnet": values.magnet = minf(MAX_COLLECTION_RANGE, magnet * 1.4)
   "max_health": values.max_health = maxf(max_health, minf(HEALTH_CAP, max_health * 1.20))
   "xp_bonus": values.xp_bonus = mini(XP_BONUS_CAP, xp_bonus + 10)
@@ -529,7 +531,7 @@ func projected_stats(id: String = "") -> Dictionary:
 func format_stat(id: String, value: float) -> String:
  if id == "rate": return ("%.2f" % value).replace(".", ",")
  var text := ("+%d%%" % roundi(value)) if id == "xp_bonus" else str(roundi(value))
- if (id == "magnet" and value >= MAX_COLLECTION_RANGE) or (id == "speed" and value >= MAX_PLAYER_SPEED) or (id == "max_health" and value >= HEALTH_CAP) or (id == "xp_bonus" and value >= XP_BONUS_CAP): text += " (MAX)"
+ if (id == "magnet" and value >= MAX_COLLECTION_RANGE) or (id == "speed" and value >= max_player_speed) or (id == "max_health" and value >= HEALTH_CAP) or (id == "xp_bonus" and value >= XP_BONUS_CAP): text += " (MAX)"
  return text
 
 func update_stats_preview(id: String = "") -> void:
@@ -1345,7 +1347,7 @@ func buff_endless_enemies() -> void:
   if enemy.hp <= 0: continue
   enemy.hp *= 1.05
   enemy.max_hp *= 1.05
-  enemy.speed *= 1.05
+  enemy.speed = enemy.speed * 1.05 if enemy.boss else minf(enemy_speed_cap(), enemy.speed * 1.05)
   enemy.contact *= 1.05
   enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * 1.05
 
@@ -1366,10 +1368,13 @@ func begin_crowd_step() -> void:
  crowd_window_start = crowd_cursor % enemies.size()
  crowd_cursor = (crowd_window_start + mini(CROWD_UPDATES_PER_FRAME, enemies.size())) % enemies.size()
 
+func enemy_speed_cap() -> float:
+ return speed * ENEMY_SPEED_RATIO
+
 func pursue_player(index: int, dt: float) -> void:
  var enemy: Dictionary = enemies[index]
  if dt <= 0: return
- var fish_speed: float = enemy.speed
+ var fish_speed: float = minf(enemy.speed, enemy_speed_cap())
  var remaining: float = float(enemy.get("separation_timer", 0.0)) - dt
  var desired: Vector2
  if enemy.has("desired_velocity"): desired = enemy.desired_velocity
@@ -1590,10 +1595,11 @@ func spawn_enemy(boss: bool) -> void:
  var tank := not boss and elapsed > 30 and rng.randf() < 0.25
  var hp := (100.0 if tank else 30.0) * (1 + elapsed / 300.0)
  if boss: hp = 32000.0
- var enemy := {"pos": position, "hp": hp, "max_hp": hp, "radius": 38.0 if boss else (44.0 if tank else 13.0), "speed": 120.0 if boss else (65.0 * MOVEMENT_MULTIPLIER * 1.1 if tank else minf(FASTEST_ENEMY_SPEED, (105.0 + elapsed * 0.1) * MOVEMENT_MULTIPLIER)), "contact": 25.0 if boss else (15.0 if tank else 10.0), "boss": boss, "tank": tank, "flash": 0.0}
+ var enemy := {"pos": position, "hp": hp, "max_hp": hp, "radius": 38.0 if boss else (44.0 if tank else 13.0), "speed": 120.0 if boss else (65.0 * MOVEMENT_MULTIPLIER * 1.1 if tank else (105.0 + elapsed * 0.1) * MOVEMENT_MULTIPLIER), "contact": 25.0 if boss else (15.0 if tank else 10.0), "boss": boss, "tank": tank, "flash": 0.0}
  var multiplier := pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0
  enemy["stat_multiplier"] = multiplier
  for stat in ["hp", "max_hp", "speed", "contact"]: enemy[stat] *= multiplier
+ if not boss: enemy.speed = minf(enemy.speed, enemy_speed_cap())
  if boss: MINHOCAO.initialize(enemy)
  enemies.append(enemy)
  if boss: sounds.announce_boss()
@@ -1627,7 +1633,7 @@ func show_upgrades() -> void:
  upgrade_buttons.clear()
  var available: Array[String] = []
  for id in UPGRADES:
-  if id == "speed" and speed >= MAX_PLAYER_SPEED: continue
+  if id == "speed" and speed >= max_player_speed: continue
   if id == "magnet" and magnet >= MAX_COLLECTION_RANGE: continue
   if id == "max_health" and max_health >= HEALTH_CAP: continue
   if id == "xp_bonus" and xp_bonus >= XP_BONUS_CAP: continue
