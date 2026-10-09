@@ -126,8 +126,10 @@ var modal_row: Control
 var boss_records_panel: PanelContainer
 var profile_panel: PanelContainer
 var profile_label: Label
+var profile_name_label: Label
 var records_panel: PanelContainer
 var stats_panel: PanelContainer
+var stats_heading: Label
 var stat_values: Dictionary = {}
 var stat_names: Dictionary = {}
 var stat_base_names: Dictionary = {}
@@ -152,7 +154,8 @@ var online: Node
 var online_status_label: Label
 var nickname_edit: LineEdit
 var nickname_save_button: Button
-var global_mode := "endless"
+var nickname_attempted := false
+var records_personal := {"endless": false, "bosses": false}
 var test_artifact_paths: Array[String] = []
 
 func _ready() -> void:
@@ -449,10 +452,10 @@ func setup_stats_panel() -> void:
  var column := VBoxContainer.new()
  column.add_theme_constant_override("separation", 14)
  margin.add_child(column)
- var heading := Label.new()
- heading.text = "ATRIBUTOS DO PESCADOR"
- heading.add_theme_font_size_override("font_size", 24)
- column.add_child(heading)
+ stats_heading = Label.new()
+ stats_heading.text = "ATRIBUTOS DO PESCADOR (lv%d)" % level
+ stats_heading.add_theme_font_size_override("font_size", 24)
+ column.add_child(stats_heading)
  var names := {"max_health": "Vida máxima", "damage": "Dano", "rate": "Ataques por segundo", "shots": "Projéteis por ataque", "speed": "Velocidade", "magnet": "Alcance de coleta", "xp_bonus": "Bônus de XP"}
  for id in names:
   var row := HBoxContainer.new()
@@ -528,6 +531,7 @@ func format_stat(id: String, value: float) -> String:
  return text
 
 func update_stats_preview(id: String = "") -> void:
+ stats_heading.text = "ATRIBUTOS DO PESCADOR (lv%d)" % level
  preview_upgrade = id
  var current := projected_stats()
  var projected := projected_stats(id)
@@ -555,10 +559,29 @@ func setup_profile_panel() -> void:
  for side in ["left", "right", "top", "bottom"]:
   margin.add_theme_constant_override("margin_" + side, 14)
  profile_panel.add_child(margin)
+ var column := VBoxContainer.new()
+ column.add_theme_constant_override("separation", 6)
+ margin.add_child(column)
+ var heading := HBoxContainer.new()
+ heading.add_theme_constant_override("separation", 12)
+ column.add_child(heading)
+ profile_name_label = Label.new()
+ profile_name_label.add_theme_font_size_override("font_size", 16)
+ profile_name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ heading.add_child(profile_name_label)
+ var edit := TextureButton.new()
+ edit.texture_normal = preload("res://assets/icons/edit-profile.svg")
+ edit.custom_minimum_size = Vector2(24, 24)
+ edit.ignore_texture_size = true
+ edit.stretch_mode = TextureButton.STRETCH_KEEP_CENTERED
+ edit.tooltip_text = "Editar perfil"
+ edit.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+ edit.pressed.connect(show_nickname)
+ heading.add_child(edit)
  profile_label = Label.new()
  profile_label.add_theme_font_size_override("font_size", 16)
- profile_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
- margin.add_child(profile_label)
+ profile_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+ column.add_child(profile_label)
 
 func show_menu() -> void:
  sounds.start_calm_music()
@@ -572,15 +595,14 @@ func show_menu() -> void:
  sounds.reset()
  clear_panel()
  title("PESCA MORTAL")
- title("Jogando offline" if bool(get_tree().get_meta("offline_session", false)) else "Jogador: " + ("visitante" if online.nickname().is_empty() else online.nickname()), 18)
+ if bool(get_tree().get_meta("offline_session", false)): title("Jogando offline", 18)
  title("WASD / setas: mover · Ataque automático\nColete ventrechas para evoluir · ESC: pausar", 18)
  button("Modo infinito", start_run.bind("endless"))
  button("Modo por chefões", start_run.bind("bosses"))
+ records_personal = {"endless": false, "bosses": false}
  show_records_panel()
  show_boss_records_panel()
  button("Histórico de partidas", show_history)
- button("Ranking global", show_global_ranking)
- button("Editar nome de jogador", show_nickname)
  button("Testar chefão — nível 30", start_boss_test)
  button("Testar infinito — nível 35", start_endless_test)
  button("Testar 10 Minhocões", start_ten_bosses_test)
@@ -590,10 +612,15 @@ func show_menu() -> void:
  online.synchronize()
 
 func show_nickname() -> void:
+ nickname_attempted = false
  state = "nickname"
  clear_panel()
  title("NOME DE JOGADOR")
  title("Escolha um nome único para aparecer no ranking.\n3 a 20 letras sem acentos, números ou _.", 18)
+ online_status_label = Label.new()
+ online_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+ online_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+ panel.add_child(online_status_label)
  nickname_edit = LineEdit.new()
  nickname_edit.max_length = 20
  nickname_edit.text = online.nickname()
@@ -601,77 +628,61 @@ func show_nickname() -> void:
  nickname_edit.custom_minimum_size.y = 48
  panel.add_child(nickname_edit)
  nickname_save_button = button("Salvar nome", save_nickname)
+ var actions := HBoxContainer.new()
+ actions.add_theme_constant_override("separation", 14)
+ panel.add_child(actions)
+ panel.remove_child(nickname_save_button)
+ nickname_save_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ var saving_style := StyleBoxFlat.new()
+ saving_style.bg_color = Color(0.02, 0.02, 0.02)
+ saving_style.set_corner_radius_all(6)
+ nickname_save_button.add_theme_stylebox_override("disabled", saving_style)
  nickname_edit.text_submitted.connect(func(_text: String): save_nickname())
- online_status_label = Label.new()
- online_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
- online_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
- panel.add_child(online_status_label)
- if not online.nickname().is_empty() or online.endpoint.is_empty() or bool(get_tree().get_meta("offline_session", false)): button("Voltar", show_menu)
- button("Fechar jogo", quit_game)
+ if not online.nickname().is_empty() or online.endpoint.is_empty() or bool(get_tree().get_meta("offline_session", false)):
+  var back := button("Voltar", show_menu)
+  panel.remove_child(back)
+  back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+  actions.add_child(back)
+ actions.add_child(nickname_save_button)
  online_changed()
  nickname_edit.grab_focus()
 
 func save_nickname() -> void:
+ if online.busy: return
+ nickname_attempted = true
  online.set_nickname(nickname_edit.text)
 
 func online_changed() -> void:
  if state == "nickname":
   if is_instance_valid(online_status_label):
-   online_status_label.text = online.status if not online.status.is_empty() else ("Conecte-se à internet para cadastrar seu nome." if not online.endpoint.is_empty() else "O ranking global ainda não foi ativado.")
-  if is_instance_valid(nickname_save_button): nickname_save_button.disabled = online.busy
-  if not online.nickname().is_empty() and online.status == "Nome salvo.": show_menu()
- elif state == "global_ranking":
-  render_global_ranking()
-
-func show_global_ranking() -> void:
- state = "global_ranking"
- render_global_ranking()
-
-func switch_global_mode() -> void:
- global_mode = "bosses" if global_mode == "endless" else "endless"
- render_global_ranking()
-
-func render_global_ranking() -> void:
- clear_panel()
- title("RANKING GLOBAL · " + ("INFINITO" if global_mode == "endless" else "CHEFÕES"), 24)
- var scroll := ScrollContainer.new()
- scroll.custom_minimum_size.y = 260
- scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
- panel.add_child(scroll)
- var grid := GridContainer.new()
- grid.columns = 3
- grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
- grid.add_theme_constant_override("h_separation", 18)
- grid.add_theme_constant_override("v_separation", 10)
- scroll.add_child(grid)
- for heading in ["Jogador", "Tempo", "Eliminações"]: history_cell(grid, heading)
- var entries: Array = online.rankings.get(global_mode, [])
- for index in entries.size():
-  var record: Dictionary = entries[index]
-  history_cell(grid, "%d. %s" % [index + 1, record.nickname])
-  history_cell(grid, RUN_HISTORY.time_text(record.seconds))
-  history_cell(grid, str(record.kills))
- if entries.is_empty(): title("Nenhum recorde global recebido.", 18)
- if not online.fetched_at.is_empty(): title("Última consulta: " + online.fetched_at.replace("T", " "), 18)
- if not online.status.is_empty(): title(online.status, 18)
- if not online.pending.is_empty(): title("Seu novo recorde aguarda sincronização.", 18)
- button("Ver " + ("chefões" if global_mode == "endless" else "infinito"), switch_global_mode)
- button("Recarregar", online.synchronize).disabled = online.busy
- button("Voltar", show_menu)
+   online_status_label.text = online.status
+   online_status_label.visible = nickname_attempted and not online.busy and not online.status.is_empty() and online.status not in ["Nome salvo.", "Ranking atualizado.", "Recorde sincronizado."] and not online.status.begins_with("Atualizando ranking")
+  if is_instance_valid(nickname_save_button):
+   nickname_save_button.disabled = online.busy
+   nickname_save_button.text = ("Salvando..." if online.action in ["register", "rename"] else "Carregando...") if online.busy else "Salvar nome"
+  if nickname_attempted and not online.nickname().is_empty() and online.status == "Nome salvo.": show_menu()
+ elif state == "menu":
+  show_records_panel()
+  show_boss_records_panel()
 
 func show_records_panel() -> void:
  if records_panel:
   modal_row.remove_child(records_panel)
   records_panel.queue_free()
- records_panel = make_records_panel("RECORDES · INFINITO", RUN_HISTORY.ranked(run_history))
+ records_panel = make_records_panel("RECORDES · INFINITO", "endless")
 
 func show_boss_records_panel() -> void:
  if boss_records_panel:
   modal_row.remove_child(boss_records_panel)
   boss_records_panel.queue_free()
- boss_records_panel = make_records_panel("RECORDES · CHEFÕES", RUN_HISTORY.boss_ranked(run_history))
+ boss_records_panel = make_records_panel("RECORDES · CHEFÕES", "bosses")
 
-func make_records_panel(heading_text: String, records: Array) -> PanelContainer:
+func select_records_tab(mode: String, personal: bool) -> void:
+ records_personal[mode] = personal
+ if mode == "endless": show_records_panel()
+ else: show_boss_records_panel()
+
+func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
  var target := PanelContainer.new()
  target.custom_minimum_size.x = 380
  target.add_theme_stylebox_override("panel", overlay.get_theme_stylebox("panel"))
@@ -686,23 +697,42 @@ func make_records_panel(heading_text: String, records: Array) -> PanelContainer:
  heading.text = heading_text
  heading.add_theme_font_size_override("font_size", 24)
  column.add_child(heading)
+ var tabs := HBoxContainer.new()
+ column.add_child(tabs)
+ for personal in [false, true]:
+  var tab := Button.new()
+  tab.text = "Pessoal" if personal else "Global"
+  tab.toggle_mode = true
+  tab.button_pressed = records_personal[mode] == personal
+  tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+  tab.pressed.connect(select_records_tab.bind(mode, personal))
+  tabs.add_child(tab)
+ var personal: bool = records_personal[mode]
+ var records: Array = (RUN_HISTORY.ranked(run_history) if mode == "endless" else RUN_HISTORY.boss_ranked(run_history)) if personal else online.rankings.get(mode, [])
  var grid := GridContainer.new()
- grid.columns = 3
+ grid.columns = 4
  grid.add_theme_constant_override("h_separation", 16)
  grid.add_theme_constant_override("v_separation", 12)
  column.add_child(grid)
- for column_name in ["Personagem", "Tempo", "Eliminações"]: history_cell(grid, column_name)
+ for column_name in ["Jogador", "Level", "Tempo", "Eliminações"]: history_cell(grid, column_name)
  var ranked: Array = records
  for index in mini(10, ranked.size()):
   var record: Dictionary = ranked[index]
-  history_cell(grid, RUN_HISTORY.character_text(record))
+  history_cell(grid, online.nickname() if personal else str(record.get("nickname", "")))
+  history_cell(grid, str(int(record.get("level", 0))))
   history_cell(grid, RUN_HISTORY.time_text(record.seconds))
-  history_cell(grid, str(record.kills))
+  history_cell(grid, str(int(record.kills)))
  if ranked.is_empty():
   var empty := Label.new()
-  empty.text = "Nenhuma partida registrada."
+  empty.text = "Nenhuma partida registrada." if personal else "Nenhum recorde global recebido."
   empty.add_theme_font_size_override("font_size", 16)
   column.add_child(empty)
+ if not personal:
+  var reload_button := Button.new()
+  reload_button.text = "Carregando..." if online.busy else "Recarregar"
+  reload_button.disabled = online.busy
+  reload_button.pressed.connect(online.synchronize)
+  column.add_child(reload_button)
 
  return target
 
@@ -1120,18 +1150,19 @@ func _process(delta: float) -> void:
  health_label.size = health_bar.size
  health_bar.max_value = max_health
  health_label.text = "%d / %d HP" % [maxi(0, int(health)), roundi(max_health)]
- hud.text = "%02d:%02d    ELIMINAÇÕES %d (lv %d)" % [int(elapsed) / 60, int(elapsed) % 60, kills, level]
+ hud.text = "%02d:%02d    ELIMINAÇÕES %d" % [int(elapsed) / 60, int(elapsed) % 60, kills]
  if run_mode == "endless" and state in ["playing", "upgrade", "paused"]:
   var remaining := maxi(0, ceili(next_boss_time - elapsed))
   hud.text += "\nINFINITO · PRÓXIMOS CHEFÕES EM %02d:%02d" % [floori(remaining / 60.0), remaining % 60]
  if not profile_panel: setup_profile_panel()
- profile_panel.visible = not run_active and state not in ["nickname", "global_ranking", "lost"]
+ profile_panel.visible = not run_active and state not in ["nickname", "lost"]
  hud.visible = run_active
  if not run_active:
   hud.text = "ELIMINAÇÕES TOTAIS %d\nTEMPO TOTAL %s\nNÍVEIS CONQUISTADOS %d" % [player_totals.kills, RUN_HISTORY.time_text(player_totals.seconds), player_totals.levels]
   hud.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
   hud.size = hud.get_minimum_size()
   hud.position = Vector2(get_viewport_rect().size.x - hud.size.x - 22, 70)
+  profile_name_label.text = online.nickname()
   profile_label.text = hud.text
   profile_panel.size = profile_panel.get_combined_minimum_size()
   var profile_scale := minf(1.0, (get_viewport_rect().size.x - 44) / profile_panel.size.x)

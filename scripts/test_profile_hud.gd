@@ -6,6 +6,30 @@ func run() -> void:
  root.add_child(game)
  await process_frame
  game.set_process(false)
+ game.online.profile = {"nickname": "Teste"}
+ game.show_nickname()
+ game.nickname_attempted = true
+ game.online.busy = true
+ game.online.action = "rename"
+ game.online.status = "Salvando nome…"
+ game.online_changed()
+ assert(game.nickname_save_button.text == "Salvando...")
+ assert(game.nickname_save_button.disabled)
+ assert(not game.online_status_label.visible)
+ game.online.action = "ranking"
+ game.online_changed()
+ assert(game.nickname_save_button.text == "Carregando...")
+ assert(not game.online_status_label.visible)
+ game.online.busy = false
+ game.online.status = "Ranking atualizado."
+ game.online_changed()
+ assert(game.nickname_save_button.text == "Salvar nome")
+ assert(not game.online_status_label.visible)
+ game.online.action = "rename"
+ game.online.status = "Esse nome já está em uso. Escolha outro."
+ game.online_changed()
+ assert(game.online_status_label.visible)
+ assert(game.panel.get_children().find(game.online_status_label) < game.panel.get_children().find(game.nickname_edit))
  game.history_path = "user://test_profile_hud.json"
  game.run_history.clear()
  game.start_run("endless")
@@ -14,10 +38,12 @@ func run() -> void:
  game.kills = 100
  game.show_pause()
  game._process(0)
- assert(game.hud.text.contains("NÍVEL 25"))
+ assert(game.hud.text.begins_with("01:30    ELIMINAÇÕES 100"))
+ assert(not game.hud.text.contains("(lv"))
+ assert(game.stats_heading.text == "ATRIBUTOS DO PESCADOR (lv25)")
  game.show_settings()
  game._process(0)
- assert(game.hud.text.contains("NÍVEL 25"))
+ assert(game.hud.text.begins_with("01:30    ELIMINAÇÕES 100"))
  game.show_menu()
  var records: Array = game.RUN_HISTORY.load_records(game.history_path)
  assert(records[0].level == 25)
@@ -39,7 +65,6 @@ func run() -> void:
  game.finish(true)
  game._process(0)
  assert(game.hud.text.contains("NÍVEIS CONQUISTADOS 26"))
- game.online.profile = {"nickname": "Teste"}
  game.start_run("endless")
  game.enemies.clear()
  for boss in [false, false, true, true]: game.spawn_enemy(boss)

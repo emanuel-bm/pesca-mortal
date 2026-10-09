@@ -90,9 +90,12 @@ func run() -> void:
  game.show_nickname()
  await process_frame
  assert(game.nickname_edit != null)
- game.show_global_ranking()
+ game.show_menu()
  await process_frame
- assert(game.state == "global_ranking")
+ assert(game.state == "menu")
+ assert(not game.records_personal.endless and not game.records_personal.bosses)
+ game.select_records_tab("endless", true)
+ assert(game.records_personal.endless and not game.records_personal.bosses)
  game.online.disabled = true
  DirAccess.remove_absolute(ProjectSettings.globalize_path(game.online.storage_path))
  DirAccess.remove_absolute(ProjectSettings.globalize_path(game.history_path))

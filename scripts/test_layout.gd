@@ -53,10 +53,10 @@ func run() -> void:
  game.online.profile = {"nickname": "Teste"}
  game.online.rankings = {"endless": [], "bosses": []}
  for index in 10:
-  game.online.rankings.endless.append({"nickname": "Pescador_123456789012", "seconds": 600.0 - index, "kills": 100})
+  game.online.rankings.endless.append({"nickname": "Pescador_123456789012", "seconds": 600.0 - index, "kills": 100, "level": 25})
  for resolution in [Vector2i(640, 400), Vector2i(800, 600), Vector2i(1152, 720), Vector2i(1920, 1080), Vector2i(2560, 1440), Vector2i(3840, 2160), Vector2i(900, 1000)]:
   root.size = resolution
-  for screen in ["menu", "settings", "paused", "upgrade", "won", "lost", "history", "nickname", "global_ranking"]:
+  for screen in ["menu", "settings", "paused", "upgrade", "won", "lost", "history", "nickname", "personal_ranking"]:
    match screen:
     "menu": game.show_menu()
     "settings": game.show_settings()
@@ -66,7 +66,10 @@ func run() -> void:
     "lost": game.finish(false)
     "history": game.show_history()
     "nickname": game.show_nickname()
-    "global_ranking": game.show_global_ranking()
+    "personal_ranking":
+     game.show_menu()
+     game.select_records_tab("endless", true)
+     game.select_records_tab("bosses", true)
    for frame in 5: await process_frame
    if not check_menu(game):
     push_error("Falha em %s / %s" % [resolution, screen])
@@ -96,9 +99,12 @@ func run() -> void:
   for frame in 5: await process_frame
   await RenderingServer.frame_post_draw
   root.get_texture().get_image().save_png("res://.tools/layout.png")
-  for screen in ["nickname", "global_ranking"]:
+  for screen in ["nickname", "personal_ranking"]:
    if screen == "nickname": game.show_nickname()
-   else: game.show_global_ranking()
+   else:
+    game.show_menu()
+    game.select_records_tab("endless", true)
+    game.select_records_tab("bosses", true)
    for frame in 5: await process_frame
    await RenderingServer.frame_post_draw
    root.get_texture().get_image().save_png("res://.tools/online-%s.png" % screen)

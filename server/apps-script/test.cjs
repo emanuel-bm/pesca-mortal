@@ -85,6 +85,7 @@ if (process.argv.includes('--serve')) {
   const server = http.createServer((req, res) => {
     if (req.url === '/stats') { res.end(JSON.stringify({submissions})); return; }
     if (req.method === 'GET' && responses.has(req.url)) {
+      if (Number(req.headers['content-length'] || 0) > 0) { res.writeHead(400); res.end('GET response must not retain POST body'); return; }
       res.setHeader('Content-Type', 'application/json'); res.end(responses.get(req.url)); responses.delete(req.url); return;
     }
     let body = '';

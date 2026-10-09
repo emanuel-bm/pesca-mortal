@@ -18,6 +18,7 @@ var request: HTTPRequest
 var action := ""
 var sent_record: Dictionary = {}
 var refresh_requested := false
+var response_redirects := 0
 
 func _ready() -> void:
  var config := ConfigFile.new()
@@ -26,6 +27,9 @@ func _ready() -> void:
  load_state()
  request = HTTPRequest.new()
  request.timeout = 20.0
+ # Google rejects a redirected GET that retains the original POST body.
+ # Read ContentService's response explicitly with an empty GET instead.
+ request.max_redirects = 0
  add_child(request)
  request.request_completed.connect(_completed)
 
@@ -125,6 +129,7 @@ func _send(operation: String, payload: Dictionary) -> void:
   changed.emit()
   return
  action = operation
+ response_redirects = 0
  payload["action"] = operation
  if operation != "ranking":
   payload["token"] = profile.get("token", "")
@@ -132,14 +137,27 @@ func _send(operation: String, payload: Dictionary) -> void:
  busy = true
  status = "Atualizando ranking…" if operation in ["ranking", "submit"] else "Salvando nome…"
  changed.emit()
- # Apps Script ContentService redirects its JSON response; HTTPRequest follows it.
+ # Only the first request sends credentials; the redirect reads a JSON response.
  var error := request.request(endpoint, ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify(payload))
  if error != OK:
   busy = false
   status = "Sem conexão. Seu recorde continua salvo neste computador."
   changed.emit()
 
-func _completed(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+func _completed(result: int, code: int, headers: PackedStringArray, body: PackedByteArray) -> void:
+ if code in [301, 302, 303] and response_redirects < 3:
+  var location := ""
+  for header in headers:
+   if header.to_lower().begins_with("location:"):
+    location = header.substr(header.find(":") + 1).strip_edges()
+  if location.begins_with("/") and endpoint.begins_with("http://127.0.0.1:"):
+   location = endpoint.substr(0, endpoint.find("/", 7)) + location
+  var allowed := location.begins_with("https://script.googleusercontent.com/macros/echo?")
+  if endpoint.begins_with("http://127.0.0.1:"):
+   allowed = location.begins_with(endpoint.substr(0, endpoint.find("/", 7)) + "/response/")
+  if allowed:
+   response_redirects += 1
+   if request.request(location, [], HTTPClient.METHOD_GET, "") == OK: return
  busy = false
  var parser := JSON.new()
  var data: Variant = null
