@@ -21,7 +21,7 @@ var music_gain := 1.0
 var outgoing_music_gain := 0.0
 var music_clock := 0.0
 const VOLUME_NAMES := {"master": "Geral", "music": "Música", "boss": "Sons do Minhocão", "shot": "Lança", "death": "Peixes mergulhando", "hurt": "Dano recebido", "level": "Subida de nível", "cards": "Cartas"}
-const MAX_EFFECT_VOLUME := {"boss": 0.65, "emerge": 0.5, "dash": 0.45, "shot": 0.5, "death": 0.2, "hurt": 0.5, "level": 0.3, "card_ima": 0.4, "card_furia": 0.4, "card_intangivel": 0.4, "card_perfurante": 0.4}
+const MAX_EFFECT_VOLUME := {"boss": 0.65, "emerge": 0.5, "dash": 0.45, "shot": 0.5, "death": 0.2, "hurt": 0.5, "level": 0.55, "card_ima": 0.4, "card_furia": 0.4, "card_intangivel": 0.4, "card_perfurante": 0.4}
 const VOLUME_VERSION := 2
 var volumes := {"master": 1.0, "music": 0.7, "boss": 0.8, "shot": 1.0, "death": 1.0, "hurt": 1.0, "level": 1.0, "cards": 1.0}
 
@@ -248,7 +248,7 @@ func _exit_tree() -> void:
  outgoing_music_player.stop()
 
 func synthesize(id: String) -> AudioStreamWAV:
- var duration: float = {"shot": 0.085, "death": 0.45, "hurt": 0.24, "level": 0.65}[id]
+ var duration: float = {"shot": 0.085, "death": 0.45, "hurt": 0.24, "level": 1.5}[id]
  var count := int(SAMPLE_RATE * duration)
  var data := PackedByteArray()
  data.resize(count * 2)
@@ -264,11 +264,21 @@ func synthesize(id: String) -> AudioStreamWAV:
   filtered_noise = lerpf(filtered_noise, noise.randf_range(-1, 1), 0.45)
   match id:
    "level":
-    var notes := [392.0, 493.88, 587.33, 783.99]
-    var note_index := mini(3, int(t / 0.12))
-    var note_time := t - note_index * 0.12
-    phase += TAU * notes[note_index] / SAMPLE_RATE
-    sample = (sin(phase) + 0.18 * sin(phase * 2.0)) * exp(-note_time * 9) * 0.65
+    # Sinos sobrepostos em arpejo, com acorde de resolução e ecos discretos.
+    var notes := [392.0, 493.88, 587.33, 783.99, 987.77, 1174.66]
+    for note_index in notes.size():
+     for echo in 3:
+      var note_time := t - note_index * 0.075 - echo * 0.115
+      if note_time < 0.0: continue
+      var note_phase: float = TAU * notes[note_index] * note_time
+      var attack := minf(note_time / 0.006, 1.0)
+      var bell := sin(note_phase) + 0.24 * sin(note_phase * 2.0) * exp(-note_time * 8.0) + 0.10 * sin(note_phase * 3.0) * exp(-note_time * 12.0)
+      sample += bell * attack * exp(-note_time * 6.0) * 0.30 * pow(0.28, echo)
+    var chord_time := t - 0.46
+    if chord_time >= 0.0:
+     var chord_attack := minf(chord_time / 0.012, 1.0)
+     for tone in [392.0, 493.88, 587.33, 783.99]:
+      sample += sin(TAU * tone * chord_time) * chord_attack * exp(-chord_time * 4.5) * 0.13
    "shot":
     frequency = lerpf(1400, 320, progress)
     phase += TAU * frequency / SAMPLE_RATE
@@ -285,6 +295,7 @@ func synthesize(id: String) -> AudioStreamWAV:
     sample = sin(phase) * exp(-t * 22) * 0.65 + filtered_noise * exp(-t * 35) * 0.35
   # Ataque suave e cauda até zero evitam estalos nas bordas.
   var envelope := minf(t / 0.004, 1.0) * pow(1.0 - progress, 2.0)
+  if id == "level": envelope = minf(t / 0.004, 1.0) * (1.0 - smoothstep(1.1, duration, t))
   var pcm := int(clampf(sample * envelope, -1, 1) * 28000)
   data.encode_u16(i * 2, pcm & 0xffff)
  var stream := AudioStreamWAV.new()
