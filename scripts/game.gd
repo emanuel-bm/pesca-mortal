@@ -86,6 +86,7 @@ var run_mode := "bosses"
 var run_active := false
 var run_recorded := false
 var test_run := false
+var training: Node
 var bosses_defeated := 0
 var next_boss_time := ENDLESS_BOSS_INTERVAL
 var endless_wave := 0
@@ -291,6 +292,9 @@ func _ready() -> void:
  panel.add_theme_constant_override("separation", 16)
  padding.add_child(panel)
  setup_stats_panel()
+ training = preload("res://scripts/training_room.gd").new()
+ training.game = self
+ add_child(training)
  show_menu()
  if test_modes_available() and "--boss-test" in OS.get_cmdline_user_args():
   start_boss_test()
@@ -603,6 +607,7 @@ func show_menu() -> void:
  title("WASD / setas: mover · Ataque automático\nColete ventrechas para evoluir · ESC: pausar", 18)
  button("Modo infinito", start_run.bind("endless"))
  button("Modo por chefões", start_run.bind("bosses"))
+ button("Sala de treino", start_run.bind("training"))
  records_personal = {"endless": false, "bosses": false}
  show_records_panel()
  show_boss_records_panel()
@@ -932,17 +937,24 @@ func leave_settings() -> void:
 
 func show_pause() -> void:
  state = "paused"
+ update_cursor_visibility()
  clear_panel()
  overlay.custom_minimum_size.x = 480
  stats_panel.show()
  update_stats_preview()
  title("Pausado")
+ if run_mode == "training":
+  stats_panel.hide()
+  training.select_tab(training.selected_tab)
  button("Continuar", resume)
  button("Configurações", show_settings)
  button("Recomeçar", restart_run)
  button("Voltar à tela inicial", show_menu)
 
 func restart_run() -> void:
+ if run_mode == "training":
+  start_run("training")
+  return
  if test_run:
   if run_mode == "horde": start_horde_test()
   elif run_mode == "endless": start_endless_test()
@@ -950,13 +962,13 @@ func restart_run() -> void:
  else: start_run(run_mode)
 
 func start_run(mode: String = "bosses") -> void:
- if mode not in ["endless", "bosses"] and not test_modes_available(): return
+ if mode not in ["endless", "bosses", "training"] and not test_modes_available(): return
  sounds.start_calm_music()
  record_run("restart")
  run_mode = mode
  run_active = true
  run_recorded = false
- test_run = false
+ test_run = mode == "training"
  bosses_defeated = 0
  next_boss_time = ENDLESS_BOSS_INTERVAL
  endless_wave = 0
@@ -1000,6 +1012,10 @@ func start_run(mode: String = "bosses") -> void:
  if records_panel: records_panel.hide()
  if boss_records_panel: boss_records_panel.hide()
  overlay.hide()
+
+ if mode == "training":
+  prevent_player_death = true
+  training.reset()
 
 func prepare_level_30_test(mode: String) -> void:
  if not test_modes_available(): return
@@ -1121,6 +1137,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 func resume() -> void:
  state = "playing"
+ update_cursor_visibility()
+ if training: training.update_interaction(false)
  if records_panel: records_panel.hide()
  if boss_records_panel: boss_records_panel.hide()
  overlay.hide()
@@ -1137,7 +1155,12 @@ func movement() -> Vector2:
  if Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN): direction.y += 1
  return direction.normalized()
 
+func update_cursor_visibility() -> void:
+ var desired := Input.MOUSE_MODE_HIDDEN if state == "playing" else Input.MOUSE_MODE_VISIBLE
+ if Input.mouse_mode != desired: Input.mouse_mode = desired
+
 func _process(delta: float) -> void:
+ update_cursor_visibility()
  update_minimap(delta)
  if xp_renderer: xp_renderer.queue_redraw()
  layout_modals()
@@ -1247,8 +1270,8 @@ func update_game(dt: float) -> void:
  if run_mode == "bosses" and elapsed >= RUN_SECONDS and not boss_spawned:
   boss_spawned = true
   spawn_enemy(true)
- spawn_timer -= dt
- if spawn_timer <= 0:
+ if run_mode != "training" or training.auto_spawn: spawn_timer -= dt
+ if spawn_timer <= 0 and (run_mode != "training" or training.auto_spawn):
   spawn_timer += 1.0
   var amount := fish_spawn_rate() + spawn_remainder
   var count := floori(amount)
@@ -1796,7 +1819,7 @@ func _draw() -> void:
     if boss_texture:
      draw_texture_rect(character_quality.texture_for("boss", graphics_quality, boss_texture), Rect2(position - Vector2(70, 85), Vector2(140, 140)), false, Color.WHITE if enemy.flash <= 0 else Color(1.7, 1.7, 1.7))
     else: draw_rect(Rect2(position - Vector2.ONE * radius, Vector2.ONE * radius * 2), color)
-    if run_mode == "endless":
+    if run_mode in ["endless", "training"]:
      var bar_position := (position + Vector2(-50, maxf(60, radius + 8))).round()
      draw_rect(Rect2(bar_position - Vector2.ONE, Vector2(102, 8)), Color(0.05, 0.04, 0.08))
      draw_rect(Rect2(bar_position, Vector2(100, 6)), Color(0.2, 0.1, 0.25))
