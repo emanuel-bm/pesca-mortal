@@ -1,13 +1,13 @@
 extends Node2D
 
 const RUN_SECONDS := 300.0
-const ENDLESS_BOSS_INTERVAL := 90.0
+const ENDLESS_FIRST_BOSS_TIME := 240.0
+const ENDLESS_BOSS_INTERVAL := 120.0
 const ARENA := Vector2(2400, 1800)
 const ENEMY_SEPARATION_SCALE := 0.3
 const MAX_ENEMIES := 1000
 const MAX_HEALTH := 50.0
-const XP_COST_MULTIPLIER := 1.4
-const XP_GROWTH_PER_LEVEL := 1.05
+const XP_GROWTH_PER_LEVEL := 1.06
 const XP_COLOR := Color(0.25, 0.65, 1.0)
 const XP_ATTRACTION_SPEED := 630.0
 const KNOCKBACK_SPEED := 420.0
@@ -87,7 +87,7 @@ var test_run := false
 var training: Node
 var cards: Node2D
 var bosses_defeated := 0
-var next_boss_time := ENDLESS_BOSS_INTERVAL
+var next_boss_time := ENDLESS_FIRST_BOSS_TIME
 var endless_wave := 0
 var run_history: Array = []
 var player_totals := {"seconds": 0.0, "kills": 0, "levels": 0}
@@ -949,7 +949,7 @@ func start_run(mode: String = "bosses") -> void:
  run_recorded = false
  test_run = mode == "training"
  bosses_defeated = 0
- next_boss_time = ENDLESS_BOSS_INTERVAL
+ next_boss_time = ENDLESS_FIRST_BOSS_TIME
  endless_wave = 0
  stats_panel.hide()
  sounds.reset()
@@ -1056,7 +1056,7 @@ func resume() -> void:
  stats_panel.hide()
 
 func xp_needed() -> int:
- return ceili((5 + (level - 1) * 3) * XP_COST_MULTIPLIER * pow(XP_GROWTH_PER_LEVEL, level - 1))
+ return ceili((5 + (level - 1) * 3) * pow(XP_GROWTH_PER_LEVEL, level - 1))
 
 func movement() -> Vector2:
  var direction := Vector2.ZERO
@@ -1277,8 +1277,7 @@ func show_pending_level_up() -> void:
   show_upgrades()
 
 func fish_spawn_rate() -> float:
- if elapsed <= 300.0: return lerpf(2.0, 10.0, clampf(elapsed / 300.0, 0.0, 1.0))
- return 10.0 + (elapsed - 300.0) / 30.0
+ return floorf(maxf(2.0, elapsed / 60.0) * 1.5)
 
 func spawn_endless_bosses() -> void:
  while elapsed >= next_boss_time:

@@ -9,7 +9,7 @@ func run() -> void:
  await process_frame
  game.start_run()
  game.update_game(0.01)
- assert(game.enemies.size() == 2, "Initial wave must spawn two enemies")
+ assert(game.enemies.size() == 3, "Initial wave must spawn three enemies")
  assert(game.MAX_HEALTH == 50.0, "Base health must remain 50")
  assert(game.health == 50.0 and game.max_health == 50.0, "Health must start at 50")
  for direction in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN, Vector2.ZERO]:
@@ -59,12 +59,10 @@ func run() -> void:
  game.update_game(0.01)
  assert(game.gems.size() == 1 and game.gems[0].xp == 5)
  game.player = game.gems[0].pos
- game.update_game(0.01)
- assert(game.level == 1 and game.xp == 5 and game.gems.is_empty(), "Pintado pickup must grant five XP")
- assert(game.xp_needed() == 7)
+ assert(game.xp_needed() == 5)
  game.health = 10
- game.xp = game.xp_needed()
- game.update_game(0.0)
+ game.update_game(0.01)
+ assert(game.level == 2 and game.xp == 0 and game.gems.is_empty(), "Pintado pickup must grant five XP and reach level two")
  assert(game.level == 2 and game.health == game.MAX_HEALTH and game.state == "upgrade", "Level up must fully heal")
  assert(game.level_healing == 40, "Level up must restore the missing 40 health")
  game.add_xp_number(game.player, 5)
@@ -75,7 +73,7 @@ func run() -> void:
   game.level = rank
   var cost: int = game.xp_needed()
   assert(cost > previous_cost)
-  assert(cost >= ceili((5 + (rank - 1) * 3) * 1.4))
+  assert(cost == ceili((5 + (rank - 1) * 3) * pow(1.06, rank - 1)))
   previous_cost = cost
  print("COMBAT PASS: waves, HP, damage, knockback, FPS, XP scaling and collection")
  quit(0)
