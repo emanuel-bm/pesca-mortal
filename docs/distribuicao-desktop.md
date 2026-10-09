@@ -10,16 +10,16 @@ powershell -NoProfile -File scripts/package_desktop.ps1
 
 | Plataforma | Arquivo gerado em `dist/` | Como abrir |
 | --- | --- | --- |
-| Windows x86_64 | `pesca-mortal-windows-v0.2.1.exe` | Executar diretamente |
-| macOS Apple Silicon (M1 e posteriores) | `pesca-mortal-macos-arm64-v0.2.1.zip` | Extrair o `.app` e abrir |
-| Linux x86_64 (Intel/AMD 64 bits) | `pesca-mortal-linux-v0.2.1.x86_64` | Dar permissão de execução e executar |
+| Windows x86_64 | `pesca-mortal-windows-v0.3.0.exe` | Executar diretamente |
+| macOS Apple Silicon (M1 e posteriores) | `pesca-mortal-macos-arm64-v0.3.0.zip` | Extrair o `.app` e abrir |
+| Linux x86_64 (Intel/AMD 64 bits) | `pesca-mortal-linux-v0.3.0.x86_64` | Dar permissão de execução e executar |
 
 O Windows e Linux usam PCK embutido: dados e recursos do jogo acompanham o
 executável. No Linux, depois de baixar:
 
 ```sh
-chmod +x pesca-mortal-linux-v0.2.1.x86_64
-./pesca-mortal-linux-v0.2.1.x86_64
+chmod +x pesca-mortal-linux-v0.3.0.x86_64
+./pesca-mortal-linux-v0.3.0.x86_64
 ```
 
 O Linux não usa `.dmg`: esse é um formato de imagem de disco do macOS.
