@@ -1,0 +1,9 @@
+.godot/
+.tools/
+builds/
+dist/
+.env
+.env.*
+!.env.example
+*.pem
+*.key

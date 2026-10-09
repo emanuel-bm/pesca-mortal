@@ -1,0 +1,67 @@
+extends SceneTree
+func _initialize() -> void:
+ call_deferred("run")
+func run() -> void:
+ var game: Node = load("res://main.tscn").instantiate()
+ root.add_child(game)
+ await process_frame
+ game.set_process(false)
+ game.start_run()
+ game.update_stats_preview()
+ assert(game.stat_names.speed.text == "Velocidade")
+ game.choose_upgrade("speed")
+ game.update_stats_preview()
+ assert(game.stat_names.speed.text == "Velocidade (2)")
+ game.choose_upgrade("speed")
+ game.update_stats_preview()
+ assert(game.stat_names.speed.text == "Velocidade (3)")
+ game.health = 40
+ game.choose_upgrade("max_health")
+ assert(is_equal_approx(game.max_health, 66 * 1.25))
+ assert(is_equal_approx(game.health, 40 + 66 * 0.25))
+ for rank in 20: game.choose_upgrade("max_health")
+ assert(game.max_health == 500 and game.health_bar.max_value == 500)
+ game.choose_upgrade("xp_bonus")
+ game.collect_xp(1)
+ assert(is_equal_approx(game.current_xp(), 1.1))
+ assert(game.format_xp(15.7) == "15.7")
+ game.update_stats_preview()
+ game._process(0)
+ assert(game.xp_label.text.begins_with("1.1 /"))
+ assert(not game.xp_label.text.contains("(lv"))
+ assert(game.hud.text.contains("ELIMINAÇÕES 0 (lv 1)"))
+ for key in ["health", "level", "xp"]: assert(not game.stat_values.has(key))
+ game.graphics_quality = 2
+ game.add_xp_number(game.player, 1.1)
+ assert(game.damage_numbers[-1].text == "+1 XP")
+ game.add_xp_number(game.player, 1.9)
+ assert(game.damage_numbers[-1].text == "+1 XP")
+ game.add_xp_number(game.player, 2.0)
+ assert(game.damage_numbers[-1].text == "+2 XP")
+ for pickup in 9: game.collect_xp(1)
+ assert(game.xp == 11 and game.xp_remainder == 0)
+ for rank in 20: game.choose_upgrade("xp_bonus")
+ assert(game.xp_bonus == 100)
+ var before: int = game.xp
+ assert(game.collect_xp(5) == 10 and game.xp == before + 10)
+ game.magnet = 500
+ game.speed = game.MAX_PLAYER_SPEED
+ game.show_upgrades()
+ assert(game.choices.size() == 3)
+ for id in ["speed", "magnet", "max_health", "xp_bonus"]: assert(not id in game.choices)
+ game.update_stats_preview()
+ assert(game.stat_values.max_health.text == "500 (MAX)")
+ assert(game.stat_values.xp_bonus.text == "+100% (MAX)")
+ game.resume()
+ game.health = 10
+ game.xp = game.xp_needed()
+ game.spawn_timer = INF
+ game.attack_timer = INF
+ game.update_game(0)
+ assert(game.health == 500)
+ game.start_run()
+ assert(game.max_health == 66 and game.health == 66 and game.xp_bonus == 0 and game.xp_remainder == 0)
+ game.update_stats_preview()
+ assert(game.stat_names.speed.text == "Velocidade")
+ print("HEALTH/XP PASS: caps, fractional rewards, doubled XP, max labels, capped choices, full heal and reset")
+ quit()

@@ -1,0 +1,55 @@
+extends SceneTree
+func _initialize() -> void:
+ call_deferred("run")
+func run() -> void:
+ var game: Node = load("res://main.tscn").instantiate()
+ root.add_child(game)
+ await process_frame
+ game.set_process(false)
+ game.start_horde_test()
+ game.update_minimap(0)
+ var map: Node = game.minimap_renderer
+ assert(map.small_points.size() == 259 and map.large_points.size() == 259 and map.boss_points.size() == 2)
+ assert(map.player_point.is_equal_approx(game.minimap_point(game.player)))
+ assert(is_equal_approx(map.area.position.y, 46))
+ assert(is_equal_approx(map.area.end.x, game.get_viewport_rect().size.x - 22))
+ game.state = "paused"
+ game._process(0)
+ assert(is_equal_approx(game.fps_label.position.y, map.area.position.y))
+ assert(is_equal_approx(game.fps_label.position.x + 150 + 22, map.area.position.x))
+ assert(map.marker_batches.size() == 3)
+ for species in 3:
+  var points: PackedVector2Array = [map.small_points, map.large_points, map.boss_points][species]
+  var batch: MultiMesh = map.marker_batches[species]
+  assert(batch.visible_instance_count == points.size())
+  if DisplayServer.get_name() != "headless":
+   assert(batch.get_instance_transform_2d(0).origin.is_equal_approx(points[0]))
+   assert(is_equal_approx(batch.get_instance_transform_2d(0).x.x, [1.8, 3.0, 6.0][species]))
+ var small_batch: MultiMesh = map.marker_batches[0]
+ var capacity := small_batch.instance_count
+ map.update_batch(small_batch, PackedVector2Array(), 1.8)
+ assert(small_batch.visible_instance_count == 0 and small_batch.instance_count == capacity)
+ map.refresh(game)
+ var point: Vector2 = map.player_point
+ game.player += Vector2(10, 0)
+ game.update_minimap(0.01)
+ assert(map.player_point == point, "Reuse snapshot between refreshes")
+ game.update_minimap(0.05)
+ assert(map.player_point.is_equal_approx(game.minimap_point(game.player)))
+ root.size = Vector2i(800, 600)
+ game.update_minimap(0)
+ assert(map.area == game.minimap_world_rect(), "Resize must refresh immediately")
+ game.show_menu()
+ game.update_minimap(0)
+ assert(not map.visible)
+ game.start_horde_test()
+ game.update_minimap(0)
+ assert(map.visible)
+ game.spawn_timer = INF
+ game.attack_timer = INF
+ game.update_game(0.01)
+ for index in game.enemies.size():
+  var cell := Vector2i((Vector2(game.enemies[index].pos) / game.COLLISION_CELL_SIZE).floor())
+  assert(index in game.enemy_grid.get(cell, []), "Projectile grid must use post-movement positions")
+ print("MINIMAP PASS: species markers, transform, refresh rate, resize, menu visibility, post-movement projectile grid")
+ quit(0)

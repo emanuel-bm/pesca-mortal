@@ -1,0 +1,223 @@
+extends Control
+## The same application checks releases before loading the game.
+const GAME := "res://main.tscn"
+var repository := ""
+var asset_name := ""
+var executable_name := ""
+var release: Dictionary = {}
+var asset: Dictionary = {}
+var request: HTTPRequest
+var message: Label
+var actions: VBoxContainer
+var phase := "check"
+var leaving := false
+var download_path := "user://update.zip"
+
+static func version_parts(value: String) -> Array[int]:
+ var expression := RegEx.new()
+ expression.compile("^v?([0-9]+)\\.([0-9]+)\\.([0-9]+)$")
+ var match_value := expression.search(value)
+ var parts: Array[int] = []
+ if match_value == null: return parts
+ for index in range(1, 4): parts.append(int(match_value.get_string(index)))
+ return parts
+
+static func newer(remote: String, local: String) -> bool:
+ var a := version_parts(remote)
+ var b := version_parts(local)
+ if a.is_empty() or b.is_empty(): return false
+ for index in range(3):
+  if a[index] != b[index]: return a[index] > b[index]
+ return false
+
+static func select_asset(data: Dictionary, name_value: String, repo: String) -> Dictionary:
+ if data.get("draft", false) or data.get("prerelease", false): return {}
+ var entries: Variant = data.get("assets", [])
+ if not entries is Array: return {}
+ for entry: Variant in entries:
+  if not entry is Dictionary or entry.get("name", "") != name_value: continue
+  var url := str(entry.get("browser_download_url", ""))
+  var digest := str(entry.get("digest", ""))
+  var expression := RegEx.new()
+  expression.compile("^sha256:[0-9a-fA-F]{64}$")
+  if url.begins_with("https://github.com/" + repo + "/releases/download/") and expression.search(digest) != null:
+   return entry
+ return {}
+
+func _ready() -> void:
+ get_window().title = "Pesca Mortal"
+ if "--smoke-test" in OS.get_cmdline_user_args():
+  _play(false)
+  return
+ var config := ConfigFile.new()
+ if config.load("res://updates.cfg") == OK:
+  repository = str(config.get_value("updates", "repository", "")).strip_edges()
+  asset_name = str(config.get_value("updates", "windows_asset", ""))
+  executable_name = str(config.get_value("updates", "windows_executable", ""))
+ _build_ui()
+ request = HTTPRequest.new()
+ request.timeout = 10.0
+ request.body_size_limit = 2 * 1024 * 1024
+ add_child(request)
+ request.request_completed.connect(_completed)
+ if "--update-install-failed" in OS.get_cmdline_user_args():
+  _error("Não foi possível instalar a atualização. A versão anterior foi preservada.")
+ elif repository.is_empty():
+  _set_message("As atualizações ainda não foram ativadas.\nVocê pode jogar a versão instalada.")
+  _button("Jogar offline", _play.bind(true))
+ else:
+  _check()
+
+func _build_ui() -> void:
+ var background := ColorRect.new()
+ background.color = Color(0.045, 0.055, 0.075)
+ background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+ add_child(background)
+ var center := CenterContainer.new()
+ center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+ add_child(center)
+ var frame := PanelContainer.new()
+ center.add_child(frame)
+ var margin := MarginContainer.new()
+ for side in ["left", "right", "top", "bottom"]:
+  margin.add_theme_constant_override("margin_" + side, 24)
+ frame.add_child(margin)
+ var column := VBoxContainer.new()
+ column.add_theme_constant_override("separation", 18)
+ margin.add_child(column)
+ var title := Label.new()
+ title.text = "PESCA MORTAL"
+ title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+ title.add_theme_font_size_override("font_size", 30)
+ column.add_child(title)
+ var version := Label.new()
+ version.text = "Versão " + str(ProjectSettings.get_setting("application/config/version", "1.0.0"))
+ version.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+ column.add_child(version)
+ message = Label.new()
+ message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+ message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+ column.add_child(message)
+ actions = VBoxContainer.new()
+ column.add_child(actions)
+ resized.connect(func(): frame.custom_minimum_size.x = minf(540.0, maxf(260.0, size.x - 32.0)))
+ frame.custom_minimum_size.x = minf(540.0, maxf(260.0, size.x - 32.0))
+
+func _set_message(value: String) -> void:
+ message.text = value
+ for child in actions.get_children():
+  actions.remove_child(child)
+  child.queue_free()
+
+func _button(value: String, action: Callable) -> Button:
+ var control := Button.new()
+ control.text = value
+ control.custom_minimum_size.y = 44
+ control.pressed.connect(action)
+ actions.add_child(control)
+ return control
+
+func _check() -> void:
+ phase = "check"
+ request.download_file = ""
+ request.timeout = 10.0
+ request.body_size_limit = 2 * 1024 * 1024
+ _set_message("Verificando atualizações…")
+ _button("Jogar offline", _play.bind(true))
+ var expression := RegEx.new()
+ expression.compile("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+ if expression.search(repository) == null:
+  _error("O endereço de atualizações ainda não foi configurado corretamente.")
+  return
+ var error := request.request("https://api.github.com/repos/" + repository + "/releases/latest", ["Accept: application/vnd.github+json", "User-Agent: Pesca-Mortal"])
+ if error != OK: _play(true)
+
+func _completed(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+ if leaving: return
+ if phase == "download":
+  if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+   _error("O download falhou. Tente novamente ou jogue offline.")
+   return
+  _set_message("Conferindo os arquivos da atualização…")
+  if FileAccess.get_sha256(download_path).to_lower() != str(asset.digest).trim_prefix("sha256:").to_lower():
+   _error("O arquivo baixado está incompleto ou inválido. Tente novamente.")
+   return
+  _install()
+  return
+ if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+  _play(true)
+  return
+ var parser := JSON.new()
+ if parser.parse(body.get_string_from_utf8()) != OK:
+  _play(true)
+  return
+ var data: Variant = parser.data
+ if not data is Dictionary or version_parts(str(data.get("tag_name", ""))).is_empty():
+  _play(true)
+  return
+ release = data
+ if not newer(str(release.tag_name), str(ProjectSettings.get_setting("application/config/version", "1.0.0"))):
+  _play(false)
+  return
+ asset = select_asset(release, asset_name, repository)
+ _offer()
+
+func _offer() -> void:
+ _set_message("Nova versão disponível: " + str(release.tag_name) + "\nAtualize agora ou continue com a versão instalada em modo offline.")
+ if OS.get_name() == "Windows" and OS.has_feature("standalone") and not asset.is_empty():
+  _button("Baixar atualização", _download)
+ else:
+  _button("Baixar atualização no GitHub", func(): OS.shell_open("https://github.com/" + repository + "/releases/latest"))
+  message.text += "\nNesta plataforma, baixe e instale a nova versão manualmente."
+ _button("Jogar offline", _play.bind(true))
+
+func _download() -> void:
+ phase = "download"
+ request.download_file = download_path
+ request.timeout = 300.0
+ request.body_size_limit = 1024 * 1024 * 1024
+ _set_message("Baixando atualização…")
+ _button("Jogar offline", _play.bind(true))
+ if request.request(str(asset.browser_download_url), ["User-Agent: Pesca-Mortal"]) != OK:
+  _error("Não foi possível iniciar o download.")
+
+func _process(_delta: float) -> void:
+ if phase == "download" and is_instance_valid(request) and not leaving:
+  message.text = "Baixando atualização… %.1f MB" % (request.get_downloaded_bytes() / 1048576.0)
+
+func _error(value: String) -> void:
+ phase = "error"
+ _set_message(value)
+ _button("Tentar novamente", _check)
+ _button("Jogar offline", _play.bind(true))
+
+func _install() -> void:
+ phase = "install"
+ var helper := "user://install_update.ps1"
+ var script_file := FileAccess.open(helper, FileAccess.WRITE)
+ if script_file == null:
+  _error("Não foi possível preparar a instalação. Você pode jogar offline.")
+  return
+ script_file.store_string(FileAccess.get_file_as_string("res://scripts/install_update.ps1"))
+ script_file.close()
+ var parameters := "user://update-install.json"
+ var file := FileAccess.open(parameters, FileAccess.WRITE)
+ if file == null:
+  _error("Não foi possível preparar a instalação.")
+  return
+ file.store_string(JSON.stringify({"pid": OS.get_process_id(), "archive": ProjectSettings.globalize_path(download_path), "target": OS.get_executable_path(), "entry": executable_name, "sha256": str(asset.digest).trim_prefix("sha256:")}))
+ file.close()
+ var powershell := OS.get_environment("SystemRoot").path_join("System32/WindowsPowerShell/v1.0/powershell.exe")
+ var pid := OS.create_process(powershell, ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", ProjectSettings.globalize_path(helper), "-ParametersPath", ProjectSettings.globalize_path(parameters)], false)
+ if pid == -1:
+  _error("Não foi possível iniciar a instalação. Você pode jogar offline.")
+  return
+ leaving = true
+ get_tree().quit()
+
+func _play(offline: bool) -> void:
+ if leaving: return
+ leaving = true
+ if is_instance_valid(request): request.cancel_request()
+ get_tree().set_meta("offline_session", offline)
+ get_tree().change_scene_to_file.call_deferred(GAME)
