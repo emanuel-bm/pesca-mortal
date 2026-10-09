@@ -55,4 +55,4 @@ func run() -> void:
  print("BOSS AUDIO PASS: first emergence, attack sounds at action start, no per-frame repeats, per-effect mute, 2s roar")
  game.free()
  await create_timer(0.1).timeout
- quit(0)
+ call_deferred("quit", 0)
