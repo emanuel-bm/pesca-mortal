@@ -24,8 +24,8 @@ const STATS := {
  "level": ["Nível", 1.0, 1.0, 100.0]
 }
 const ACTIONS := {
- KEY_F1: ["F1 · +10 Piranhas", "piranha"],
- KEY_F2: ["F2 · +10 Pintados", "pintado"],
+ KEY_F1: ["F1 · +100 Piranhas", "piranha"],
+ KEY_F2: ["F2 · +100 Pintados", "pintado"],
  KEY_F3: ["F3 · Invocar Minhocão", "boss"],
  KEY_F4: ["F4 · Matar todos os peixes", "fish_clear"],
  KEY_F5: ["F5 · Limpar todos os inimigos", "clear"],
@@ -235,7 +235,7 @@ func act(action: String) -> void:
  if game.run_mode != "training" or game.state not in ["playing", "paused"]: return
  match action:
   "piranha", "pintado", "boss":
-   for index in mini(1 if action == "boss" else 10, maxi(0, game.MAX_ENEMIES - game.enemies.size())):
+   for index in mini(1 if action == "boss" else 100, maxi(0, game.MAX_ENEMIES - game.enemies.size())):
     game.spawn_enemy(action == "boss")
     var enemy: Dictionary = game.enemies.back()
     enemy.pos = (game.player + Vector2.from_angle(game.rng.randf_range(0, TAU)) * 300).clamp(Vector2(50, 50), game.ARENA - Vector2(50, 50))
