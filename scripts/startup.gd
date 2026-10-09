@@ -9,9 +9,20 @@ var asset: Dictionary = {}
 var request: HTTPRequest
 var message: Label
 var actions: VBoxContainer
+var status_frame: PanelContainer
+var loading: VBoxContainer
 var phase := "check"
 var leaving := false
 var download_path := "user://update.zip"
+
+class LoadingSpinner extends Control:
+ var angle := 0.0
+ func _process(delta: float) -> void:
+  if not is_visible_in_tree(): return
+  angle = fmod(angle + delta * 4.0, TAU)
+  queue_redraw()
+ func _draw() -> void:
+  draw_arc(size / 2.0, 16.0, angle, angle + TAU * 0.75, 32, Color(0.7, 0.8, 0.9), 3.0, true)
 
 static func version_parts(value: String) -> Array[int]:
  var expression := RegEx.new()
@@ -76,7 +87,21 @@ func _build_ui() -> void:
  var center := CenterContainer.new()
  center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
  add_child(center)
+ loading = VBoxContainer.new()
+ loading.add_theme_constant_override("separation", 18)
+ center.add_child(loading)
+ var spinner := LoadingSpinner.new()
+ spinner.custom_minimum_size = Vector2(40, 40)
+ spinner.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+ loading.add_child(spinner)
+ var loading_text := Label.new()
+ loading_text.text = "Verificando atualizações…"
+ loading_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+ loading_text.add_theme_font_size_override("font_size", 20)
+ loading.add_child(loading_text)
+ loading.hide()
  var frame := PanelContainer.new()
+ status_frame = frame
  center.add_child(frame)
  var margin := MarginContainer.new()
  for side in ["left", "right", "top", "bottom"]:
@@ -104,6 +129,8 @@ func _build_ui() -> void:
  frame.custom_minimum_size.x = minf(540.0, maxf(260.0, size.x - 32.0))
 
 func _set_message(value: String) -> void:
+ loading.hide()
+ status_frame.show()
  message.text = value
  for child in actions.get_children():
   actions.remove_child(child)
@@ -123,7 +150,8 @@ func _check() -> void:
  request.timeout = 10.0
  request.body_size_limit = 2 * 1024 * 1024
  _set_message("Verificando atualizações…")
- _button("Jogar offline", _play.bind(true))
+ status_frame.hide()
+ loading.show()
  var expression := RegEx.new()
  expression.compile("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
  if expression.search(repository) == null:

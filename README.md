@@ -1,6 +1,6 @@
 # Pesca Mortal — protótipo
 
-Beta **0.1.0**. Código, arte, áudio, scripts de servidor e testes estão
+Beta **0.1.1**. Código, arte, áudio, scripts de servidor e testes estão
 incluídos no projeto. Ferramentas locais, caches e builds exportadas ficam
 fora do Git; pacotes para jogar são distribuídos pelas Releases.
 

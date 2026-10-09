@@ -1,7 +1,9 @@
 # Atualizações integradas
 
-O próprio aplicativo abre `startup.tscn`, consulta a última release pública do
-GitHub e só depois carrega `main.tscn`. Não há outro launcher para distribuir.
+O próprio aplicativo abre `startup.tscn`, mostra apenas um indicador animado
+e o texto **Verificando atualizações…**, consulta a última release pública do
+GitHub e só depois carrega `main.tscn`. Título, versão e botões aparecem apenas
+quando houver uma decisão após a consulta. Não há outro launcher para distribuir.
 O Windows usa um auxiliar PowerShell oculto apenas durante a instalação,
 pois o executável aberto não pode substituir a si mesmo.
 
@@ -10,7 +12,7 @@ pois o executável aberto não pode substituir a si mesmo.
 - Falha de consulta (incluindo timeout, limite da API ou release inexistente):
   abre o menu offline automaticamente.
 - Sem repositório configurado: oferece jogar offline.
-- Jogar offline cancela a consulta/download, impede chamadas ao ranking e
+- Jogar offline cancela o download, impede chamadas ao ranking e
   permite iniciar sem cadastro de nome. Recordes ficam na fila local para
   sincronização quando houver uma sessão online e um perfil cadastrado.
 - O download não é obrigatório: a escolha offline está sempre disponível
