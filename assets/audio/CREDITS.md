@@ -45,18 +45,27 @@ Caudas e ecos circulares preservam a continuidade da repetição.
 Para regenerar: `python assets/audio/compose_battle_theme.py` (requer NumPy).
 A primeira versão foi preservada em `correnteza_sombria.wav`.
 
-## minhocao_roar.wav — Rugido do Minhocão
+## minhocao_roar.wav — Rugido oficial do Minhocão (V5)
 
-Efeito original de dois segundos, sintetizado para o surgimento da serpente gigante.
-Rugido de garganta aberta, com ataque forte, sustentação, ressonâncias vocais
-móveis, sub-harmônicos, aspereza e uma segunda pressão gutural antes de terminar.
-Sem gravações, samples ou soundfonts externos. Mono PCM16/44.100 Hz,
-com fades nas bordas para evitar estalos.
-Para regenerar: `python assets/audio/compose_boss_sounds.py` (requer NumPy).
+Efeito original sintetizado, de dois segundos. A versão aprovada usa o timbre
+rasgado e metálico da V0: começa no silêncio, sobe ao máximo em 400 ms,
+sustenta a intensidade até 1,5 segundo e diminui no último meio segundo.
+Amplitude geral reduzida em 30% (ganho de 0,70 aplicado após normalização).
+A referência indicada pelo usuário foi o rugido de Godzilla:
+https://youtu.be/3T8kYlW2XjQ . Nenhuma gravação dos filmes foi utilizada.
+Mono PCM16/44.100 Hz, com fades nas bordas para evitar estalos.
+Para regenerar: `python assets/audio/compose_boss_roar.py` (requer NumPy).
 
 ## minhocao_emerge.wav e minhocao_dash.wav
 
 Efeitos originais sintetizados: emergência de 0,7 segundo com impacto grave,
 terra rompendo e água deslocada; investida de 0,5 segundo com deslocamento de
 ar e massa grave. Mono PCM16/44.100 Hz, sem samples externos, com fades nas
-bordas. O mesmo `compose_boss_sounds.py` regenera os dois arquivos.
+bordas. `python assets/audio/compose_boss_sounds.py` regenera os três efeitos.
+
+## Versões arquivadas
+
+V0 a V4 e o arquivo anterior estão preservados em `unused versions/`, junto
+com os scripts e os créditos históricos. A pasta pode ser versionada no Git,
+mas contém `.gdignore` e é excluída nos presets Windows, macOS e Linux para
+não entrar na exportação oficial. Consulte `unused versions/README.md`.
