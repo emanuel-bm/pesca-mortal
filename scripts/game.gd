@@ -164,6 +164,12 @@ var records_personal := {"endless": false, "bosses": false}
 var test_artifact_paths: Array[String] = []
 
 func _ready() -> void:
+ var cursor_layer := CanvasLayer.new()
+ cursor_layer.layer = 100
+ add_child(cursor_layer)
+ var menu_cursor := preload("res://scripts/menu_cursor.gd").new()
+ menu_cursor.game = self
+ cursor_layer.add_child(menu_cursor)
  get_window().title = "Pesca Mortal " + str(ProjectSettings.get_setting("application/config/version", "1.0.0"))
  rng.randomize()
  game_font = load("res://assets/fonts/Perfect DOS VGA 437 Win.ttf")
@@ -1156,7 +1162,7 @@ func movement() -> Vector2:
  return direction.normalized()
 
 func update_cursor_visibility() -> void:
- var desired := Input.MOUSE_MODE_HIDDEN if state == "playing" else Input.MOUSE_MODE_VISIBLE
+ var desired := Input.MOUSE_MODE_HIDDEN
  if Input.mouse_mode != desired: Input.mouse_mode = desired
 
 func _process(delta: float) -> void:
@@ -1768,6 +1774,11 @@ func update_minimap(dt: float) -> void:
   minimap_view_size = view_size
   minimap_renderer.refresh(self)
 
+func draw_spear(canvas: CanvasItem, tip: Vector2, direction: Vector2) -> void:
+ var side := direction.orthogonal()
+ canvas.draw_line(tip - direction * 18.75, tip - direction * 3.75, Color(0.7, 0.44, 0.19), 2.25)
+ canvas.draw_colored_polygon(PackedVector2Array([tip + direction * 5.25, tip - direction * 4.5 + side * 3, tip - direction * 2.25, tip - direction * 4.5 - side * 3]), Color(0.85, 0.93, 0.89))
+
 func _draw() -> void:
  var offset := camera_offset()
  var viewport := get_viewport_rect().size
@@ -1789,9 +1800,7 @@ func _draw() -> void:
   if not visible_world.grow(26).has_point(projectile.pos): continue
   var tip: Vector2 = projectile.pos - offset
   var direction: Vector2 = projectile.velocity.normalized()
-  var side := direction.orthogonal()
-  draw_line(tip - direction * 18.75, tip - direction * 3.75, Color(0.7, 0.44, 0.19), 2.25)
-  draw_colored_polygon(PackedVector2Array([tip + direction * 5.25, tip - direction * 4.5 + side * 3, tip - direction * 2.25, tip - direction * 4.5 - side * 3]), Color(0.85, 0.93, 0.89))
+  draw_spear(self, tip, direction)
  if graphics_quality < 2: character_quality.draw_fish(self, visible_world, offset)
  for enemy in enemies:
   if graphics_quality < 2 and character_quality.fish_batches.size() == 2 and not enemy.boss: continue
