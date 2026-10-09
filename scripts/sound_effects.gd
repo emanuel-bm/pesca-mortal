@@ -6,6 +6,9 @@ var players: Dictionary = {}
 var random := RandomNumberGenerator.new()
 var last_death_ms := -1000
 var last_boss_ms := -1000
+var pending_roars: Array[float] = []
+var roar_spacing_remaining := 0.0
+var roar_voices: Array[AudioStreamPlayer] = []
 var music_player: AudioStreamPlayer
 var outgoing_music_player: AudioStreamPlayer
 const MUSIC_FADE_SECONDS := 4.0
@@ -17,10 +20,10 @@ var transition_remaining := -1.0
 var music_gain := 1.0
 var outgoing_music_gain := 0.0
 var music_clock := 0.0
-const VOLUME_NAMES := {"master": "Geral", "music": "Música", "boss": "Rugido do Minhocão", "emerge": "Minhocão emergindo", "dash": "Investida do Minhocão", "shot": "Lança", "death": "Peixes mergulhando", "hurt": "Dano recebido", "level": "Subida de nível"}
+const VOLUME_NAMES := {"master": "Geral", "music": "Música", "boss": "Sons do Minhocão", "shot": "Lança", "death": "Peixes mergulhando", "hurt": "Dano recebido", "level": "Subida de nível"}
 const MAX_EFFECT_VOLUME := {"boss": 0.65, "emerge": 0.5, "dash": 0.45, "shot": 0.5, "death": 0.2, "hurt": 0.5, "level": 0.3}
 const VOLUME_VERSION := 2
-var volumes := {"master": 1.0, "music": 0.7, "boss": 0.8, "emerge": 0.8, "dash": 0.8, "shot": 1.0, "death": 1.0, "hurt": 1.0, "level": 1.0}
+var volumes := {"master": 1.0, "music": 0.7, "boss": 0.8, "shot": 1.0, "death": 1.0, "hurt": 1.0, "level": 1.0}
 
 func _ready() -> void:
  random.randomize()
@@ -58,8 +61,15 @@ func load_volumes() -> void:
 
 func apply_volumes() -> void:
  for id in players:
-  players[id].volume_linear = MAX_EFFECT_VOLUME[id] * volumes.master * volumes[id]
+  players[id].volume_linear = MAX_EFFECT_VOLUME[id] * volumes.master * volumes[volume_group(id)]
   if not effect_enabled(id): players[id].stop()
+ for voice in roar_voices:
+  voice.volume_linear = MAX_EFFECT_VOLUME.boss * volumes.master * volumes.boss
+  if not effect_enabled("boss"): voice.stop()
+ if not effect_enabled("boss"):
+  pending_roars.clear()
+  roar_spacing_remaining = 0.0
+  clear_roar_voices()
  apply_music_volume()
 
 func apply_music_volume() -> void:
@@ -114,6 +124,7 @@ func request_battle_music() -> void:
 
 func _process(delta: float) -> void:
  update_music(delta)
+ update_roars(delta)
 
 func update_music(delta: float) -> void:
  music_clock = fposmod(music_clock + delta, 30.0)
@@ -129,8 +140,11 @@ func update_music(delta: float) -> void:
    transition_remaining = -1.0
  apply_music_volume()
 
+func volume_group(id: String) -> String:
+ return "boss" if id in ["boss", "emerge", "dash"] else id
+
 func effect_enabled(id: String) -> bool:
- return volumes.master > 0.0 and volumes[id] > 0.0
+ return volumes.master > 0.0 and volumes[volume_group(id)] > 0.0
 
 func set_volume(id: String, value: float) -> void:
  volumes[id] = clampf(value, 0.0, 1.0)
@@ -164,13 +178,44 @@ func play_boss_dash() -> void:
  play_effect("dash", 0.98, 1.02)
 
 func announce_boss() -> void:
- # Música e rugido são disparados no mesmo frame. Uma onda usa um só rugido.
  request_battle_music()
  if not effect_enabled("boss"): return
- var now := Time.get_ticks_msec()
- if now - last_boss_ms < 2000: return
- last_boss_ms = now
- play_effect("boss", 1.0, 1.0)
+ last_boss_ms = Time.get_ticks_msec()
+ # Cada chefe conserva seu rugido; os da mesma onda começam desencontrados.
+ if roar_spacing_remaining <= 0.0:
+  play_roar_voice()
+ else:
+  pending_roars.append(roar_spacing_remaining)
+ roar_spacing_remaining += random.randf_range(0.18, 0.28)
+
+func update_roars(delta: float) -> void:
+ roar_spacing_remaining = maxf(0.0, roar_spacing_remaining - delta)
+ for index in range(pending_roars.size() - 1, -1, -1):
+  pending_roars[index] -= delta
+  if pending_roars[index] <= 0.0:
+   pending_roars.remove_at(index)
+   play_roar_voice()
+
+func play_roar_voice() -> void:
+ if not effect_enabled("boss"): return
+ var voice := AudioStreamPlayer.new()
+ voice.stream = players.boss.stream
+ voice.pitch_scale = random.randf_range(0.97, 1.03)
+ voice.volume_linear = MAX_EFFECT_VOLUME.boss * volumes.master * volumes.boss
+ add_child(voice)
+ roar_voices.append(voice)
+ voice.finished.connect(on_roar_finished.bind(voice))
+ voice.play()
+
+func on_roar_finished(voice: AudioStreamPlayer) -> void:
+ roar_voices.erase(voice)
+ voice.queue_free()
+
+func clear_roar_voices() -> void:
+ for voice in roar_voices:
+  voice.stop()
+  voice.queue_free()
+ roar_voices.clear()
 
 func play_effect(id: String, pitch_min: float, pitch_max: float) -> void:
  if not effect_enabled(id): return
@@ -180,6 +225,9 @@ func play_effect(id: String, pitch_min: float, pitch_max: float) -> void:
  player.play()
 
 func reset() -> void:
+ pending_roars.clear()
+ roar_spacing_remaining = 0.0
+ clear_roar_voices()
  for player in players.values(): player.stop()
  last_death_ms = -1000
  last_boss_ms = -1000

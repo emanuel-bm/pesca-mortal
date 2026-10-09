@@ -46,13 +46,47 @@ func run() -> void:
  assert(boss.phase == "dash" and sounds.attacks == ["emerge", "dash"])
  game.update_game(0.01)
  assert(sounds.attacks == ["emerge", "dash"], "Dash audio must not repeat every frame")
- for id in ["emerge", "dash"]:
-  sounds.players[id].play()
-  sounds.volumes[id] = 0.0
-  sounds.apply_volumes()
+ for id in ["emerge", "dash"]: sounds.players[id].play()
+ sounds.volumes.boss = 0.0
+ sounds.apply_volumes()
+ for id in ["boss", "emerge", "dash"]:
   assert(not sounds.players[id].playing and not sounds.effect_enabled(id))
+ assert(sounds.pending_roars.is_empty() and sounds.roar_voices.is_empty())
+ sounds.volumes.boss = 1.0
+ sounds.set_process(false)
+ game.start_ten_bosses_test()
+ game.spawn_timer = 1000
+ game.attack_timer = 1000
+ game.update_game(2.01)
+ var bosses: Array = game.enemies.filter(func(enemy): return enemy.boss)
+ assert(bosses.size() == 10)
+ assert(sounds.roar_voices.size() == 1 and sounds.pending_roars.size() == 9)
+ var previous_delay := 0.0
+ for delay in sounds.pending_roars:
+  assert(delay > previous_delay)
+  previous_delay = delay
+ for enemy in bosses:
+  assert(enemy.first_emergence_pending and enemy.phase == "burrow")
+ bosses[0].timer = 0.0
+ game.update_game(0.01)
+ assert(bosses[0].phase == "tracking" and not bosses[0].first_emergence_pending)
+ for index in range(1, bosses.size()):
+  assert(bosses[index].first_emergence_pending)
+ sounds.update_roars(0.3)
+ assert(sounds.roar_voices.size() == 2 and sounds.pending_roars.size() == 8)
+ sounds.update_roars(3.0)
+ assert(sounds.roar_voices.size() == 10 and sounds.pending_roars.is_empty())
+ var transition: float = sounds.transition_remaining
+ sounds.announce_boss()
+ assert(sounds.transition_remaining == transition)
+ sounds.reset()
+ assert(sounds.roar_voices.is_empty() and sounds.pending_roars.is_empty())
+ game.start_run("endless")
+ game.elapsed = game.ENDLESS_BOSS_INTERVAL
+ game.spawn_endless_bosses()
+ assert(game.enemies.filter(func(enemy): return enemy.boss).size() == 1)
  assert(is_equal_approx(sounds.players.boss.stream.get_length(), 2.0))
- print("BOSS AUDIO PASS: first emergence, attack sounds at action start, no per-frame repeats, per-effect mute, 2s roar")
+ print("BOSS AUDIO PASS: first emergence, attack sounds at action start, no per-frame repeats, shared boss mute, 10 staggered voices, per-boss emergence, reset, normal first wave, 2s roar")
  game.free()
  await create_timer(0.1).timeout
  call_deferred("quit", 0)

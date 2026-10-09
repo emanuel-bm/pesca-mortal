@@ -87,6 +87,7 @@ var test_run := false
 var bosses_defeated := 0
 var next_boss_time := ENDLESS_BOSS_INTERVAL
 var endless_wave := 0
+var test_first_wave_bosses := 1
 var run_history: Array = []
 var player_totals := {"seconds": 0.0, "kills": 0, "levels": 0}
 var history_path := "user://endless_runs.json"
@@ -284,6 +285,8 @@ func _ready() -> void:
  show_menu()
  if "--boss-test" in OS.get_cmdline_user_args():
   start_boss_test()
+ if "--ten-bosses-test" in OS.get_cmdline_user_args():
+  start_ten_bosses_test()
  if "--smoke-test" in OS.get_cmdline_user_args():
   smoke_test = true
   start_run()
@@ -510,6 +513,7 @@ func show_menu() -> void:
  button("Editar nome de jogador", show_nickname)
  button("Testar chefão — nível 30", start_boss_test)
  button("Testar infinito — nível 35", start_endless_test)
+ button("Testar 10 Minhocões", start_ten_bosses_test)
  button("Teste de hordas", start_horde_test)
  button("Configurações", show_settings)
  button("Fechar jogo", quit_game)
@@ -839,6 +843,7 @@ func start_run(mode: String = "bosses") -> void:
  bosses_defeated = 0
  next_boss_time = ENDLESS_BOSS_INTERVAL
  endless_wave = 0
+ test_first_wave_bosses = 1
  stats_panel.hide()
  sounds.reset()
  player = ARENA / 2
@@ -891,6 +896,12 @@ func start_boss_test() -> void:
  elapsed = RUN_SECONDS
  boss_spawned = true
  spawn_enemy(true)
+
+func start_ten_bosses_test() -> void:
+ prepare_level_30_test("endless")
+ prevent_player_death = true
+ test_first_wave_bosses = 10
+ elapsed = ENDLESS_BOSS_INTERVAL - 2.0
 
 func start_endless_test() -> void:
  prepare_level_30_test("endless")
@@ -1188,7 +1199,8 @@ func fish_spawn_rate() -> float:
 func spawn_endless_bosses() -> void:
  while elapsed >= next_boss_time:
   endless_wave += 1
-  for index in endless_wave: spawn_enemy(true)
+  var count := test_first_wave_bosses if test_run and endless_wave == 1 else endless_wave
+  for index in count: spawn_enemy(true)
   boss_spawned = true
   next_boss_time += ENDLESS_BOSS_INTERVAL
 

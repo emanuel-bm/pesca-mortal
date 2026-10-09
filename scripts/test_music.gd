@@ -90,7 +90,7 @@ func run() -> void:
  sounds.start_calm_music()
  sounds.update_music(1.0)
  assert(sounds.music_track == "calm", "Returning to menu must cancel a pending boss transition")
- # Two-second roar, synchronized music trigger, simultaneous-boss suppression.
+ # Two-second roar, synchronized music trigger, independent simultaneous-boss roars.
  assert(is_equal_approx(sounds.players.boss.stream.get_length(), 2.0))
  sounds.volumes.master = 1.0
  sounds.volumes.boss = 1.0
@@ -98,7 +98,8 @@ func run() -> void:
  assert(sounds.music_track == "battle" and sounds.transition_remaining == 4.0)
  var announcement_time: int = sounds.last_boss_ms
  sounds.announce_boss()
- assert(sounds.last_boss_ms == announcement_time)
+ assert(sounds.pending_roars.size() == 1 and sounds.roar_voices.size() == 1)
+ announcement_time = sounds.last_boss_ms
  sounds.players.boss.play()
  sounds.volumes.boss = 0.0
  sounds.apply_volumes()
