@@ -117,6 +117,8 @@ var quality_picker: OptionButton
 var character_quality = preload("res://scripts/character_quality.gd").new()
 var graphics_quality := 2
 var fps_toggle: CheckButton
+var test_modes_enabled := false
+var test_mode_toggle: CheckButton
 var fps_label: Label
 var sounds: Node
 var player_texture: Texture2D
@@ -189,9 +191,9 @@ func _ready() -> void:
  add_child(sounds)
  character_quality.setup(self)
  load_display_settings()
- var automated_test := "--smoke-test" in OS.get_cmdline_user_args()
+ var automated_test := test_modes_available() and "--smoke-test" in OS.get_cmdline_user_args()
  for argument in OS.get_cmdline_args():
-  if argument.begins_with("res://scripts/test_"): automated_test = true
+  if test_modes_available() and argument.begins_with("res://scripts/test_"): automated_test = true
  if automated_test:
   history_path = "user://test_boot_history_%d_%d.json" % [Time.get_ticks_usec(), get_instance_id()]
   test_artifact_paths.append(history_path)
@@ -288,11 +290,11 @@ func _ready() -> void:
  padding.add_child(panel)
  setup_stats_panel()
  show_menu()
- if "--boss-test" in OS.get_cmdline_user_args():
+ if test_modes_available() and "--boss-test" in OS.get_cmdline_user_args():
   start_boss_test()
- if "--ten-bosses-test" in OS.get_cmdline_user_args():
+ if test_modes_available() and "--ten-bosses-test" in OS.get_cmdline_user_args():
   start_ten_bosses_test()
- if "--smoke-test" in OS.get_cmdline_user_args():
+ if test_modes_available() and "--smoke-test" in OS.get_cmdline_user_args():
   smoke_test = true
   start_run()
   elapsed = RUN_SECONDS - 2.0
@@ -603,10 +605,11 @@ func show_menu() -> void:
  show_records_panel()
  show_boss_records_panel()
  button("Histórico de partidas", show_history)
- button("Testar chefão — nível 30", start_boss_test)
- button("Testar infinito — nível 35", start_endless_test)
- button("Testar 10 Minhocões", start_ten_bosses_test)
- button("Teste de hordas", start_horde_test)
+ if test_modes_available() and test_modes_enabled:
+  button("Testar chefão — nível 30", start_boss_test)
+  button("Testar infinito — nível 35", start_endless_test)
+  button("Testar 10 Minhocões", start_ten_bosses_test)
+  button("Teste de hordas", start_horde_test)
  button("Configurações", show_settings)
  button("Fechar jogo", quit_game)
  online.synchronize()
@@ -801,7 +804,11 @@ func _exit_tree() -> void:
  for path in test_artifact_paths:
   DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
+func test_modes_available() -> bool:
+ return OS.has_feature("editor")
+
 func load_display_settings() -> void:
+ test_modes_enabled = false
  var config := ConfigFile.new()
  if config.load("user://display.cfg") == OK:
   var saved: Vector2i = config.get_value("display", "resolution", selected_resolution)
@@ -868,6 +875,12 @@ func show_settings() -> void:
  fps_toggle.text = "Mostrar contador de FPS"
  fps_toggle.button_pressed = show_fps
  panel.add_child(fps_toggle)
+ test_mode_toggle = null
+ if test_modes_available():
+  test_mode_toggle = CheckButton.new()
+  test_mode_toggle.text = "Habilitar modo teste"
+  test_mode_toggle.button_pressed = test_modes_enabled
+  panel.add_child(test_mode_toggle)
  for id in sounds.VOLUME_NAMES:
   var row := HBoxContainer.new()
   var label := Label.new()
@@ -907,6 +920,7 @@ func save_settings_from_ui() -> void:
  selected_resolution = RESOLUTIONS[resolution_picker.selected]
  fullscreen = fullscreen_toggle.button_pressed
  show_fps = fps_toggle.button_pressed
+ test_modes_enabled = test_modes_available() and is_instance_valid(test_mode_toggle) and test_mode_toggle.button_pressed
  apply_display_settings()
  leave_settings()
 
@@ -934,6 +948,7 @@ func restart_run() -> void:
  else: start_run(run_mode)
 
 func start_run(mode: String = "bosses") -> void:
+ if mode not in ["endless", "bosses"] and not test_modes_available(): return
  sounds.start_calm_music()
  record_run("restart")
  run_mode = mode
@@ -985,6 +1000,7 @@ func start_run(mode: String = "bosses") -> void:
  overlay.hide()
 
 func prepare_level_30_test(mode: String) -> void:
+ if not test_modes_available(): return
  start_run(mode)
  test_run = true
  for id in ["damage", "rate", "shots", "speed", "magnet"]:
@@ -992,18 +1008,21 @@ func prepare_level_30_test(mode: String) -> void:
  level = 30
 
 func start_boss_test() -> void:
+ if not test_modes_available(): return
  prepare_level_30_test("bosses")
  elapsed = RUN_SECONDS
  boss_spawned = true
  spawn_enemy(true)
 
 func start_ten_bosses_test() -> void:
+ if not test_modes_available(): return
  prepare_level_30_test("endless")
  prevent_player_death = true
  test_first_wave_bosses = 10
  elapsed = ENDLESS_BOSS_INTERVAL - 2.0
 
 func start_endless_test() -> void:
+ if not test_modes_available(): return
  prepare_level_30_test("endless")
  for id in ["damage", "rate", "shots", "magnet"]:
   for rank in (2 if id == "damage" else 1): choose_upgrade(id)
@@ -1016,6 +1035,7 @@ func start_endless_test() -> void:
  for index in 2: spawn_enemy(true)
 
 func start_horde_test() -> void:
+ if not test_modes_available(): return
  start_run("horde")
  prevent_player_death = true
  test_run = true
