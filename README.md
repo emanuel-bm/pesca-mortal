@@ -6,8 +6,9 @@ fora do Git; pacotes para jogar são distribuídos pelas Releases.
 
 O menu oferece **Modo infinito** e **Modo por chefões**. O modo por chefões
 mantém o confronto aos cinco minutos e termina ao vencer o Minhocão.
-No infinito, 1.000 eliminações geram um chefão; 2.000 geram mais dois;
-3.000 geram mais três, sem remover chefões ainda vivos. Cada chefão abatido
+No infinito, o primeiro chefão aparece aos quatro minutos. Depois, novas ondas
+aparecem a cada dois minutos, com dois chefões na segunda, três na terceira
+e assim por diante, sem remover chefões ainda vivos. Cada chefão abatido
 multiplica HP, dano e velocidade dos inimigos por 1,05, de forma acumulativa,
 atingindo os atuais e os próximos. Tamanho e XP dos peixes não mudam com o buff.
 O contador de eliminações inclui chefões no modo infinito.
