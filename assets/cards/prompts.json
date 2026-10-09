@@ -1,0 +1,34 @@
+{
+  "tool": "image_gen built-in",
+  "transparent_background": true,
+  "cards": [
+    {
+      "id": "perfurante",
+      "prompt": "Create ONE small pixel-art game pickup sprite shaped like an upright playing card, front view flat orthographic, aspect ratio 2:3, centered on a square transparent canvas. Ivory parchment face, chunky near-black stepped pixel outline, thin muted golden inner border, slightly stepped rounded corners, tiny matching decorative corner pips rotated 180 degrees at opposite corners like a playing card. Large central emblem. Cohesive retro 16-bit pixel art: hard square pixel clusters, limited palette, no antialiasing, no soft gradients, no glow, no external shadow. Intended sprite readable at 32x48 game pixels; art should be simple and visibly coarse as if designed at that resolution and enlarged nearest-neighbor. Card occupies about 60% canvas width and 90% height. NO letters, NO words, NO numbers, NO captions, NO card deck, ONE card only. Transparent outside the card. References are subject/color references from existing game, do not reproduce their entire canvases. PERFURANTE card central emblem: the referenced silver-gray piranha with orange-red belly, dark fins, orange eye and toothy mouth, simplified horizontal side view facing right. A single slender brown wooden spear with pale ivory triangular metal arrowhead clearly passes diagonally through the piranha's body, entering at lower-left and emerging at upper-right, shaft visible on both sides. Match game spear: unadorned brown shaft and pale triangular tip, no feathers, no fantasy ornament. No blood or gore. Tiny corner pips shaped like spearheads. Accent color muted green.",
+      "references": [
+        "C:/Users/emanu/OneDrive/Documentos/cha-mortal/assets/piranha.png"
+      ]
+    },
+    {
+      "id": "intangivel",
+      "prompt": "Create ONE small pixel-art game pickup sprite shaped like an upright playing card, front view flat orthographic, aspect ratio 2:3, centered on a square transparent canvas. Ivory parchment face, chunky near-black stepped pixel outline, thin muted golden inner border, slightly stepped rounded corners, tiny matching decorative corner pips rotated 180 degrees at opposite corners like a playing card. Large central emblem. Cohesive retro 16-bit pixel art: hard square pixel clusters, limited palette, no antialiasing, no soft gradients, no glow, no external shadow. Intended sprite readable at 32x48 game pixels; art should be simple and visibly coarse as if designed at that resolution and enlarged nearest-neighbor. Card occupies about 60% canvas width and 90% height. NO letters, NO words, NO numbers, NO captions, NO card deck, ONE card only. Transparent outside the card. References are subject/color references from existing game, do not reproduce their entire canvases. INTANGIVEL card central emblem: ONE large detached armor scale of the referenced Minhocao, a thick angular diamond-shaped gray-olive stone-like reptile scale with a raised central ridge and a few ivory highlights, recognizable as one plate of this creature's rocky armor. No full creature, no eye, no mouth. Strong simple silhouette. Tiny corner pips shaped like diamond scales. Accent color slate blue.",
+      "references": [
+        "C:/Users/emanu/OneDrive/Documentos/cha-mortal/assets/minhocao.png"
+      ]
+    },
+    {
+      "id": "furia",
+      "prompt": "Create ONE small pixel-art game pickup sprite shaped like an upright playing card, front view flat orthographic, aspect ratio 2:3, centered on a square transparent canvas. Ivory parchment face, chunky near-black stepped pixel outline, thin muted golden inner border, slightly stepped rounded corners, tiny matching decorative corner pips rotated 180 degrees at opposite corners like a playing card. Large central emblem. Cohesive retro 16-bit pixel art: hard square pixel clusters, limited palette, no antialiasing, no soft gradients, no glow, no external shadow. Intended sprite readable at 32x48 game pixels; art should be simple and visibly coarse as if designed at that resolution and enlarged nearest-neighbor. Card occupies about 60% canvas width and 90% height. NO letters, NO words, NO numbers, NO captions, NO card deck, ONE card only. Transparent outside the card. References are subject/color references from existing game, do not reproduce their entire canvases. FURIA card central emblem: a close-up of the referenced Minhocao's fierce orange-gold eye, vertical black slit pupil, bright ivory glint, rimmed with a few angular gray-olive rocky scales and a deep red lower eyelid. ONE eye only, large and instantly recognizable, no whole head. Tiny corner pips shaped like eye silhouettes. Accent color orange-red.",
+      "references": [
+        "C:/Users/emanu/OneDrive/Documentos/cha-mortal/assets/minhocao.png"
+      ]
+    },
+    {
+      "id": "ima",
+      "prompt": "Create ONE small pixel-art game pickup sprite shaped like an upright playing card, front view flat orthographic, aspect ratio 2:3, centered on a square transparent canvas. Ivory parchment face, chunky near-black stepped pixel outline, thin muted golden inner border, slightly stepped rounded corners, tiny matching decorative corner pips rotated 180 degrees at opposite corners like a playing card. Large central emblem. Cohesive retro 16-bit pixel art: hard square pixel clusters, limited palette, no antialiasing, no soft gradients, no glow, no external shadow. Intended sprite readable at 32x48 game pixels; art should be simple and visibly coarse as if designed at that resolution and enlarged nearest-neighbor. Card occupies about 60% canvas width and 90% height. NO letters, NO words, NO numbers, NO captions, NO card deck, ONE card only. Transparent outside the card. References are subject/color references from existing game, do not reproduce their entire canvases. IMA card central emblem: a classic red horseshoe magnet with pale silver metallic pole tips, opening upwards, with ONE small narrow golden crispy fried fish belly strip (ventrecha) attached to ONE pole tip, matching the provided referenced long irregular golden-brown food shape. Keep magnet very recognizable, the golden fried food must clearly touch the tip rather than float separately. Tiny corner pips shaped like horseshoe magnets. Accent color red with golden food.",
+      "references": [
+        "C:/Users/emanu/OneDrive/Documentos/cha-mortal/assets/ventrescha-v3.png"
+      ]
+    }
+  ]
+}

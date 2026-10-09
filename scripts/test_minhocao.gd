@@ -18,7 +18,7 @@ func run() -> void:
  await process_frame
  game.start_run()
  for i in 5: game.choose_upgrade("speed")
- assert(game.speed <= game.MAX_PLAYER_SPEED)
+ assert(is_equal_approx(game.speed, 190.0 * pow(1.04, 5)))
  game.start_run()
  assert(is_equal_approx(game.speed, 190.0))
  game.elapsed = 300
@@ -30,7 +30,7 @@ func run() -> void:
  assert(game.enemies.size() > enemy_count, "Hordes must continue during boss fight")
  for enemy in game.enemies:
   if not enemy.boss:
-   var expected_speed: float = 85.8 if enemy.tank else minf(game.enemy_speed_cap(), (105.0 + game.elapsed * 0.1) * game.MOVEMENT_MULTIPLIER)
+   var expected_speed: float = 85.8 if enemy.tank else (105.0 + game.elapsed * 0.1) * game.MOVEMENT_MULTIPLIER
    assert(is_equal_approx(enemy.speed, expected_speed))
  game.start_run()
  game.enemies.clear()
@@ -111,7 +111,7 @@ func run() -> void:
  game.attack_timer = 100
  game.update_game(0.02)
  assert(game.health == game.MAX_HEALTH - boss.contact, "Emergence must damage inside warning area")
- print("MINHOCAO PASS: speed cap, HP, invulnerability, target lock, emergence damage, vulnerability, dash, cycle")
+ print("MINHOCAO PASS: uncapped speed, HP, invulnerability, target lock, emergence damage, vulnerability, dash, cycle")
  if "--capture" in OS.get_cmdline_user_args():
   assert(game.player_texture != null and game.boss_texture != null)
   game.start_run()

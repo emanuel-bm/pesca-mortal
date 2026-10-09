@@ -11,47 +11,53 @@ func run() -> void:
  game.online.disabled = true
  game.start_run("endless")
  game.test_run = true
- assert(is_equal_approx(game.enemy_speed_cap(), 171.0))
  game.elapsed = 10000
  game.bosses_defeated = 100
  for index in 40: game.spawn_enemy(false)
- for fish in game.enemies: assert(is_equal_approx(fish.speed, 171.0))
+ var multiplier := pow(1.05, 100)
+ for fish in game.enemies:
+  var base_speed: float = 85.8 if fish.tank else (105.0 + game.elapsed * 0.1) * game.MOVEMENT_MULTIPLIER
+  assert(is_equal_approx(fish.speed, base_speed * multiplier))
+ var original_speed: float = game.enemies.back().speed
  game.buff_endless_enemies()
- for fish in game.enemies: assert(is_equal_approx(fish.speed, 171.0))
- game.choose_upgrade("speed")
- assert(is_equal_approx(game.enemy_speed_cap(), 190.0 * 1.04 * 0.9))
- game.buff_endless_enemies()
- for fish in game.enemies: assert(is_equal_approx(fish.speed, game.enemy_speed_cap()))
- game.max_player_speed = 300.0
+ assert(is_equal_approx(game.enemies.back().speed, original_speed * 1.05))
  for index in 30: game.choose_upgrade("speed")
- assert(game.speed == 300.0 and game.enemy_speed_cap() == 270.0)
- assert(not game.format_stat("speed", 250.0).contains("MAX"))
- assert(game.format_stat("speed", 300.0).ends_with(" (MAX)"))
- game.show_upgrades()
- assert(not "speed" in game.choices)
- game.resume()
- game.spawn_enemy(false)
- assert(game.enemies.back().speed == 270.0)
- game.speed = 190.0
+ assert(is_equal_approx(game.speed, 190.0 * pow(1.04, 30)))
+ assert(game.speed > 300.0 and not game.format_stat("speed", game.speed).contains("MAX"))
+ game.speed = 1.0
  var fish: Dictionary = game.enemies.back()
  fish.pos = Vector2(500, 500)
- fish.crowd_velocity = Vector2(270, 0)
- fish.desired_velocity = Vector2(270, 0)
+ fish.speed = 400.0
+ fish.crowd_velocity = Vector2(400, 0)
+ fish.desired_velocity = Vector2(400, 0)
  fish.separation_timer = 1.0
  var before: Vector2 = fish.pos
  game.pursue_player(game.enemies.size() - 1, 0.1)
- assert(fish.pos.distance_to(before) <= 17.101)
- # Compare capped boss movement against its original, at the same phase duration.
- for multiplier in [1.0, 1.05, 1.5, 10.0]:
-  var boss := {"pos": Vector2(500, 500), "phase": "exposed", "timer": 3.0, "stat_multiplier": multiplier}
+ assert(is_equal_approx(fish.pos.distance_to(before), 40.0))
+ for boss_multiplier in [1.0, 1.05, 1.5, 10.0]:
+  var boss := {"pos": Vector2(500, 500), "phase": "exposed", "timer": 3.0, "stat_multiplier": boss_multiplier}
   game.MINHOCAO.update(boss, 0.1, Vector2(1000, 500), game.ARENA)
-  assert(is_equal_approx(boss.pos.x - 500, 54.0 * minf(multiplier, 1.5) * 0.1))
-  boss = {"pos": Vector2(500, 500), "phase": "dash", "timer": 1.0, "phase_duration": 1.0, "dash_start": Vector2(500, 500), "dash_end": Vector2(1000, 500), "stat_multiplier": multiplier}
+  assert(is_equal_approx(boss.pos.x - 500, 54.0 * boss_multiplier * 0.1))
+  boss = {"pos": Vector2(500, 500), "phase": "dash", "timer": 1.0, "phase_duration": 1.0, "dash_start": Vector2(500, 500), "dash_end": Vector2(1000, 500), "stat_multiplier": boss_multiplier}
   game.MINHOCAO.update(boss, 0.1, Vector2(1000, 500), game.ARENA)
-  assert(is_equal_approx(boss.pos.x - 500, 500.0 * minf(multiplier, 1.5) * 0.1))
+  assert(is_equal_approx(boss.pos.x - 500, 500.0 * boss_multiplier * 0.1))
   boss.phase = "tracking"
   boss.timer = 1.0
   game.MINHOCAO.update(boss, 0.1, Vector2(1000, 500), game.ARENA)
   assert(is_equal_approx(boss.timer, 0.9))
- print("SPEED LIMITS PASS: current player speed, upgrade/config changes, spawn/buff/movement caps, independent boss movement cap and unchanged warnings")
+ game.start_run()
+ game.spawn_timer = 100.0
+ game.attack_timer = 100.0
+ var first_cost: int = game.xp_needed()
+ game.level = 2
+ var second_cost: int = game.xp_needed()
+ game.level = 1
+ game.collect_xp(first_cost + second_cost + 2)
+ game.update_game(0.0)
+ assert(game.level == 2 and game.state == "upgrade")
+ game.choose_upgrade(game.choices[0])
+ assert(game.level == 3 and game.state == "upgrade", "Surplus XP must immediately open the second choice screen")
+ game.choose_upgrade(game.choices[0])
+ assert(game.state == "playing" and game.xp == 2)
+ print("SPEED/XP PASS: unlimited speeds; independent movement; consecutive level-up choices")
  quit()

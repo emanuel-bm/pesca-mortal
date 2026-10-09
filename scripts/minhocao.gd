@@ -10,7 +10,6 @@ const DASH_WARNING_TIME := 1.2 / ATTACK_RATE
 const DASH_TIME := 0.8 / (ATTACK_RATE * 1.2)
 const EXPOSED_TIME := 3.0
 const SURFACE_SPEED := 45.0 * 1.2
-const MAX_MOVEMENT_MULTIPLIER := 1.5
 
 static func set_phase_timer(enemy: Dictionary, base_time: float) -> void:
  enemy.phase_duration = base_time * randf_range(0.7, 1.3)
@@ -28,7 +27,7 @@ static func vulnerable(enemy: Dictionary) -> bool:
  return enemy.phase in ["exposed", "dash"]
 
 static func update(enemy: Dictionary, dt: float, player: Vector2, arena: Vector2) -> bool:
- var movement_multiplier := minf(MAX_MOVEMENT_MULTIPLIER, float(enemy.get("stat_multiplier", 1.0)))
+ var movement_multiplier := float(enemy.get("stat_multiplier", 1.0))
  enemy.timer -= dt * (movement_multiplier if enemy.phase == "dash" else 1.0)
  match enemy.phase:
   "burrow":

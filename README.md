@@ -20,7 +20,24 @@ modo por chefões e testes de nível 30 não entram no ranking. O recorde aparec
 no menu e o botão Histórico abre a lista completa.
 
 A [pesquisa sobre habilidades e cartas](docs/pesquisa-habilidades.md) descreve
-as referências; nenhum sistema de cartas foi implementado.
+as referências. As [regras das cartas](docs/cartas-em-discussao.md) estão implementadas:
+piranhas têm 0,25% de chance de drop, pintados 1,25% e chefões do infinito 100%.
+Cada drop sorteia igualmente Ímã, Fúria, Intangível ou Perfurante. Coletar ativa
+a carta: Ímã atrai todos os XP existentes no mapa até a canoa, a 630 pixels/s;
+a experiência é recebida quando cada XP chega. As outras duram seis segundos.
+Fúria dá +50% dano, +50% frequência e +20% velocidade; Intangível protege de
+todo dano; Perfurante faz novas lanças atravessarem os alvos consumindo seu saldo
+de dano pela vida atual de cada alvo, até esgotar o saldo ou atingir a borda.
+Efeitos diferentes combinam; repetir uma carta renova o tempo sem acumular bônus.
+Cartas flutuam e recebem um brilho de cima para baixo. Desaparecem em 30 segundos,
+piscando a cada meio segundo nos últimos cinco. Pausas e escolhas de melhorias
+congelam efeitos e animações. Ícones na parte inferior mostram o tempo restante.
+Na **Sala de treino**, **F9** invoca as quatro cartas para experimentar.
+**Ctrl+1** ativa Ímã, **Ctrl+2** Fúria, **Ctrl+3** Intangível e **Ctrl+4** Perfurante,
+diretamente, mesmo com os drops desligados. Também há botões na guia Treino.
+Pause com ESC e ative **Habilitar cartas** na guia Treino para habilitar drops:
+peixes usam as mesmas chances da partida e chefões deixam uma carta garantida.
+A opção começa desligada e volta a ficar desligada ao reiniciar o treino.
 
 Protótipo 2D em Godot 4.7.2. O título é provisório.
 O ranking global usa uma planilha privada com Apps Script. Cadastro de nickname
@@ -57,7 +74,7 @@ Os atalhos dependem da engine portátil local; não são um pacote de distribui�
 - Escolha melhorias com mouse ou teclas 1, 2 e 3.
 - Na escolha de melhorias, a tabela à direita mostra atributos atuais.
   Passe o mouse ou dê foco a uma opção para ver o valor atual e a prévia em verde.
-  A prévia respeita o teto de velocidade e só aplica a mudança ao escolher.
+  A prévia só aplica a mudança ao escolher; velocidade pode aumentar sem teto.
 - ESC: pausar ou continuar.
 
 Configurações de tela estão disponíveis no menu inicial e no menu de pausa.
@@ -74,20 +91,20 @@ durante a luta. Derrote o chefe para vencer.
 ## Escopo
 
 Uma arena delimitada, dois inimigos comuns, um chefe perseguidor,
-cinco melhorias (sem limite de escolhas; velocidade mantém seu teto), dano com invulnerabilidade
+cinco melhorias (sem limite de escolhas; velocidade sem teto), dano com invulnerabilidade
 temporária e knockback para longe do atacante, pausa, derrota, vitória e reinício.
-Vida máxima de 66; dano comum de 10, resistente de 15 e chefe de 25.
+Vida máxima inicial de 50; dano comum de 10, resistente de 15 e chefe de 25.
 Minhocão com 32.000 de vida; somente o chefe exibe barra de vida.
 Alterna mergulho de 0,6 s, marca que acompanha por 0,375 s e trava por 0,75 s,
 emergência, exposição por 3 s e investida em linha anunciada por 0,9 s.
 A investida atravessa o trajeto em 0,5 s; movimento à superfície de 54.
 Enterrado, não recebe dano nem atrai disparos. Emergência causa 25 de dano
 na área anunciada; contato mantém a invulnerabilidade de 0,8 s do jogador.
-Velocidade inicial do jogador: 190; melhorias de 4%, com teto de 250.
-Peixes comuns têm velocidade limitada a 90% da velocidade atual do jogador (171 no início; 225 quando o jogador chega a 250). O teto acompanha as melhorias de velocidade do jogador.
+Velocidade inicial do jogador: 190; melhorias de 4%, sem teto.
+Peixes usam sua própria velocidade, sem limite baseado na velocidade do jogador.
 Resistentes se movem a 78; perseguidores começam a 126. Todas as velocidades
 de movimento aumentaram 20% em relação à versão anterior.
-A velocidade máxima do jogador pode ser configurada no Inspector (`max_player_speed`, padrão 250). Movimentos na superfície e investidas do Minhocão recebem no máximo +50% de velocidade por buffs, independentemente da velocidade do jogador.
+Velocidades do jogador, dos peixes e dos chefões crescem sem teto de progressão. Movimentos na superfície e investidas do Minhocão recebem o multiplicador completo dos buffs; os tempos dos avisos continuam iguais.
 Melhorias de vida máxima e dano de ataque aumentam o valor atual em 20% por escolha.
 Valores exibidos são arredondados para inteiros; cálculos mantêm a precisão.
 Experiência por inimigo escala com sua área: pequenos dão 1 XP e laranjas 3 XP.

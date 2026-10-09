@@ -3,6 +3,7 @@ extends CanvasLayer
 var game: Node
 var frame: PanelContainer
 var auto_spawn := false
+var cards_enabled := false
 var controls: PanelContainer
 var editor: PanelContainer
 var values: Dictionary = {}
@@ -12,6 +13,7 @@ var tab_buttons: Array[Button] = []
 var selected_tab := 0
 var automatic: CheckButton
 var immortality: CheckButton
+var cards_toggle: CheckButton
 const STATS := {
  "health": ["Vida atual", 10.0, 1.0, 500.0],
  "max_health": ["Vida máxima", 10.0, 1.0, 500.0],
@@ -31,8 +33,10 @@ const ACTIONS := {
  KEY_F5: ["F5 · Limpar todos os inimigos", "clear"],
  KEY_F6: ["F6 · Avançar 1 minuto", "time"],
  KEY_F7: ["F7 · Subir um nível", "level"],
- KEY_F8: ["F8 · Restaurar vida", "heal"]
+ KEY_F8: ["F8 · Restaurar vida", "heal"],
+ KEY_F9: ["F9 · Invocar quatro cartas", "cards"]
 }
+const CARD_KEYS := {KEY_1: "ima", KEY_2: "furia", KEY_3: "intangivel", KEY_4: "perfurante"}
 
 func _ready() -> void:
  layer = 2
@@ -94,6 +98,13 @@ func _ready() -> void:
   item.alignment = HORIZONTAL_ALIGNMENT_LEFT
   item.pressed.connect(act.bind(ACTIONS[key][1]))
   column.add_child(item)
+ for key in CARD_KEYS:
+  var id: String = CARD_KEYS[key]
+  var item := Button.new()
+  item.text = "Ctrl+%d · %s" % [key - KEY_1 + 1, {"ima": "Ímã", "furia": "Fúria", "intangivel": "Intangível", "perfurante": "Perfurante"}[id]]
+  item.alignment = HORIZONTAL_ALIGNMENT_LEFT
+  item.pressed.connect(activate_card.bind(id))
+  column.add_child(item)
  automatic = CheckButton.new()
  automatic.text = "Spawn automático"
  automatic.toggled.connect(func(enabled: bool): auto_spawn = enabled; game.spawn_timer = 0.0)
@@ -102,6 +113,10 @@ func _ready() -> void:
  immortality.text = "Personagem imortal"
  immortality.toggled.connect(func(enabled: bool): game.prevent_player_death = enabled)
  column.add_child(immortality)
+ cards_toggle = CheckButton.new()
+ cards_toggle.text = "Habilitar cartas"
+ cards_toggle.toggled.connect(func(enabled: bool): cards_enabled = enabled)
+ column.add_child(cards_toggle)
  editor = PanelContainer.new()
  editor.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
  contents.add_child(editor)
@@ -139,6 +154,8 @@ func _ready() -> void:
  frame.hide()
 
 func reset() -> void:
+ cards_enabled = false
+ cards_toggle.set_pressed_no_signal(false)
  auto_spawn = false
  automatic.set_pressed_no_signal(false)
  immortality.set_pressed_no_signal(true)
@@ -200,7 +217,9 @@ func open_attributes() -> void:
 func _input(event: InputEvent) -> void:
  if not game.run_active or game.run_mode != "training": return
  if not event is InputEventKey or not event.pressed or event.echo: return
- if game.state in ["playing", "paused"] and event.keycode == KEY_TAB:
+ if game.state in ["playing", "paused"] and event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed and CARD_KEYS.has(event.keycode):
+  activate_card(CARD_KEYS[event.keycode])
+ elif game.state in ["playing", "paused"] and event.keycode == KEY_TAB:
   select_tab(1 - selected_tab)
  elif game.state == "paused" and event.keycode == KEY_ESCAPE:
   game.resume()
@@ -208,6 +227,11 @@ func _input(event: InputEvent) -> void:
   act(ACTIONS[event.keycode][1])
  else: return
  get_viewport().set_input_as_handled()
+
+func activate_card(id: String) -> void:
+ if not game.run_active or game.run_mode != "training" or game.state not in ["playing", "paused"]: return
+ game.cards.activate(id)
+ game.show_pending_level_up()
 
 func refresh() -> void:
  for id in values:
@@ -262,3 +286,6 @@ func act(action: String) -> void:
    game.health = game.max_health
    game.show_upgrades()
   "heal": game.health = game.max_health
+  "cards":
+   for index in game.cards.IDS.size():
+    game.cards.spawn(game.cards.IDS[index], game.player + Vector2(-120 + index * 80, -80))

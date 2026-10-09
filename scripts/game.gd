@@ -9,14 +9,12 @@ const MAX_HEALTH := 50.0
 const XP_COST_MULTIPLIER := 1.4
 const XP_GROWTH_PER_LEVEL := 1.05
 const XP_COLOR := Color(0.25, 0.65, 1.0)
+const XP_ATTRACTION_SPEED := 630.0
 const KNOCKBACK_SPEED := 420.0
 const KNOCKBACK_DECELERATION := 1800.0
 const MOVEMENT_MULTIPLIER := 1.2
 const FASTEST_ENEMY_SPEED := 135.0 * MOVEMENT_MULTIPLIER
 const BASE_PLAYER_SPEED := 190.0
-const MAX_PLAYER_SPEED := 250.0
-const ENEMY_SPEED_RATIO := 0.9
-@export_range(190.0, 1000.0, 1.0, "or_greater") var max_player_speed: float = MAX_PLAYER_SPEED
 const MINHOCAO = preload("res://scripts/minhocao.gd")
 const FISH_VISUALS = preload("res://scripts/fish_visuals.gd")
 const RUN_HISTORY = preload("res://scripts/run_history.gd")
@@ -87,6 +85,7 @@ var run_active := false
 var run_recorded := false
 var test_run := false
 var training: Node
+var cards: Node2D
 var bosses_defeated := 0
 var next_boss_time := ENDLESS_BOSS_INTERVAL
 var endless_wave := 0
@@ -296,6 +295,9 @@ func _ready() -> void:
  training = preload("res://scripts/training_room.gd").new()
  training.game = self
  add_child(training)
+ cards = preload("res://scripts/cards.gd").new()
+ cards.game = self
+ add_child(cards)
  show_menu()
 
 func setup_water() -> void:
@@ -519,7 +521,7 @@ func projected_stats(id: String = "") -> Dictionary:
   "damage": values.damage = damage * 1.20
   "rate": values.rate = 1.2 / attack_delay
   "shots": values.shots = shot_count + 1
-  "speed": values.speed = minf(max_player_speed, speed * 1.04)
+  "speed": values.speed = speed * 1.04
   "magnet": values.magnet = minf(MAX_COLLECTION_RANGE, magnet * 1.4)
   "max_health": values.max_health = maxf(max_health, minf(HEALTH_CAP, max_health * 1.20))
   "xp_bonus": values.xp_bonus = mini(XP_BONUS_CAP, xp_bonus + 10)
@@ -528,7 +530,7 @@ func projected_stats(id: String = "") -> Dictionary:
 func format_stat(id: String, value: float) -> String:
  if id == "rate": return ("%.2f" % value).replace(".", ",")
  var text := ("+%d%%" % roundi(value)) if id == "xp_bonus" else str(roundi(value))
- if (id == "magnet" and value >= MAX_COLLECTION_RANGE) or (id == "speed" and value >= max_player_speed) or (id == "max_health" and value >= HEALTH_CAP) or (id == "xp_bonus" and value >= XP_BONUS_CAP): text += " (MAX)"
+ if (id == "magnet" and value >= MAX_COLLECTION_RANGE) or (id == "max_health" and value >= HEALTH_CAP) or (id == "xp_bonus" and value >= XP_BONUS_CAP): text += " (MAX)"
  return text
 
 func update_stats_preview(id: String = "") -> void:
@@ -958,6 +960,7 @@ func start_run(mode: String = "bosses") -> void:
  crowd_batch_enabled = false
  minimap_timer = 0.0
  bullets.clear()
+ cards.reset()
  damage_numbers.clear()
  water_ripples.clear()
  wake_timer = 0.0
@@ -1011,7 +1014,7 @@ func _input(event: InputEvent) -> void:
    move_menu_focus(-1 if event.keycode == KEY_UP else 1)
    get_viewport().set_input_as_handled()
    return
- if state != "upgrade" or not event is InputEventKey or not event.pressed or event.echo: return
+ if state != "upgrade" or not event is InputEventKey or not event.pressed or event.echo or event.ctrl_pressed: return
  var key: int = event.keycode
  if key in [KEY_UP, KEY_LEFT]:
   select_upgrade(posmod(selected_upgrade - 1, choices.size()))
@@ -1035,7 +1038,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
    resume()
   elif state == "settings":
    leave_settings()
- if state == "upgrade":
+ if state == "upgrade" and not event.ctrl_pressed:
   var index := -1
   if event.keycode == KEY_1: index = 0
   if event.keycode == KEY_2: index = 1
@@ -1074,6 +1077,7 @@ func _process(delta: float) -> void:
  layout_modals()
  if state == "playing":
   update_game(minf(delta, 0.05))
+ cards.refresh()
  update_water(minf(delta, 0.05))
  var show_player_bars := run_active or state in ["won", "lost"]
  for item in [health_bar, health_label, xp_bar, xp_label]:
@@ -1140,13 +1144,14 @@ func _process(delta: float) -> void:
  queue_redraw()
 
 func update_game(dt: float) -> void:
+ cards.tick_effects(dt)
  update_damage_numbers(dt)
  elapsed += dt
  if not boss_spawned and run_mode in ["bosses", "endless"]:
   var first_boss_time: float = RUN_SECONDS if run_mode == "bosses" else next_boss_time
   sounds.prepare_boss_music(first_boss_time - elapsed)
  invulnerability = maxf(0.0, invulnerability - dt)
- player += (movement() * speed + knockback_velocity) * dt
+ player += (movement() * effective_speed() + knockback_velocity) * dt
  if absf(movement().x) > 0.1: facing_left = movement().x < 0
  knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, KNOCKBACK_DECELERATION * dt)
  player = player.clamp(Vector2(18, 18), ARENA - Vector2(18, 18))
@@ -1163,7 +1168,7 @@ func update_game(dt: float) -> void:
  attack_timer -= dt
  if attack_timer <= 0 and not enemies.is_empty():
   fire()
-  attack_timer = attack_delay
+  attack_timer = effective_attack_delay()
  update_crowd_snapshot(dt)
  begin_crowd_step()
  for enemy_index in enemies.size():
@@ -1193,17 +1198,33 @@ func update_game(dt: float) -> void:
  rebuild_projectile_grid()
  for i in range(bullets.size() - 1, -1, -1):
   var projectile := bullets[i]
+  var previous_position: Vector2 = projectile.pos
   projectile.pos += projectile.velocity * dt
   projectile.life -= dt
   var hit := false
-  var target := projectile_target(projectile.pos)
-  if target >= 0:
-   var enemy := enemies[target]
-   enemy.hp -= damage
-   add_damage_number(enemy.pos - Vector2(0, enemy.radius + 8), damage)
-   enemy.flash = 0.12
-   hit = true
-  if hit or projectile.life <= 0: bullets.remove_at(i)
+  if bool(projectile.get("piercing", false)):
+   if not projectile.has("remaining_damage"): projectile.remaining_damage = effective_damage()
+   var steps := maxi(1, ceili(previous_position.distance_to(projectile.pos) / 8.0))
+   for step in range(steps + 1):
+    var point := previous_position.lerp(projectile.pos, float(step) / steps)
+    var target := projectile_target(point, projectile.hit_enemies)
+    while target >= 0 and projectile.remaining_damage > 0.0:
+     var enemy := enemies[target]
+     var consumed: float = minf(projectile.remaining_damage, enemy.hp)
+     hit_with_spear(enemy, consumed)
+     projectile.remaining_damage = maxf(0.0, projectile.remaining_damage - consumed)
+     projectile.hit_enemies.append(enemy)
+     target = projectile_target(point, projectile.hit_enemies)
+    if projectile.remaining_damage <= 0.0:
+     hit = true
+     break
+  else:
+   var target := projectile_target(projectile.pos)
+   if target >= 0:
+    hit_with_spear(enemies[target])
+    hit = true
+  var outside: bool = not Rect2(Vector2.ZERO, ARENA).has_point(projectile.pos)
+  if hit or projectile.life <= 0 or outside: bullets.remove_at(i)
  for i in range(enemies.size() - 1, -1, -1):
   var enemy := enemies[i]
   enemy.flash = maxf(0, enemy.flash - dt)
@@ -1215,19 +1236,39 @@ func update_game(dt: float) -> void:
      return
     buff_endless_enemies()
    gems.append({"pos": enemy.pos, "xp": enemy_xp_reward(enemy)})
+   cards.drop(enemy)
    kills += 1
    enemies.remove_at(i)
  if run_mode == "endless": spawn_endless_bosses()
  for i in range(gems.size() - 1, -1, -1):
   var distance: float = gems[i].pos.distance_to(player)
-  if distance < magnet:
-   gems[i].pos = gems[i].pos.move_toward(player, 420 * dt)
-  if distance < 20:
+  if distance < magnet or bool(gems[i].get("magnetized", false)):
+   gems[i].pos = gems[i].pos.move_toward(player, XP_ATTRACTION_SPEED * dt)
+  if gems[i].pos.distance_to(player) < 20:
    var reward := float(gems[i].xp) * (100 + xp_bonus) / 100.0
    collect_xp(int(gems[i].xp))
    add_xp_number(gems[i].pos, reward)
    gems.remove_at(i)
- if xp >= xp_needed():
+ cards.update_pickups(dt)
+ show_pending_level_up()
+
+func effective_speed() -> float:
+ return speed * (1.2 if cards.active("furia") else 1.0)
+
+func effective_attack_delay() -> float:
+ return attack_delay / (1.5 if cards.active("furia") else 1.0)
+
+func effective_damage() -> float:
+ return damage * (1.5 if cards.active("furia") else 1.0)
+
+func hit_with_spear(enemy: Dictionary, amount: float = -1.0) -> void:
+ if amount < 0.0: amount = effective_damage()
+ enemy.hp -= amount
+ add_damage_number(enemy.pos - Vector2(0, enemy.radius + 8), amount)
+ enemy.flash = 0.12
+
+func show_pending_level_up() -> void:
+ if state == "playing" and xp >= xp_needed():
   xp -= xp_needed()
   level += 1
   level_healing = roundi(max_health - health)
@@ -1253,7 +1294,7 @@ func buff_endless_enemies() -> void:
   if enemy.hp <= 0: continue
   enemy.hp *= 1.05
   enemy.max_hp *= 1.05
-  enemy.speed = enemy.speed * 1.05 if enemy.boss else minf(enemy_speed_cap(), enemy.speed * 1.05)
+  enemy.speed *= 1.05
   enemy.contact *= 1.05
   enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * 1.05
 
@@ -1274,13 +1315,10 @@ func begin_crowd_step() -> void:
  crowd_window_start = crowd_cursor % enemies.size()
  crowd_cursor = (crowd_window_start + mini(CROWD_UPDATES_PER_FRAME, enemies.size())) % enemies.size()
 
-func enemy_speed_cap() -> float:
- return speed * ENEMY_SPEED_RATIO
-
 func pursue_player(index: int, dt: float) -> void:
  var enemy: Dictionary = enemies[index]
  if dt <= 0: return
- var fish_speed: float = minf(enemy.speed, enemy_speed_cap())
+ var fish_speed: float = enemy.speed
  var remaining: float = float(enemy.get("separation_timer", 0.0)) - dt
  var desired: Vector2
  if enemy.has("desired_velocity"): desired = enemy.desired_velocity
@@ -1428,7 +1466,7 @@ func rebuild_crowd_grid() -> void:
   crowd_grid[cell].append(index)
   crowd_cell_radius[cell] = maxf(float(crowd_cell_radius.get(cell, 0.0)), crowd_radii[index])
 
-func projectile_target(point: Vector2) -> int:
+func projectile_target(point: Vector2, excluded: Array = []) -> int:
  var cell := Vector2i((point / COLLISION_CELL_SIZE).floor())
  var best := enemies.size()
  # The largest hitbox plus spear padding fits inside one neighboring cell.
@@ -1437,6 +1475,7 @@ func projectile_target(point: Vector2) -> int:
    for index in enemy_grid.get(Vector2i(x, y), []):
     if index >= best: continue
     var enemy := enemies[index]
+    if enemy in excluded: continue
     if enemy.hp <= 0 or (enemy.boss and not MINHOCAO.vulnerable(enemy)): continue
     if enemy_overlaps(enemy, point, 5): best = index
  return best if best < enemies.size() else -1
@@ -1485,7 +1524,7 @@ func update_damage_numbers(dt: float) -> void:
   if damage_numbers[i].life <= 0: damage_numbers.remove_at(i)
 
 func receive_hit(amount: float, source: Vector2) -> void:
- if invulnerability > 0: return
+ if invulnerability > 0 or cards.active("intangivel"): return
  health -= amount
  if prevent_player_death: health = maxf(1.0, health)
  sounds.play_hurt()
@@ -1505,7 +1544,6 @@ func spawn_enemy(boss: bool) -> void:
  var multiplier := pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0
  enemy["stat_multiplier"] = multiplier
  for stat in ["hp", "max_hp", "speed", "contact"]: enemy[stat] *= multiplier
- if not boss: enemy.speed = minf(enemy.speed, enemy_speed_cap())
  if boss: MINHOCAO.initialize(enemy)
  enemies.append(enemy)
  if boss: sounds.announce_boss()
@@ -1525,7 +1563,8 @@ func fire() -> void:
  if direction.is_zero_approx(): direction = Vector2.RIGHT
  for i in shot_count:
   var angle := (i - (shot_count - 1) / 2.0) * 0.13
-  bullets.append({"pos": player, "velocity": direction.rotated(angle) * 650, "life": 1.6})
+  var piercing: bool = cards.active("perfurante")
+  bullets.append({"pos": player, "velocity": direction.rotated(angle) * 650, "life": ARENA.length() / 650.0 + 0.1 if piercing else 1.6, "piercing": piercing, "remaining_damage": effective_damage(), "hit_enemies": []})
 
 func show_upgrades() -> void:
  state = "upgrade"
@@ -1539,7 +1578,6 @@ func show_upgrades() -> void:
  upgrade_buttons.clear()
  var available: Array[String] = []
  for id in UPGRADES:
-  if id == "speed" and speed >= max_player_speed: continue
   if id == "magnet" and magnet >= MAX_COLLECTION_RANGE: continue
   if id == "max_health" and max_health >= HEALTH_CAP: continue
   if id == "xp_bonus" and xp_bonus >= XP_BONUS_CAP: continue
@@ -1579,6 +1617,7 @@ func choose_upgrade(id: String) -> void:
  xp_bonus = int(next.xp_bonus)
  health_bar.max_value = max_health
  resume()
+ show_pending_level_up()
 
 func finish(won: bool) -> void:
  record_run("death" if not won else "won")

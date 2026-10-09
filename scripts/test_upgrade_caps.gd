@@ -16,15 +16,15 @@ func run() -> void:
  assert(game.stat_values.magnet.get_theme_color("font_color").is_equal_approx(Color(0.5, 0.85, 1.0)))
  assert(not game.format_stat("magnet", 499).contains("MAX"))
  game.speed = 249.0
- assert(game.projected_stats("speed").speed == 250.0)
+ assert(is_equal_approx(game.projected_stats("speed").speed, 249.0 * 1.04))
  game.choose_upgrade("speed")
- assert(game.speed == 250.0)
- game.speed = game.MAX_PLAYER_SPEED
- assert(game.format_stat("speed", game.speed).ends_with(" (MAX)"))
+ assert(is_equal_approx(game.speed, 249.0 * 1.04))
+ game.speed = 1000.0
+ assert(not game.format_stat("speed", game.speed).contains("MAX"))
  assert(not game.format_stat("speed", game.speed - 1).contains("MAX"))
  for iteration in 20:
   game.show_upgrades()
-  assert(not "magnet" in game.choices and not "speed" in game.choices)
+  assert(not "magnet" in game.choices)
   assert(game.choices.size() == 3)
  game.start_run("endless")
  game.test_run = true
@@ -40,5 +40,5 @@ func run() -> void:
  game.boss_spawned = true
  for index in 2: game.spawn_enemy(true)
  assert(game.magnet <= 500)
- print("UPGRADE CAPS PASS: collection capped, MAX labels, completed upgrades excluded, test loadout capped")
+ print("UPGRADE CAPS PASS: collection capped, speed unlimited, MAX labels, completed upgrades excluded")
  quit()

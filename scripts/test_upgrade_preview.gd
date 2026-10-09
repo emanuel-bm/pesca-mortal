@@ -41,9 +41,9 @@ func run() -> void:
   var actual: Dictionary = game.projected_stats()
   for key in actual: assert(is_equal_approx(float(actual[key]), float(expected[key])))
   assert(not game.stats_panel.visible)
- game.speed = game.MAX_PLAYER_SPEED
+ game.speed = 250.0
  game.update_stats_preview("speed")
- assert(game.stat_values.speed.text == "250 (MAX) → 250 (MAX)")
+ assert(game.stat_values.speed.text == "250 → 260")
  game.start_run()
  game.show_upgrades()
  for child in game.panel.get_children():
@@ -80,10 +80,10 @@ func run() -> void:
  game._input(navigation)
  assert(game.state == "playing" and game.upgrade_levels[picked] == old_rank + 1)
  for id in game.UPGRADES: game.upgrade_levels[id] = 50
- game.speed = game.MAX_PLAYER_SPEED
+ game.speed = 250.0
  game.show_upgrades()
  assert(game.state == "upgrade" and game.choices.size() == 3)
- assert(not "speed" in game.choices)
+ assert(is_equal_approx(game.projected_stats("speed").speed, 260.0))
  var prior: float = game.damage
  game.choose_upgrade("damage")
  assert(game.damage > prior and game.upgrade_levels.damage == 51)
@@ -107,7 +107,7 @@ func run() -> void:
  assert(not game.sounds.effect_enabled("shot") and game.sounds.effect_enabled("death"))
  game.sounds.volumes = saved_volumes
  game.sounds.apply_volumes()
- print("PREVIEW PASS: unlimited upgrades, speed cap, full-width XP bar, shot volume, hover and application")
+ print("PREVIEW PASS: unlimited upgrades and speed, full-width XP bar, shot volume, hover and application")
  if "--capture" in OS.get_cmdline_user_args():
   game.update_stats_preview(game.choices[0])
   for frame in 5: await process_frame

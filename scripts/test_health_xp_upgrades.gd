@@ -49,10 +49,10 @@ func run() -> void:
  var before: int = game.xp
  assert(game.collect_xp(5) == 10 and game.xp == before + 10)
  game.magnet = 500
- game.speed = game.MAX_PLAYER_SPEED
+ game.speed = 1000.0
  game.show_upgrades()
  assert(game.choices.size() == 3)
- for id in ["speed", "magnet", "max_health", "xp_bonus"]: assert(not id in game.choices)
+ for id in ["magnet", "max_health", "xp_bonus"]: assert(not id in game.choices)
  game.update_stats_preview()
  assert(game.stat_values.max_health.text == "500 (MAX)")
  assert(game.stat_values.xp_bonus.text == "+100% (MAX)")
