@@ -95,6 +95,8 @@ var upgrade_levels: Dictionary = {}
 var choices: Array[String] = []
 var upgrade_buttons: Array[Button] = []
 var selected_upgrade := 0
+var menu_controls: Array[Control] = []
+var menu_mouse_navigation := false
 var hud: Label
 var xp_bar: ProgressBar
 var xp_label: Label
@@ -349,18 +351,81 @@ func button(text: String, callback: Callable) -> Button:
  normal.bg_color = Color(0.15, 0.23, 0.33)
  normal.set_corner_radius_all(6)
  item.add_theme_stylebox_override("normal", normal)
- var hover := normal.duplicate() as StyleBoxFlat
- hover.bg_color = Color(0.22, 0.36, 0.5)
- item.add_theme_stylebox_override("hover", hover)
- item.add_theme_stylebox_override("pressed", hover)
+ style_menu_button(item)
  item.pressed.connect(callback)
  panel.add_child(item)
  return item
+
+func style_menu_button(item: Button) -> void:
+ var normal := item.get_theme_stylebox("normal").duplicate() as StyleBoxFlat
+ if normal == null:
+  normal = StyleBoxFlat.new()
+  normal.bg_color = Color.TRANSPARENT
+  normal.set_corner_radius_all(6)
+ normal.set_border_width_all(3)
+ normal.border_color = Color.TRANSPARENT
+ item.add_theme_stylebox_override("normal", normal)
+ var highlight := normal.duplicate() as StyleBoxFlat
+ highlight.bg_color = Color(0.22, 0.36, 0.5)
+ highlight.border_color = Color(0.3, 1.0, 0.45)
+ for style in ["hover", "focus", "hover_pressed"]:
+  item.add_theme_stylebox_override(style, highlight)
+ # Toggle buttons stay pressed while enabled; selection belongs to focus/hover.
+ item.add_theme_stylebox_override("pressed", normal if item.toggle_mode else highlight)
+
+func collect_menu_controls(parent: Node) -> void:
+ for child in parent.get_children():
+  if child is BaseButton or child is Slider or child is LineEdit:
+   child.focus_mode = Control.FOCUS_ALL
+   menu_controls.append(child)
+   if child is Button: style_menu_button(child)
+   elif child is Slider or child is LineEdit:
+    var highlight := StyleBoxFlat.new()
+    highlight.bg_color = Color.TRANSPARENT
+    highlight.set_border_width_all(3)
+    highlight.border_color = Color(0.3, 1.0, 0.45)
+    highlight.set_corner_radius_all(6)
+    child.add_theme_stylebox_override("focus", highlight)
+   var hover_callback := focus_menu_hover.bind(child)
+   if not child.mouse_entered.is_connected(hover_callback):
+    child.mouse_entered.connect(hover_callback)
+  else:
+   collect_menu_controls(child)
+
+func focus_menu_hover(item: Control) -> void:
+ if menu_mouse_navigation: item.grab_focus()
+
+func setup_menu_navigation() -> void:
+ menu_controls.clear()
+ if not overlay.visible or state in ["playing", "upgrade"]: return
+ collect_menu_controls(panel)
+ for i in menu_controls.size():
+  var item := menu_controls[i]
+  var previous := item.get_path_to(menu_controls[posmod(i - 1, menu_controls.size())])
+  var next := item.get_path_to(menu_controls[(i + 1) % menu_controls.size()])
+  item.focus_neighbor_top = previous
+  item.focus_neighbor_bottom = next
+  item.focus_previous = previous
+  item.focus_next = next
+ if not menu_controls.is_empty(): menu_controls[0].grab_focus()
+
+func move_menu_focus(direction: int) -> void:
+ var enabled: Array[Control] = []
+ for item in menu_controls:
+  if is_instance_valid(item) and item.is_visible_in_tree() and not (item is BaseButton and item.disabled):
+   enabled.append(item)
+ if enabled.is_empty(): return
+ var index := enabled.find(get_viewport().gui_get_focus_owner())
+ if index < 0: index = -1 if direction > 0 else 0
+ enabled[posmod(index + direction, enabled.size())].grab_focus()
 
 func clear_panel() -> void:
  panel.add_theme_constant_override("separation", 16)
  for side in ["left", "right", "top", "bottom"]:
   panel.get_parent().add_theme_constant_override("margin_" + side, 24)
+ menu_controls.clear()
+ menu_mouse_navigation = false
+ setup_menu_navigation.call_deferred()
  overlay.custom_minimum_size.x = 620
  stats_panel.hide()
  if records_panel: records_panel.hide()
@@ -943,12 +1008,23 @@ func spawn_horde_fish(tank: bool) -> void:
  enemy.max_hp = enemy.hp
 
 func _input(event: InputEvent) -> void:
+ if event is InputEventMouseMotion:
+  menu_mouse_navigation = true
+ elif event is InputEventKey and event.pressed:
+  menu_mouse_navigation = false
  if event is InputEventKey and event.pressed and not event.echo and event.alt_pressed and event.keycode in [KEY_ENTER, KEY_KP_ENTER]:
   fullscreen = not fullscreen
   apply_display_settings()
   if state == "settings" and is_instance_valid(fullscreen_toggle): fullscreen_toggle.button_pressed = fullscreen
   get_viewport().set_input_as_handled()
   return
+ if overlay.visible and state != "upgrade" and event is InputEventKey and event.pressed:
+  var focused := get_viewport().gui_get_focus_owner()
+  var popup_open: bool = focused is OptionButton and focused.get_popup().visible
+  if not popup_open and event.keycode in [KEY_UP, KEY_DOWN]:
+   move_menu_focus(-1 if event.keycode == KEY_UP else 1)
+   get_viewport().set_input_as_handled()
+   return
  if run_mode == "horde" and state == "playing" and event is InputEventKey and event.pressed and not event.echo:
   if event.keycode == KEY_F5:
    for index in mini(100, maxi(0, 2000 - enemies.size())): spawn_horde_fish(index % 2 == 1)
@@ -1029,6 +1105,9 @@ func _process(delta: float) -> void:
  if state == "playing":
   update_game(minf(delta, 0.05))
  update_water(minf(delta, 0.05))
+ var show_player_bars := run_active or state in ["won", "lost"]
+ for item in [health_bar, health_label, xp_bar, xp_label]:
+  item.visible = show_player_bars
  xp_bar.position = Vector2(0, 20)
  xp_bar.size = Vector2(get_viewport_rect().size.x, 20)
  xp_bar.max_value = xp_needed()
@@ -1057,7 +1136,7 @@ func _process(delta: float) -> void:
   profile_panel.size = profile_panel.get_combined_minimum_size()
   var profile_scale := minf(1.0, (get_viewport_rect().size.x - 44) / profile_panel.size.x)
   profile_panel.scale = Vector2.ONE * profile_scale
-  profile_panel.position = Vector2(get_viewport_rect().size.x - profile_panel.size.x * profile_scale - 22, 70)
+  profile_panel.position = Vector2(22, 22)
  else:
   hud.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
   hud.position = Vector2(22, 46)
@@ -1513,14 +1592,6 @@ func show_upgrades() -> void:
  for i in choices.size():
   var id := choices[i]
   var option := button("%d · %s — %s" % [i + 1, LABELS[id][0], LABELS[id][1]], choose_upgrade.bind(id))
-  var normal := option.get_theme_stylebox("normal").duplicate() as StyleBoxFlat
-  normal.set_border_width_all(3)
-  normal.border_color = Color(0, 0, 0, 0)
-  option.add_theme_stylebox_override("normal", normal)
-  var highlight := normal.duplicate() as StyleBoxFlat
-  highlight.bg_color = Color(0.22, 0.36, 0.5)
-  highlight.border_color = Color(0.3, 1.0, 0.45)
-  for style in ["hover", "focus", "pressed"]: option.add_theme_stylebox_override(style, highlight)
   upgrade_buttons.append(option)
   option.mouse_entered.connect(select_upgrade.bind(i))
   option.focus_entered.connect(update_stats_preview.bind(id))
