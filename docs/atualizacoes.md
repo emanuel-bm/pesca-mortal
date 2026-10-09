@@ -77,7 +77,7 @@ principal e o atualizador novo usam o EXE direto. Esse parâmetro opcional
 não publica arquivos nem cria releases.
 
 O atualizador resolve `{version}` em `windows_asset` usando a tag da release
-remota (por exemplo, `v0.1.3` vira `pesca-mortal-windows-v0.1.3.exe`). Não usa
+remota (por exemplo, `v0.2.0` vira `pesca-mortal-windows-v0.2.0.exe`). Não usa
 a versão instalada para montar o nome do download. A troca automática mantém
 o caminho do executável instalado para preservar atalhos; os arquivos
 publicados e baixados manualmente têm nomes distintos a cada versão.

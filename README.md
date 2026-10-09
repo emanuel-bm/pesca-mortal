@@ -1,6 +1,6 @@
 # Pesca Mortal — protótipo
 
-Próxima beta: **0.1.3** (ainda não publicada). Código, arte, áudio, scripts de servidor e testes estão
+Beta atual: **0.2.0**. Código, arte, áudio, scripts de servidor e testes estão
 incluídos no projeto. Ferramentas locais, caches e builds exportadas ficam
 fora do Git; pacotes para jogar são distribuídos pelas Releases.
 
@@ -37,7 +37,7 @@ Créditos e autorização do autor preservados em `assets/fonts`.
 A abertura verifica versões publicadas e permite **Jogar offline**.
 A instalação automática integrada para Windows consulta as
 [Releases do projeto](https://github.com/emanuel-bm/pesca-mortal/releases).
-No próximo release, baixe e execute `pesca-mortal-windows-v0.1.3.exe` diretamente. Consulte
+Na release 0.2.0, baixe e execute `pesca-mortal-windows-v0.2.0.exe` diretamente. Consulte
 [distribuição e atualizações](docs/atualizacoes.md).
 
 Os formatos e o comando para preparar Windows, macOS Apple Silicon e Linux
