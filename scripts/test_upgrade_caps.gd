@@ -15,6 +15,10 @@ func run() -> void:
  game.update_stats_preview()
  assert(game.stat_values.magnet.get_theme_color("font_color").is_equal_approx(Color(0.5, 0.85, 1.0)))
  assert(not game.format_stat("magnet", 499).contains("MAX"))
+ game.speed = 249.0
+ assert(game.projected_stats("speed").speed == 250.0)
+ game.choose_upgrade("speed")
+ assert(game.speed == 250.0)
  game.speed = game.MAX_PLAYER_SPEED
  assert(game.format_stat("speed", game.speed).ends_with(" (MAX)"))
  assert(not game.format_stat("speed", game.speed - 1).contains("MAX"))

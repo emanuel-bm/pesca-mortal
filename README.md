@@ -84,11 +84,12 @@ emergência, exposição por 3 s e investida em linha anunciada por 0,9 s.
 A investida atravessa o trajeto em 0,5 s; movimento à superfície de 54.
 Enterrado, não recebe dano nem atrai disparos. Emergência causa 25 de dano
 na área anunciada; contato mantém a invulnerabilidade de 0,8 s do jogador.
-Velocidade inicial do jogador: 184,8; melhorias de 3%, com teto de 213,84.
-O inimigo comum mais rápido chega a 162 (jogador no máximo 32% acima).
+Velocidade inicial do jogador: 190; melhorias de 4%, com teto de 250.
+O inimigo comum mais rápido chega a 162 (jogador no máximo 54,32% acima).
 Resistentes se movem a 78; perseguidores começam a 126. Todas as velocidades
 de movimento aumentaram 20% em relação à versão anterior.
-Depois disso, apenas o jogador recebeu mais 10% de velocidade.
+A velocidade inicial do jogador foi ajustada posteriormente para 190.
+Melhorias de vida máxima e dano de ataque aumentam o valor atual em 20% por escolha.
 Valores exibidos são arredondados para inteiros; cálculos mantêm a precisão.
 Experiência por inimigo escala com sua área: pequenos dão 1 XP e laranjas 3 XP.
 Cristais de maior valor aparecem maiores e concedem todo o XP ao serem coletados.

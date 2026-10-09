@@ -13,7 +13,7 @@ const KNOCKBACK_SPEED := 420.0
 const KNOCKBACK_DECELERATION := 1800.0
 const MOVEMENT_MULTIPLIER := 1.2
 const FASTEST_ENEMY_SPEED := 135.0 * MOVEMENT_MULTIPLIER
-const BASE_PLAYER_SPEED := 140.0 * MOVEMENT_MULTIPLIER * 1.1
+const BASE_PLAYER_SPEED := 190.0
 const MAX_PLAYER_SPEED := 250.0
 const MINHOCAO = preload("res://scripts/minhocao.gd")
 const FISH_VISUALS = preload("res://scripts/fish_visuals.gd")
@@ -23,12 +23,12 @@ const HEALTH_CAP := 500.0
 const XP_BONUS_CAP := 100
 const UPGRADES := ["damage", "rate", "shots", "speed", "magnet", "max_health", "xp_bonus"]
 const LABELS := {
- "damage": ["Impacto", "+25% de dano"],
+ "damage": ["Impacto", "+20% de dano"],
  "rate": ["Ritmo", "+20% de frequência de ataque"],
  "shots": ["Rajada", "+1 projétil por disparo"],
- "speed": ["Passo leve", "+3% de velocidade"],
+ "speed": ["Passo leve", "+4% de velocidade"],
  "magnet": ["Atração", "+40% de alcance de coleta"],
- "max_health": ["Vitalidade", "+25% de vida máxima"],
+ "max_health": ["Vitalidade", "+20% de vida máxima"],
  "xp_bonus": ["Aprendizado", "+10% de ganho de XP"]
 }
 
@@ -517,12 +517,12 @@ func layout_modals() -> void:
 func projected_stats(id: String = "") -> Dictionary:
  var values := {"damage": damage, "rate": 1.0 / attack_delay, "shots": shot_count, "speed": speed, "magnet": magnet, "max_health": max_health, "xp_bonus": xp_bonus}
  match id:
-  "damage": values.damage = damage * 1.25
+  "damage": values.damage = damage * 1.20
   "rate": values.rate = 1.2 / attack_delay
   "shots": values.shots = shot_count + 1
-  "speed": values.speed = minf(MAX_PLAYER_SPEED, speed * 1.03)
+  "speed": values.speed = minf(MAX_PLAYER_SPEED, speed * 1.04)
   "magnet": values.magnet = minf(MAX_COLLECTION_RANGE, magnet * 1.4)
-  "max_health": values.max_health = maxf(max_health, minf(HEALTH_CAP, max_health * 1.25))
+  "max_health": values.max_health = maxf(max_health, minf(HEALTH_CAP, max_health * 1.20))
   "xp_bonus": values.xp_bonus = mini(XP_BONUS_CAP, xp_bonus + 10)
  return values
 
@@ -1145,7 +1145,7 @@ func _process(delta: float) -> void:
    assert(boss_spawned, "Boss did not spawn")
    assert(not enemies.is_empty(), "No enemies spawned")
    choose_upgrade("damage")
-   assert(damage == 25.0, "Upgrade failed")
+   assert(is_equal_approx(damage, 24.0), "Upgrade failed")
    finish(true)
    assert(state == "won", "Victory failed")
    start_run()

@@ -43,7 +43,7 @@ func run() -> void:
   assert(not game.stats_panel.visible)
  game.speed = game.MAX_PLAYER_SPEED
  game.update_stats_preview("speed")
- assert(game.stat_values.speed.text == "214 → 214")
+ assert(game.stat_values.speed.text == "250 (MAX) → 250 (MAX)")
  game.start_run()
  game.show_upgrades()
  for child in game.panel.get_children():
