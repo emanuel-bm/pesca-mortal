@@ -130,7 +130,14 @@ func run() -> void:
   for frame in 3: await process_frame
   await RenderingServer.frame_post_draw
   root.get_texture().get_image().save_png("res://.tools/player-left-preview.png")
- game.start_boss_test()
+ game.start_run("bosses")
+ game.test_run = true
+ for id in ["damage", "rate", "shots", "speed", "magnet"]:
+  for rank in (5 if id == "speed" else 6): game.choose_upgrade(id)
+ game.level = 30
+ game.elapsed = game.RUN_SECONDS
+ game.boss_spawned = true
+ game.spawn_enemy(true)
  assert(game.level == 30 and game.health == game.MAX_HEALTH and game.xp == 0)
  assert(game.boss_spawned and game.enemies.size() == 1 and game.enemies[0].boss)
  var ranks := 0

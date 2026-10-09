@@ -19,7 +19,19 @@ func run() -> void:
   game._process(0)
   assert(game.hud.text.contains("PEIXES 1"))
   assert(not game.hud.text.contains("VISÍVEIS") and not game.hud.text.contains("NÍVEL"))
- game.start_endless_test()
+ game.start_run("endless")
+ game.test_run = true
+ for id in ["damage", "rate", "shots", "speed", "magnet"]:
+  for rank in (5 if id == "speed" else 6): game.choose_upgrade(id)
+ for id in ["damage", "rate", "shots", "magnet"]:
+  for rank in (2 if id == "damage" else 1): game.choose_upgrade(id)
+ game.level = 35
+ game.elapsed = 420.0
+ game.kills = 2900
+ game.endless_wave = 4
+ game.next_boss_time = 450.0
+ game.boss_spawned = true
+ for index in 2: game.spawn_enemy(true)
  game.state = "paused"
  game._process(0)
  assert(game.hud.text.contains("PEIXES VISÍVEIS"))

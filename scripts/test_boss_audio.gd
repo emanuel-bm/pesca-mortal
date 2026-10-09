@@ -23,7 +23,14 @@ func run() -> void:
  var sounds := SoundProbe.new()
  game.add_child(sounds)
  game.sounds = sounds
- game.start_boss_test()
+ game.start_run("bosses")
+ game.test_run = true
+ for id in ["damage", "rate", "shots", "speed", "magnet"]:
+  for rank in (5 if id == "speed" else 6): game.choose_upgrade(id)
+ game.level = 30
+ game.elapsed = game.RUN_SECONDS
+ game.boss_spawned = true
+ game.spawn_enemy(true)
  game.spawn_timer = 1000
  game.attack_timer = 1000
  game.invulnerability = 1000
@@ -54,7 +61,14 @@ func run() -> void:
  assert(sounds.pending_roars.is_empty() and sounds.roar_voices.is_empty())
  sounds.volumes.boss = 1.0
  sounds.set_process(false)
- game.start_ten_bosses_test()
+ game.start_run("endless")
+ game.test_run = true
+ game.prevent_player_death = true
+ game.elapsed = game.ENDLESS_BOSS_INTERVAL - 2.0
+ game.next_boss_time = INF
+ for index in 10: game.spawn_enemy(true)
+ game.boss_spawned = true
+ for enemy in game.enemies: enemy.timer += 2.01
  game.spawn_timer = 1000
  game.attack_timer = 1000
  game.update_game(2.01)

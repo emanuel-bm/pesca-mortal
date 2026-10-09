@@ -1,5 +1,9 @@
 # Colisão e desvio de hordas — 08/10/2026
 
+Nota de manutenção: os modos antigos de teste e `test_horde.gd` foram removidos.
+A sala de treino é o único ambiente de teste acessível no jogo; os benchmarks
+e verificações automatizadas abaixo montam seus próprios cenários.
+
 ## Pesquisa
 
 Não foi encontrada uma descrição oficial da Poncle que permita afirmar qual algoritmo exato de colisão entre inimigos o Vampire Survivors usa. Existem análises comunitárias de código descompilado; não foram usadas como prova da implementação oficial.

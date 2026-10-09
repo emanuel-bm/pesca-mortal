@@ -185,7 +185,14 @@ func check_game_music() -> void:
  assert(sounds.music_track == "battle" and sounds.transition_remaining == -1.0)
  game.start_run()
  assert(sounds.music_track == "calm" and not sounds.battle_requested)
- game.start_boss_test()
+ game.start_run("bosses")
+ game.test_run = true
+ for id in ["damage", "rate", "shots", "speed", "magnet"]:
+  for rank in (5 if id == "speed" else 6): game.choose_upgrade(id)
+ game.level = 30
+ game.elapsed = game.RUN_SECONDS
+ game.boss_spawned = true
+ game.spawn_enemy(true)
  assert(sounds.battle_requested, "Boss test must also trigger the music")
  game.show_menu()
  sounds.update_music(1.0)

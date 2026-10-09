@@ -46,8 +46,7 @@ A geração dos arquivos não cria uma release nem envia arquivos ao GitHub.
 
 Abra `Jogar.bat`. A engine portátil está em `.tools/godot` nesta máquina.
 Para editar, abra `Abrir-editor.bat` ou importe `project.godot` em Godot 4.7.2.
-Para testar apenas o chefe, abra `Testar-Minhocao.bat`: começa aos cinco minutos,
-com todas as melhorias no nível máximo. Reiniciar retorna a uma partida normal.
+A sala de treino está disponível no menu do jogo para configurar inimigos e atributos.
 Os atalhos dependem da engine portátil local; não são um pacote de distribuição.
 
 ## Controles
@@ -133,12 +132,10 @@ Arte, identidade regional e balanceamento final ficam para a próxima etapa.
 
 ## Verificação
 
-Importação headless e teste básico automatizado de aparição do chefe,
-melhoria de dano, tela de vitória e reinício:
+Importação headless e verificações automatizadas dos sistemas do jogo:
 
 ```powershell
 & '.\.tools\godot\Godot_v4.7.2-stable_win64_console.exe' --headless --path . --editor --quit
-& '.\.tools\godot\Godot_v4.7.2-stable_win64_console.exe' --headless --path . -- --smoke-test
 & '.\.tools\godot\Godot_v4.7.2-stable_win64_console.exe' --headless --path . --script res://scripts/test_layout.gd
 & '.\.tools\godot\Godot_v4.7.2-stable_win64_console.exe' --headless --path . --script res://scripts/test_combat.gd
 & '.\.tools\godot\Godot_v4.7.2-stable_win64_console.exe' --headless --path . --script res://scripts/test_minhocao.gd

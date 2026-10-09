@@ -70,7 +70,14 @@ func run() -> void:
  game.elapsed = 20
  game.show_menu()
  assert(game.run_history.size() == 3)
- game.start_boss_test()
+ game.start_run("bosses")
+ game.test_run = true
+ for id in ["damage", "rate", "shots", "speed", "magnet"]:
+  for rank in (5 if id == "speed" else 6): game.choose_upgrade(id)
+ game.level = 30
+ game.elapsed = game.RUN_SECONDS
+ game.boss_spawned = true
+ game.spawn_enemy(true)
  game.finish(false)
  assert(game.run_history.size() == 3, "Test mode must not enter ranking")
  var ranked: Array = game.RUN_HISTORY.ranked([
@@ -115,7 +122,19 @@ func run() -> void:
  var totals: Dictionary = game.RUN_HISTORY.totals(speed_records)
  assert(totals.seconds == 905 and totals.kills == 72 and totals.levels == 53)
  DirAccess.remove_absolute(ProjectSettings.globalize_path(game.history_path))
- game.start_endless_test()
+ game.start_run("endless")
+ game.test_run = true
+ for id in ["damage", "rate", "shots", "speed", "magnet"]:
+  for rank in (5 if id == "speed" else 6): game.choose_upgrade(id)
+ for id in ["damage", "rate", "shots", "magnet"]:
+  for rank in (2 if id == "damage" else 1): game.choose_upgrade(id)
+ game.level = 35
+ game.elapsed = 420.0
+ game.kills = 2900
+ game.endless_wave = 4
+ game.next_boss_time = 450.0
+ game.boss_spawned = true
+ for index in 2: game.spawn_enemy(true)
  assert(game.level == 35 and game.kills == 2900 and game.elapsed == 420)
  assert(game.test_run and game.run_mode == "endless" and game.enemies.size() == 2)
  assert(game.next_boss_time == 450)
@@ -133,7 +152,7 @@ func run() -> void:
  game.spawn_endless_bosses()
  assert(game.enemies.size() == 13 and game.next_boss_time == 630)
  game.restart_run()
- assert(game.test_run and game.run_mode == "endless" and game.level == 35 and game.kills == 2900 and game.enemies.size() == 2)
+ assert(not game.test_run and game.run_mode == "endless" and game.level == 1 and game.kills == 0 and game.enemies.is_empty())
  var before_test_finish: int = game.run_history.size()
  game.finish(false)
  assert(game.run_history.size() == before_test_finish)

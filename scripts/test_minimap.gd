@@ -6,7 +6,21 @@ func run() -> void:
  root.add_child(game)
  await process_frame
  game.set_process(false)
- game.start_horde_test()
+ game.start_run("training")
+ game.elapsed = 420.0
+ game.speed = game.BASE_PLAYER_SPEED * 2.0
+ game.attack_timer = INF
+ for index in 518:
+  game.spawn_enemy(false)
+  var fish: Dictionary = game.enemies.back()
+  fish.tank = index % 2 == 1
+  fish.radius = 44.0 if fish.tank else 13.0
+  fish.speed = 85.8 if fish.tank else game.FASTEST_ENEMY_SPEED
+  fish.contact = 15.0 if fish.tank else 10.0
+  fish.hp = (100.0 if fish.tank else 30.0) * (1 + game.elapsed / 300.0)
+  fish.max_hp = fish.hp
+ for index in 2: game.spawn_enemy(true)
+ game.boss_spawned = true
  game.update_minimap(0)
  var map: Node = game.minimap_renderer
  assert(map.small_points.size() == 259 and map.large_points.size() == 259 and map.boss_points.size() == 2)
@@ -42,7 +56,21 @@ func run() -> void:
  game.show_menu()
  game.update_minimap(0)
  assert(not map.visible)
- game.start_horde_test()
+ game.start_run("training")
+ game.elapsed = 420.0
+ game.speed = game.BASE_PLAYER_SPEED * 2.0
+ game.attack_timer = INF
+ for index in 518:
+  game.spawn_enemy(false)
+  var fish: Dictionary = game.enemies.back()
+  fish.tank = index % 2 == 1
+  fish.radius = 44.0 if fish.tank else 13.0
+  fish.speed = 85.8 if fish.tank else game.FASTEST_ENEMY_SPEED
+  fish.contact = 15.0 if fish.tank else 10.0
+  fish.hp = (100.0 if fish.tank else 30.0) * (1 + game.elapsed / 300.0)
+  fish.max_hp = fish.hp
+ for index in 2: game.spawn_enemy(true)
+ game.boss_spawned = true
  game.update_minimap(0)
  assert(map.visible)
  game.spawn_timer = INF

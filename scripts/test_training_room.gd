@@ -1,16 +1,11 @@
 extends SceneTree
 
-class ExportedGame:
- extends "res://scripts/game.gd"
- func test_modes_available() -> bool:
-  return false
-
 func _initialize() -> void:
  call_deferred("run")
 
 func run() -> void:
  root.set_meta("offline_session", true)
- var game := ExportedGame.new()
+ var game: Node = load("res://main.tscn").instantiate()
  root.add_child(game)
  game.online.disabled = true
  game.set_process(false)

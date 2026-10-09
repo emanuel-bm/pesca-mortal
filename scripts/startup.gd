@@ -58,9 +58,6 @@ static func select_asset(data: Dictionary, name_value: String, repo: String) -> 
 
 func _ready() -> void:
  get_window().title = "Pesca Mortal"
- if "--smoke-test" in OS.get_cmdline_user_args():
-  _play(false)
-  return
  var config := ConfigFile.new()
  if config.load("res://updates.cfg") == OK:
   repository = str(config.get_value("updates", "repository", "")).strip_edges()

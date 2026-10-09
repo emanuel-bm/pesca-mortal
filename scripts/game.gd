@@ -90,7 +90,6 @@ var training: Node
 var bosses_defeated := 0
 var next_boss_time := ENDLESS_BOSS_INTERVAL
 var endless_wave := 0
-var test_first_wave_bosses := 1
 var run_history: Array = []
 var player_totals := {"seconds": 0.0, "kills": 0, "levels": 0}
 var history_path := "user://endless_runs.json"
@@ -107,8 +106,6 @@ var health_bar: ProgressBar
 var health_label: Label
 var overlay: PanelContainer
 var panel: VBoxContainer
-var smoke_test := false
-var smoke_time := 0.0
 const RESOLUTIONS := [Vector2i(960, 600), Vector2i(1152, 720), Vector2i(1280, 720), Vector2i(1600, 900), Vector2i(1920, 1080), Vector2i(2560, 1440), Vector2i(3840, 2160)]
 var selected_resolution := Vector2i(1152, 720)
 var fullscreen := false
@@ -120,8 +117,6 @@ var quality_picker: OptionButton
 var character_quality = preload("res://scripts/character_quality.gd").new()
 var graphics_quality := 2
 var fps_toggle: CheckButton
-var test_modes_enabled := false
-var test_mode_toggle: CheckButton
 var fps_label: Label
 var sounds: Node
 var player_texture: Texture2D
@@ -200,9 +195,9 @@ func _ready() -> void:
  add_child(sounds)
  character_quality.setup(self)
  load_display_settings()
- var automated_test := test_modes_available() and "--smoke-test" in OS.get_cmdline_user_args()
+ var automated_test := false
  for argument in OS.get_cmdline_args():
-  if test_modes_available() and argument.begins_with("res://scripts/test_"): automated_test = true
+  if OS.has_feature("editor") and argument.begins_with("res://scripts/test_"): automated_test = true
  if automated_test:
   history_path = "user://test_boot_history_%d_%d.json" % [Time.get_ticks_usec(), get_instance_id()]
   test_artifact_paths.append(history_path)
@@ -302,14 +297,6 @@ func _ready() -> void:
  training.game = self
  add_child(training)
  show_menu()
- if test_modes_available() and "--boss-test" in OS.get_cmdline_user_args():
-  start_boss_test()
- if test_modes_available() and "--ten-bosses-test" in OS.get_cmdline_user_args():
-  start_ten_bosses_test()
- if test_modes_available() and "--smoke-test" in OS.get_cmdline_user_args():
-  smoke_test = true
-  start_run()
-  elapsed = RUN_SECONDS - 2.0
 
 func setup_water() -> void:
  if not water_texture: return
@@ -618,11 +605,6 @@ func show_menu() -> void:
  show_records_panel()
  show_boss_records_panel()
  button("Histórico de partidas", show_history)
- if test_modes_available() and test_modes_enabled:
-  button("Testar chefão — nível 30", start_boss_test)
-  button("Testar infinito — nível 35", start_endless_test)
-  button("Testar 10 Minhocões", start_ten_bosses_test)
-  button("Teste de hordas", start_horde_test)
  button("Configurações", show_settings)
  button("Fechar jogo", quit_game)
  online.synchronize()
@@ -817,11 +799,7 @@ func _exit_tree() -> void:
  for path in test_artifact_paths:
   DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
-func test_modes_available() -> bool:
- return OS.has_feature("editor")
-
 func load_display_settings() -> void:
- test_modes_enabled = false
  var config := ConfigFile.new()
  if config.load("user://display.cfg") == OK:
   var saved: Vector2i = config.get_value("display", "resolution", selected_resolution)
@@ -876,7 +854,7 @@ func show_settings() -> void:
   if resolution == selected_resolution: resolution_picker.select(i)
  panel.add_child(resolution_picker)
  quality_picker = OptionButton.new()
- for quality_name in ["Qualidade baixa — desempenho", "Qualidade média", "Qualidade ultra"]:
+ for quality_name in ["Qualidade baixa", "Qualidade média", "Qualidade ultra"]:
   quality_picker.add_item(quality_name)
  quality_picker.select(graphics_quality)
  panel.add_child(quality_picker)
@@ -888,12 +866,6 @@ func show_settings() -> void:
  fps_toggle.text = "Mostrar contador de FPS"
  fps_toggle.button_pressed = show_fps
  panel.add_child(fps_toggle)
- test_mode_toggle = null
- if test_modes_available():
-  test_mode_toggle = CheckButton.new()
-  test_mode_toggle.text = "Habilitar modo teste"
-  test_mode_toggle.button_pressed = test_modes_enabled
-  panel.add_child(test_mode_toggle)
  for id in sounds.VOLUME_NAMES:
   var row := HBoxContainer.new()
   var label := Label.new()
@@ -924,8 +896,15 @@ func show_settings() -> void:
    preview.pressed.connect(sounds.play_effect.bind(id, 1.0, 1.0))
    row.add_child(preview)
   panel.add_child(row)
- button("Aplicar e salvar", save_settings_from_ui)
- button("Voltar", leave_settings)
+ var actions := HBoxContainer.new()
+ actions.add_theme_constant_override("separation", 14)
+ panel.add_child(actions)
+ var save := button("Salvar", save_settings_from_ui)
+ var back := button("Voltar", leave_settings)
+ for item in [save, back]:
+  panel.remove_child(item)
+  item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+  actions.add_child(item)
 
 func save_settings_from_ui() -> void:
  graphics_quality = quality_picker.selected
@@ -933,7 +912,6 @@ func save_settings_from_ui() -> void:
  selected_resolution = RESOLUTIONS[resolution_picker.selected]
  fullscreen = fullscreen_toggle.button_pressed
  show_fps = fps_toggle.button_pressed
- test_modes_enabled = test_modes_available() and is_instance_valid(test_mode_toggle) and test_mode_toggle.button_pressed
  apply_display_settings()
  leave_settings()
 
@@ -958,17 +936,10 @@ func show_pause() -> void:
  button("Voltar à tela inicial", show_menu)
 
 func restart_run() -> void:
- if run_mode == "training":
-  start_run("training")
-  return
- if test_run:
-  if run_mode == "horde": start_horde_test()
-  elif run_mode == "endless": start_endless_test()
-  else: start_boss_test()
- else: start_run(run_mode)
+ start_run(run_mode)
 
 func start_run(mode: String = "bosses") -> void:
- if mode not in ["endless", "bosses", "training"] and not test_modes_available(): return
+ if mode not in ["endless", "bosses", "training"]: return
  sounds.start_calm_music()
  record_run("restart")
  run_mode = mode
@@ -978,7 +949,6 @@ func start_run(mode: String = "bosses") -> void:
  bosses_defeated = 0
  next_boss_time = ENDLESS_BOSS_INTERVAL
  endless_wave = 0
- test_first_wave_bosses = 1
  stats_panel.hide()
  sounds.reset()
  player = ARENA / 2
@@ -1023,64 +993,6 @@ func start_run(mode: String = "bosses") -> void:
   prevent_player_death = true
   training.reset()
 
-func prepare_level_30_test(mode: String) -> void:
- if not test_modes_available(): return
- start_run(mode)
- test_run = true
- for id in ["damage", "rate", "shots", "speed", "magnet"]:
-  for rank in (5 if id == "speed" else 6): choose_upgrade(id)
- level = 30
-
-func start_boss_test() -> void:
- if not test_modes_available(): return
- prepare_level_30_test("bosses")
- elapsed = RUN_SECONDS
- boss_spawned = true
- spawn_enemy(true)
-
-func start_ten_bosses_test() -> void:
- if not test_modes_available(): return
- prepare_level_30_test("endless")
- prevent_player_death = true
- test_first_wave_bosses = 10
- elapsed = ENDLESS_BOSS_INTERVAL - 2.0
-
-func start_endless_test() -> void:
- if not test_modes_available(): return
- prepare_level_30_test("endless")
- for id in ["damage", "rate", "shots", "magnet"]:
-  for rank in (2 if id == "damage" else 1): choose_upgrade(id)
- level = 35
- elapsed = 420.0
- kills = 2900
- endless_wave = floori(elapsed / ENDLESS_BOSS_INTERVAL)
- next_boss_time = (endless_wave + 1) * ENDLESS_BOSS_INTERVAL
- boss_spawned = true
- for index in 2: spawn_enemy(true)
-
-func start_horde_test() -> void:
- if not test_modes_available(): return
- start_run("horde")
- prevent_player_death = true
- test_run = true
- elapsed = 420.0
- speed = BASE_PLAYER_SPEED * 2.0
- spawn_timer = INF
- attack_timer = INF
- for index in 518: spawn_horde_fish(index % 2 == 1)
- for index in 2: spawn_enemy(true)
- boss_spawned = true
-
-func spawn_horde_fish(tank: bool) -> void:
- spawn_enemy(false)
- var enemy: Dictionary = enemies[-1]
- enemy.tank = tank
- enemy.radius = 44.0 if tank else 13.0
- enemy.speed = 85.8 if tank else FASTEST_ENEMY_SPEED
- enemy.contact = 15.0 if tank else 10.0
- enemy.hp = (100.0 if tank else 30.0) * (1 + elapsed / 300.0)
- enemy.max_hp = enemy.hp
-
 func _input(event: InputEvent) -> void:
  if event is InputEventMouseMotion:
   menu_mouse_navigation = true
@@ -1099,16 +1011,6 @@ func _input(event: InputEvent) -> void:
    move_menu_focus(-1 if event.keycode == KEY_UP else 1)
    get_viewport().set_input_as_handled()
    return
- if run_mode == "horde" and state == "playing" and event is InputEventKey and event.pressed and not event.echo:
-  if event.keycode == KEY_F5:
-   for index in mini(100, maxi(0, 2000 - enemies.size())): spawn_horde_fish(index % 2 == 1)
-  elif event.keycode == KEY_F6:
-   var removed := 0
-   for index in range(enemies.size() - 1, -1, -1):
-    if not enemies[index].boss:
-     enemies.remove_at(index)
-     removed += 1
-     if removed >= 100: break
  if state != "upgrade" or not event is InputEventKey or not event.pressed or event.echo: return
  var key: int = event.keycode
  if key in [KEY_UP, KEY_LEFT, KEY_W, KEY_A]:
@@ -1170,19 +1072,6 @@ func _process(delta: float) -> void:
  update_minimap(delta)
  if xp_renderer: xp_renderer.queue_redraw()
  layout_modals()
- if smoke_test:
-  smoke_time += delta
-  if smoke_time > 3.0:
-   assert(boss_spawned, "Boss did not spawn")
-   assert(not enemies.is_empty(), "No enemies spawned")
-   choose_upgrade("damage")
-   assert(is_equal_approx(damage, 24.0), "Upgrade failed")
-   finish(true)
-   assert(state == "won", "Victory failed")
-   start_run()
-   assert(health == MAX_HEALTH and enemies.is_empty(), "Restart failed")
-   print("SMOKE PASS: boss, upgrade, victory, restart")
-   get_tree().quit()
  if state == "playing":
   update_game(minf(delta, 0.05))
  update_water(minf(delta, 0.05))
@@ -1222,7 +1111,7 @@ func _process(delta: float) -> void:
  else:
   hud.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
   hud.position = Vector2(22, 46)
- if run_active and run_mode != "horde":
+ if run_active:
   var fish_count := 0
   var visible_fish := 0
   var visible_area := Rect2(camera_offset(), get_viewport_rect().size)
@@ -1232,19 +1121,7 @@ func _process(delta: float) -> void:
    if test_run and visible_area.grow(enemy.radius + 2).has_point(enemy.pos): visible_fish += 1
   hud.text += "\nPEIXES %d" % fish_count
   if test_run: hud.text += "\nPEIXES VISÍVEIS %d" % visible_fish
- if run_mode == "horde" and run_active:
-  var fish_count := 0
-  var tank_count := 0
-  var boss_count := 0
-  var visible_fish := 0
-  var visible_area := Rect2(camera_offset(), get_viewport_rect().size)
-  for enemy in enemies:
-   if enemy.boss: boss_count += 1
-   elif enemy.tank: tank_count += 1
-   else: fish_count += 1
-   if not enemy.boss and visible_area.grow(enemy.radius + 2).has_point(enemy.pos): visible_fish += 1
-  hud.text = "TESTE DE HORDAS · %d INIMIGOS\nPIRANHAS %d · PINTADOS %d · CHEFÕES %d\nPEIXES VISÍVEIS %d\nNÃO PODE MORRER · VELOCIDADE 2x\nF5: +100 peixes · F6: -100 peixes" % [enemies.size(), fish_count, tank_count, boss_count, visible_fish]
- fps_label.visible = show_fps or (run_mode == "horde" and run_active)
+ fps_label.visible = show_fps
  fps_label.text = "%d FPS" % Engine.get_frames_per_second()
  var map_area := minimap_world_rect()
  var map_shown := minimap_renderer != null and minimap_renderer.visible
@@ -1365,7 +1242,7 @@ func fish_spawn_rate() -> float:
 func spawn_endless_bosses() -> void:
  while elapsed >= next_boss_time:
   endless_wave += 1
-  var count := test_first_wave_bosses if test_run and endless_wave == 1 else endless_wave
+  var count := endless_wave
   for index in count: spawn_enemy(true)
   boss_spawned = true
   next_boss_time += ENDLESS_BOSS_INTERVAL
