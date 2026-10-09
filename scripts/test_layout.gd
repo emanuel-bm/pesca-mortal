@@ -6,7 +6,11 @@ func _initialize() -> void:
 func check_menu(game: Node) -> bool:
  var visible_area: Rect2 = game.get_viewport_rect()
  var rect: Rect2 = game.overlay.get_global_rect()
- if rect.get_center().distance_to(visible_area.get_center()) > 2:
+ if game.state == "lost":
+  if absf(rect.get_center().x - visible_area.get_center().x) > 2 or absf(rect.end.y - (visible_area.end.y - 20)) > 2 or rect.position.y <= visible_area.get_center().y:
+   push_error("Tela de morte deve ficar centralizada no rodapé, liberando o personagem")
+   return false
+ elif rect.get_center().distance_to(visible_area.get_center()) > 2:
   push_error("Painel principal deve ficar no centro da tela")
   return false
  if game.records_panel and game.records_panel.visible:

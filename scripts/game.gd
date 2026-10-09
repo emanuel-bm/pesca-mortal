@@ -358,6 +358,9 @@ func button(text: String, callback: Callable) -> Button:
  return item
 
 func clear_panel() -> void:
+ panel.add_theme_constant_override("separation", 16)
+ for side in ["left", "right", "top", "bottom"]:
+  panel.get_parent().add_theme_constant_override("margin_" + side, 24)
  overlay.custom_minimum_size.x = 620
  stats_panel.hide()
  if records_panel: records_panel.hide()
@@ -436,6 +439,8 @@ func layout_modals() -> void:
   boss_records_panel.position = Vector2(viewport.x - 24 - boss_records_panel.size.x * factor, (viewport.y - boss_records_panel.size.y * factor) / 2)
  overlay.scale = Vector2.ONE * factor
  overlay.position = (viewport - overlay.size * factor) / 2
+ if state == "lost":
+  overlay.position.y = viewport.y - overlay.size.y * factor - 20
  stats_panel.scale = Vector2.ONE * factor
  stats_panel.position = Vector2(viewport.x - 24 - stats_panel.size.x * factor, (viewport.y - stats_panel.size.y * factor) / 2)
 
@@ -1041,7 +1046,7 @@ func _process(delta: float) -> void:
   var remaining := maxi(0, ceili(next_boss_time - elapsed))
   hud.text += "\nINFINITO · PRÓXIMOS CHEFÕES EM %02d:%02d" % [floori(remaining / 60.0), remaining % 60]
  if not profile_panel: setup_profile_panel()
- profile_panel.visible = not run_active and state not in ["nickname", "global_ranking"]
+ profile_panel.visible = not run_active and state not in ["nickname", "global_ranking", "lost"]
  hud.visible = run_active
  if not run_active:
   hud.text = "ELIMINAÇÕES TOTAIS %d\nTEMPO TOTAL %s\nNÍVEIS CONQUISTADOS %d" % [player_totals.kills, RUN_HISTORY.time_text(player_totals.seconds), player_totals.levels]
@@ -1547,6 +1552,35 @@ func finish(won: bool) -> void:
  state = "won" if won else "lost"
  clear_panel()
  title("VITÓRIA!" if won else "FIM DE PARTIDA")
+ if not won:
+  var living_fish := 0
+  var living_bosses := 0
+  for enemy in enemies:
+   if enemy.hp <= 0: continue
+   if enemy.boss: living_bosses += 1
+   else: living_fish += 1
+  panel.add_theme_constant_override("separation", 8)
+  overlay.custom_minimum_size.x = 480
+  for side in ["left", "right"]:
+   panel.get_parent().add_theme_constant_override("margin_" + side, 16)
+  for side in ["top", "bottom"]:
+   panel.get_parent().add_theme_constant_override("margin_" + side, 8)
+  title("%s · Tempo: %02d:%02d" % [online.nickname(), int(elapsed) / 60, int(elapsed) % 60], 16)
+  title("Nível: %d · Eliminações: %d" % [level, kills], 16)
+  title("Peixes vivos: %d · Chefes vivos: %d" % [living_fish, living_bosses], 16)
+  var actions := HBoxContainer.new()
+  actions.add_theme_constant_override("separation", 12)
+  panel.add_child(actions)
+  for item in [button("Jogar novamente", restart_run), button("Voltar à tela inicial", show_menu)]:
+   panel.remove_child(item)
+   actions.add_child(item)
+   item.custom_minimum_size.y = 48
+   item.add_theme_font_size_override("font_size", 16)
+   item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+  profile_panel.hide()
+  layout_modals()
+  queue_redraw()
+  return
  title("Tempo: %02d:%02d\nNível: %d · Eliminações: %d" % [int(elapsed) / 60, int(elapsed) % 60, level, kills], 22)
  button("Jogar novamente", restart_run)
  button("Voltar à tela inicial", show_menu)
@@ -1684,4 +1718,5 @@ func _draw() -> void:
   draw_texture_rect(character_quality.texture_for("player", graphics_quality, player_texture), Rect2(Vector2(-32, -32), Vector2(64, 64)), false, Color(2, 2, 2) if player_color == Color.WHITE else Color.WHITE)
   draw_set_transform(Vector2.ZERO)
  else: draw_rect(Rect2(viewport / 2 - Vector2(14, 14), Vector2(28, 28)), player_color)
-
+ if state == "lost":
+  draw_arc(viewport / 2, 44, 0, TAU, 48, Color(1, 0.45, 0.35), 2, true)
