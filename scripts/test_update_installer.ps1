@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 $projectDirectory = Split-Path -Parent $PSScriptRoot
-$testDirectory = Join-Path $projectDirectory ('.tools/update-test-' + [Guid]::NewGuid().ToString('N'))
+$testDirectory = Join-Path $projectDirectory ('.tools/atualização-test-' + [Guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Path $testDirectory
 $sourceDirectory = Join-Path $testDirectory 'source'
 $null = New-Item -ItemType Directory -Path $sourceDirectory
@@ -24,7 +24,7 @@ $zipPath = Join-Path $testDirectory 'update.zip'
 [IO.Compression.ZipFile]::CreateFromDirectory($sourceDirectory, $zipPath)
 $parametersPath = Join-Path $testDirectory 'parameters.json'
 $settings = @{ pid = 2147483647; archive = $zipPath; target = $targetPath; entry = 'Pesca Mortal.exe'; sha256 = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash }
-$settings | ConvertTo-Json | Set-Content -LiteralPath $parametersPath
+$settings | ConvertTo-Json | Set-Content -LiteralPath $parametersPath -Encoding UTF8
 $installer = Join-Path $PSScriptRoot 'install_update.ps1'
 & $installer -ParametersPath $parametersPath
 $marker = Join-Path $testDirectory 'launched.txt'
@@ -34,7 +34,7 @@ if ((Get-FileHash -LiteralPath $targetPath).Hash -ne (Get-FileHash -LiteralPath 
 if ((Get-Content -LiteralPath $marker -Raw).Length -gt 0) { throw 'Unexpected launch failure' }
 Remove-Item -LiteralPath $marker
 $settings.sha256 = '0' * 64
-$settings | ConvertTo-Json | Set-Content -LiteralPath $parametersPath
+$settings | ConvertTo-Json | Set-Content -LiteralPath $parametersPath -Encoding UTF8
 & $installer -ParametersPath $parametersPath
 for ($attempt = 0; $attempt -lt 40 -and -not (Test-Path -LiteralPath $marker); $attempt++) { Start-Sleep -Milliseconds 100 }
 if (-not (Test-Path -LiteralPath $marker)) { throw 'Original executable was not relaunched after checksum failure' }
@@ -43,7 +43,7 @@ if ((Get-FileHash -LiteralPath $targetPath).Hash -ne (Get-FileHash -LiteralPath 
 Remove-Item -LiteralPath $marker
 $settings.sha256 = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash
 $settings.entry = 'missing.exe'
-$settings | ConvertTo-Json | Set-Content -LiteralPath $parametersPath
+$settings | ConvertTo-Json | Set-Content -LiteralPath $parametersPath -Encoding UTF8
 & $installer -ParametersPath $parametersPath
 for ($attempt = 0; $attempt -lt 40 -and -not (Test-Path -LiteralPath $marker); $attempt++) { Start-Sleep -Milliseconds 100 }
 if (-not (Test-Path -LiteralPath $marker)) { throw 'Original executable was not relaunched after missing entry' }
@@ -57,7 +57,7 @@ $brokenZipPath = Join-Path $testDirectory 'broken.zip'
 $settings.entry = 'Pesca Mortal.exe'
 $settings.archive = $brokenZipPath
 $settings.sha256 = (Get-FileHash -LiteralPath $brokenZipPath -Algorithm SHA256).Hash
-$settings | ConvertTo-Json | Set-Content -LiteralPath $parametersPath
+$settings | ConvertTo-Json | Set-Content -LiteralPath $parametersPath -Encoding UTF8
 & $installer -ParametersPath $parametersPath
 for ($attempt = 0; $attempt -lt 40 -and -not (Test-Path -LiteralPath $marker); $attempt++) { Start-Sleep -Milliseconds 100 }
 if (-not (Test-Path -LiteralPath $marker)) { throw 'Backup was not relaunched after replacement failed' }

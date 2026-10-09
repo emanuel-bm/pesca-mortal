@@ -1,6 +1,9 @@
 param([Parameter(Mandatory=$true)][string]$ParametersPath)
 $ErrorActionPreference = 'Stop'
-$settings = Get-Content -LiteralPath $ParametersPath -Raw | ConvertFrom-Json
+# Godot can inherit PowerShell 7 module paths from the development terminal.
+# This helper runs in Windows PowerShell and must load its own standard modules.
+$env:PSModulePath = Join-Path $PSHOME 'Modules'
+$settings = Get-Content -LiteralPath $ParametersPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $targetPath = [IO.Path]::GetFullPath([string]$settings.target)
 $targetDirectory = [IO.Path]::GetDirectoryName($targetPath)
 $taskId = [Guid]::NewGuid().ToString('N')

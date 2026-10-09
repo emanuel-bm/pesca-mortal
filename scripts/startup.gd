@@ -192,7 +192,10 @@ func _completed(result: int, code: int, _headers: PackedStringArray, body: Packe
 
 func _offer() -> void:
  _set_message("Nova versão disponível: " + str(release.tag_name) + "\nAtualize agora ou continue com a versão instalada em modo offline.")
- if OS.get_name() == "Windows" and OS.has_feature("standalone") and not asset.is_empty():
+ if OS.get_name() == "Windows" and OS.has_feature("template"):
+  if asset.is_empty():
+   _error("O pacote de atualização ainda não está disponível ou não pôde ser validado. Tente novamente ou jogue offline.")
+   return
   _button("Baixar atualização", _download)
  else:
   _button("Baixar atualização no GitHub", func(): OS.shell_open("https://github.com/" + repository + "/releases/latest"))

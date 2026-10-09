@@ -70,8 +70,18 @@ de abertura simula respostas da API (incluindo falhas e download corrompido)
 e verifica que o menu offline funciona sem cadastro. O teste PowerShell
 `scripts/test_update_installer.ps1` instala um executável de teste e verifica
 o caminho de erro, sem alterar a instalação real. Antes de publicar, testar
-duas releases reais em outra máquina. O funcionamento ponta a ponta entre
-duas versões distintas ainda precisa desse teste.
+duas releases reais em outra máquina. `scripts/test_exported_update.gd`, usado
+como script da cena inicial de uma exportação Windows isolada, verifica que
+o botão usa download interno e que pacotes inválidos oferecem tentar
+novamente/offline. Com `-- --update-e2e` e uma versão local inferior à release,
+ele aciona o download real e a instalação no próprio executável de teste.
+
+O teste ponta a ponta foi executado nesta máquina: consulta ao GitHub,
+download real da release 0.1.1, substituição do executável (hash idêntico ao
+arquivo publicado) e reabertura automática do jogo. A 0.1.2 corrige o uso da
+feature `template` do Godot 4, os caminhos UTF-8 com acentos e a seleção dos
+módulos nativos do Windows PowerShell. As antigas 0.1.0/0.1.1 não conseguem
+receber essas correções automaticamente; precisam ser substituídas uma vez.
 
 Referências: [GitHub Releases API](https://docs.github.com/en/rest/releases/releases?apiVersion=latest),
 [Godot HTTPRequest](https://docs.godotengine.org/en/stable/classes/class_httprequest.html),
