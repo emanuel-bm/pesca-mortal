@@ -35,22 +35,23 @@ release seguindo os passos de exportação abaixo.
    `1.0.1`. Usar versões com três números, sem sufixos de pré-release.
 4. Executar `powershell -NoProfile -File scripts/package_windows.ps1`.
 5. Criar uma release publicada com tag `v1.0.1` e anexar
-   `dist/Pesca-Mortal-Windows.zip`. Sempre usar esse mesmo nome do asset.
+   `dist/pesca-mortal-windows-v1.0.1.exe`. O nome inclui a versão publicada.
    A versão da tag precisa corresponder à versão exportada do jogo.
 6. Distribuir essa primeira build aos amigos. As próximas releases poderão
    ser baixadas pelo próprio jogo.
 
 Commits isolados não são atualizações. Releases em rascunho/pré-release não
 entram nesse canal. A API precisa fornecer o `digest` SHA-256 do asset para
-habilitar instalação automática; caso contrário, o botão abre o GitHub.
+habilitar instalação automática; caso contrário, o Windows oferece tentar
+novamente ou jogar offline dentro do jogo.
 O código pode permanecer público junto com as releases, sem tokens no jogo.
 
 ## Instalação e limites
 
-No Windows exportado, o jogo baixa o ZIP em `user://`, verifica SHA-256,
-prepara o auxiliar e fecha. O auxiliar confere novamente o checksum, extrai
-somente `Pesca Mortal.exe` da raiz do ZIP para um arquivo temporário na pasta
-da instalação e espera o processo antigo terminar. Substitui o executável,
+No Windows exportado, o jogo baixa o EXE em `user://`, verifica SHA-256,
+prepara o auxiliar e fecha. O auxiliar confere novamente o checksum, copia
+o executável para um arquivo temporário na pasta da instalação e espera
+o processo antigo terminar. Substitui o executável,
 preserva backup até conseguir iniciar a nova versão e reabre o mesmo caminho.
 O programa atualizado consulta novamente a release e abre o menu quando a
 versão corresponde. Saves, nome, ranking local e preferências em `user://`
@@ -62,6 +63,24 @@ A pasta do jogo precisa permitir escrita. O pacote usa PCK embutido; builds
 que precisem de DLLs ou outros arquivos devem ampliar o instalador antes da
 distribuição. macOS, Linux e execução pelo editor oferecem download manual
 no GitHub e jogar offline; a instalação automática atual é para Windows.
+
+A geração padrão não cria ZIP nem publica nada: apenas exporta
+`dist/pesca-mortal-windows-v<versão>.exe`. Commit, push e release são etapas separadas. Uma
+release deve ser solicitada somente depois de reunir as atualizações.
+O EXE já contém o PCK (dados e recursos do jogo) embutido.
+
+Clientes 0.1.2 já instalados ainda procuram `Pesca-Mortal-Windows.zip`.
+Para migrá-los automaticamente, a próxima publicação pode incluir também
+um ZIP de compatibilidade, gerado explicitamente com `-LegacyZip`. Sem esse
+arquivo, esses clientes precisam receber o novo EXE uma vez. O download
+principal e o atualizador novo usam o EXE direto. Esse parâmetro opcional
+não publica arquivos nem cria releases.
+
+O atualizador resolve `{version}` em `windows_asset` usando a tag da release
+remota (por exemplo, `v0.1.3` vira `pesca-mortal-windows-v0.1.3.exe`). Não usa
+a versão instalada para montar o nome do download. A troca automática mantém
+o caminho do executável instalado para preservar atalhos; os arquivos
+publicados e baixados manualmente têm nomes distintos a cada versão.
 
 ## Verificação
 

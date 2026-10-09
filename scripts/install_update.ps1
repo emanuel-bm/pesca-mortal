@@ -15,14 +15,22 @@ $installed = $false
 try {
     if ([IO.Path]::GetFileName([string]$settings.entry) -ne [string]$settings.entry -or -not ([string]$settings.entry).EndsWith('.exe')) { throw 'Invalid executable name' }
     if ((Get-FileHash -LiteralPath $settings.archive -Algorithm SHA256).Hash -ne [string]$settings.sha256) { throw 'Checksum mismatch' }
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $archive = [IO.Compression.ZipFile]::OpenRead([string]$settings.archive)
-    # Release archives contain one executable with an embedded PCK, at the root.
-    $entry = $archive.GetEntry([string]$settings.entry)
-    if ($null -eq $entry -or $entry.Length -lt 2 -or $entry.Length -gt 1GB) { throw 'Executable missing or invalid' }
-    [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $stagedPath, $false)
-    $archive.Dispose()
-    $archive = $null
+    if ($settings.format -eq 'exe') {
+        $download = Get-Item -LiteralPath $settings.archive
+        if ($download.Length -lt 2 -or $download.Length -gt 1GB) { throw 'Executable size invalid' }
+        Copy-Item -LiteralPath $settings.archive -Destination $stagedPath
+    } elseif (-not $settings.format -or $settings.format -eq 'zip') {
+        # Backward-compatible input for older update packages.
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $archive = [IO.Compression.ZipFile]::OpenRead([string]$settings.archive)
+        $entry = $archive.GetEntry([string]$settings.entry)
+        if ($null -eq $entry -or $entry.Length -lt 2 -or $entry.Length -gt 1GB) { throw 'Executable missing or invalid' }
+        [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $stagedPath, $false)
+        $archive.Dispose()
+        $archive = $null
+    } else {
+        throw 'Unsupported update format'
+    }
     $stream = [IO.File]::OpenRead($stagedPath)
     try {
         if ($stream.ReadByte() -ne 77 -or $stream.ReadByte() -ne 90) { throw 'Invalid Windows executable' }

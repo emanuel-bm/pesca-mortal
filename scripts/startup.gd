@@ -13,7 +13,7 @@ var status_frame: PanelContainer
 var loading: VBoxContainer
 var phase := "check"
 var leaving := false
-var download_path := "user://update.zip"
+var download_path := "user://update.exe"
 
 class LoadingSpinner extends Control:
  var angle := 0.0
@@ -43,10 +43,11 @@ static func newer(remote: String, local: String) -> bool:
 
 static func select_asset(data: Dictionary, name_value: String, repo: String) -> Dictionary:
  if data.get("draft", false) or data.get("prerelease", false): return {}
+ var expected_name := name_value.replace("{version}", str(data.get("tag_name", "")).trim_prefix("v"))
  var entries: Variant = data.get("assets", [])
  if not entries is Array: return {}
  for entry: Variant in entries:
-  if not entry is Dictionary or entry.get("name", "") != name_value: continue
+  if not entry is Dictionary or entry.get("name", "") != expected_name: continue
   var url := str(entry.get("browser_download_url", ""))
   var digest := str(entry.get("digest", ""))
   var expression := RegEx.new()
@@ -204,6 +205,7 @@ func _offer() -> void:
 
 func _download() -> void:
  phase = "download"
+ download_path = "user://update.exe" if asset_name.to_lower().ends_with(".exe") else "user://update.zip"
  request.download_file = download_path
  request.timeout = 300.0
  request.body_size_limit = 1024 * 1024 * 1024
@@ -236,7 +238,7 @@ func _install() -> void:
  if file == null:
   _error("Não foi possível preparar a instalação.")
   return
- file.store_string(JSON.stringify({"pid": OS.get_process_id(), "archive": ProjectSettings.globalize_path(download_path), "target": OS.get_executable_path(), "entry": executable_name, "sha256": str(asset.digest).trim_prefix("sha256:")}))
+ file.store_string(JSON.stringify({"pid": OS.get_process_id(), "archive": ProjectSettings.globalize_path(download_path), "format": "exe" if asset_name.to_lower().ends_with(".exe") else "zip", "target": OS.get_executable_path(), "entry": executable_name, "sha256": str(asset.digest).trim_prefix("sha256:")}))
  file.close()
  var powershell := OS.get_environment("SystemRoot").path_join("System32/WindowsPowerShell/v1.0/powershell.exe")
  var pid := OS.create_process(powershell, ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", ProjectSettings.globalize_path(helper), "-ParametersPath", ProjectSettings.globalize_path(parameters)], false)

@@ -19,7 +19,8 @@ func _ready() -> void:
   , CONNECT_ONE_SHOT)
   return
  startup.request.cancel_request()
- var asset := {"name": startup.asset_name, "browser_download_url": "https://github.com/" + startup.repository + "/releases/download/v9.0.0/Pesca-Mortal-Windows.zip", "digest": "sha256:" + "a".repeat(64)}
+ var filename := str(startup.asset_name).replace("{version}", "9.0.0")
+ var asset := {"name": filename, "browser_download_url": "https://github.com/" + startup.repository + "/releases/download/v9.0.0/" + filename, "digest": "sha256:" + "a".repeat(64)}
  startup.release = {"tag_name": "v9.0.0", "assets": [asset]}
  startup.asset = startup.select_asset(startup.release, startup.asset_name, startup.repository)
  startup._offer()

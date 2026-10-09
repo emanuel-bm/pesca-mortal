@@ -62,4 +62,22 @@ $settings | ConvertTo-Json | Set-Content -LiteralPath $parametersPath -Encoding 
 for ($attempt = 0; $attempt -lt 40 -and -not (Test-Path -LiteralPath $marker); $attempt++) { Start-Sleep -Milliseconds 100 }
 if (-not (Test-Path -LiteralPath $marker)) { throw 'Backup was not relaunched after replacement failed' }
 if ((Get-FileHash -LiteralPath $targetPath).Hash -ne $previousHash) { throw 'Backup was not restored' }
-Write-Output 'Installer checks passed: replacement, restart, checksum failure and invalid archive preserve the previous executable.'
+Remove-Item -LiteralPath $marker
+# Direct EXE input must install without archive extraction.
+Copy-Item -LiteralPath $targetPath -Destination $newPath -Force
+$settings.format = 'exe'
+$settings.archive = $newPath
+$settings.sha256 = (Get-FileHash -LiteralPath $newPath -Algorithm SHA256).Hash
+$settings | ConvertTo-Json | Set-Content -LiteralPath $parametersPath -Encoding UTF8
+& $installer -ParametersPath $parametersPath
+for ($attempt = 0; $attempt -lt 40 -and -not (Test-Path -LiteralPath $marker); $attempt++) { Start-Sleep -Milliseconds 100 }
+if (-not (Test-Path -LiteralPath $marker)) { throw 'Direct executable was not relaunched' }
+if ((Get-Content -LiteralPath $marker -Raw).Length -gt 0) { throw 'Direct executable install failed' }
+if ((Get-FileHash -LiteralPath $targetPath).Hash -ne $settings.sha256) { throw 'Direct executable differs from downloaded file' }
+Remove-Item -LiteralPath $marker
+$settings.sha256 = '0' * 64
+$settings | ConvertTo-Json | Set-Content -LiteralPath $parametersPath -Encoding UTF8
+& $installer -ParametersPath $parametersPath
+for ($attempt = 0; $attempt -lt 40 -and -not (Test-Path -LiteralPath $marker); $attempt++) { Start-Sleep -Milliseconds 100 }
+if (-not (Test-Path -LiteralPath $marker) -or (Get-Content -LiteralPath $marker -Raw) -notmatch '--update-install-failed') { throw 'Direct executable checksum failure was not recovered' }
+Write-Output 'Installer checks passed: EXE and ZIP replacement, restart, checksum failures and rollback.'

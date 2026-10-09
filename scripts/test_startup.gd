@@ -16,7 +16,7 @@ func run() -> void:
  root.add_child(startup)
  startup.request.cancel_request()
  startup.repository = "example/pesca"
- startup.asset_name = "Pesca-Mortal-Windows.zip"
+ startup.asset_name = "pesca-mortal-windows-v{version}.exe"
  assert(startup.newer("v1.10.0", "1.9.9"))
  assert(not startup.newer("v1.0.0", "1.0.0"))
  assert(not startup.newer("v0.9.9", "1.0.0"))
@@ -33,10 +33,15 @@ func run() -> void:
  startup._completed(HTTPRequest.RESULT_SUCCESS, 200, [], JSON.stringify({"tag_name": "v" + str(ProjectSettings.get_setting("application/config/version"))}).to_utf8_buffer())
  assert(startup.played == "online")
  startup.played = ""
- var data := {"tag_name": "v1.1.0", "assets": [{"name": startup.asset_name, "digest": "sha256:" + "a".repeat(64), "browser_download_url": "https://github.com/example/pesca/releases/download/v1.1.0/Pesca-Mortal-Windows.zip"}]}
+ var data := {"tag_name": "v1.1.0", "assets": [{"name": "pesca-mortal-windows-v1.1.0.exe", "digest": "sha256:" + "a".repeat(64), "browser_download_url": "https://github.com/example/pesca/releases/download/v1.1.0/pesca-mortal-windows-v1.1.0.exe"}]}
  startup._completed(HTTPRequest.RESULT_SUCCESS, 200, [], JSON.stringify(data).to_utf8_buffer())
  assert(startup.played.is_empty(), "A newer release must offer a choice before loading the game")
  assert(not startup.asset.is_empty())
+ var future: Dictionary = data.duplicate(true)
+ future.tag_name = "v1.2.0"
+ assert(startup.select_asset(future, startup.asset_name, startup.repository).is_empty(), "A release must not install an executable named for a different version")
+ future.assets[0].name = "pesca-mortal-windows-v1.2.0.exe"
+ assert(not startup.select_asset(future, startup.asset_name, startup.repository).is_empty(), "The filename must follow the remote release, not the installed version")
  var offline_button: Button = startup.actions.get_child(startup.actions.get_child_count() - 1)
  assert(offline_button.text == "Jogar offline")
  offline_button.pressed.emit()
