@@ -29,6 +29,13 @@ func run() -> void:
  game.online.disabled = true
  game.sounds.volumes.master = 0.0
  game.sounds.apply_volumes()
+ for id in game.cards.IDS:
+  var sound_id: String = "card_" + id
+  var stream: AudioStreamWAV = game.sounds.players[sound_id].stream
+  assert(is_equal_approx(stream.get_length(), 1.0))
+  assert(stream.loop_mode == AudioStreamWAV.LOOP_DISABLED)
+  assert(game.sounds.volume_group(sound_id) == "cards")
+  assert(not game.sounds.effect_enabled(sound_id), "Master mute must mute card sounds")
  fresh()
  assert(game.cards.drop_chance({"boss": false, "tank": false}) == 0.0025)
  assert(game.cards.drop_chance({"boss": false, "tank": true}) == 0.0125)

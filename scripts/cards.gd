@@ -78,6 +78,7 @@ func spawn(id: String, world_position: Vector2) -> void:
  refresh_pickup(pickup)
 
 func activate(id: String) -> void:
+ game.sounds.play_card(id)
  if id == "ima":
   for gem in game.gems: gem["magnetized"] = true
  else:
