@@ -72,6 +72,12 @@ func run() -> void:
  root.add_child(game)
  assert(game.state == "menu", "First-time offline players must not be blocked by nickname registration")
  assert(game.online.disabled and not game.online.busy)
+ set_meta("offline_session", false)
+ game.online.disabled = false
+ game.online.profile = {}
+ game.online.endpoint = ""
+ game.show_menu()
+ assert(game.state == "menu", "An up-to-date game must remain playable before the ranking server is deployed")
  game.queue_free()
  await process_frame
  print("Startup checks passed: release choice, offline fallback, integrity and first-time offline menu.")

@@ -492,14 +492,14 @@ func show_menu() -> void:
  record_run("menu")
  run_active = false
  state = "menu"
- if online.nickname().is_empty() and not bool(get_tree().get_meta("offline_session", false)):
+ if online.nickname().is_empty() and not online.endpoint.is_empty() and not bool(get_tree().get_meta("offline_session", false)):
   show_nickname()
   return
  player_totals = RUN_HISTORY.totals(run_history)
  sounds.reset()
  clear_panel()
  title("PESCA MORTAL")
- title("Jogando offline" if bool(get_tree().get_meta("offline_session", false)) else "Jogador: " + online.nickname(), 18)
+ title("Jogando offline" if bool(get_tree().get_meta("offline_session", false)) else "Jogador: " + ("visitante" if online.nickname().is_empty() else online.nickname()), 18)
  title("WASD / setas: mover · Ataque automático\nColete ventrechas para evoluir · ESC: pausar", 18)
  button("Modo infinito", start_run.bind("endless"))
  button("Modo por chefões", start_run.bind("bosses"))
@@ -532,7 +532,7 @@ func show_nickname() -> void:
  online_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
  online_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
  panel.add_child(online_status_label)
- if not online.nickname().is_empty() or bool(get_tree().get_meta("offline_session", false)): button("Voltar", show_menu)
+ if not online.nickname().is_empty() or online.endpoint.is_empty() or bool(get_tree().get_meta("offline_session", false)): button("Voltar", show_menu)
  button("Fechar jogo", quit_game)
  online_changed()
  nickname_edit.grab_focus()
