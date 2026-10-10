@@ -1,7 +1,7 @@
 extends Node2D
 
 const RUN_SECONDS := 300.0
-const ENDLESS_FIRST_BOSS_TIME := 240.0
+const ENDLESS_FIRST_BOSS_TIME := 180.0
 const ENDLESS_BOSS_INTERVAL := 120.0
 const ARENA := Vector2(2400, 1800)
 const ENEMY_SEPARATION_SCALE := 0.3
@@ -1203,21 +1203,18 @@ func update_game(dt: float) -> void:
   projectile.life -= dt
   var hit := false
   if bool(projectile.get("piercing", false)):
-   if not projectile.has("remaining_damage"): projectile.remaining_damage = effective_damage()
+   if not projectile.has("base_damage"): projectile.base_damage = effective_damage()
    var steps := maxi(1, ceili(previous_position.distance_to(projectile.pos) / 8.0))
    for step in range(steps + 1):
     var point := previous_position.lerp(projectile.pos, float(step) / steps)
     var target := projectile_target(point, projectile.hit_enemies)
-    while target >= 0 and projectile.remaining_damage > 0.0:
+    while target >= 0:
      var enemy := enemies[target]
-     var consumed: float = minf(projectile.remaining_damage, enemy.hp)
-     hit_with_spear(enemy, consumed)
-     projectile.remaining_damage = maxf(0.0, projectile.remaining_damage - consumed)
+     var multipliers := [1.0, 0.7, 0.5, 0.2]
+     var multiplier: float = multipliers[mini(projectile.hit_enemies.size(), 3)]
+     hit_with_spear(enemy, projectile.base_damage * multiplier)
      projectile.hit_enemies.append(enemy)
      target = projectile_target(point, projectile.hit_enemies)
-    if projectile.remaining_damage <= 0.0:
-     hit = true
-     break
   else:
    var target := projectile_target(projectile.pos)
    if target >= 0:
@@ -1537,7 +1534,7 @@ func spawn_enemy(boss: bool) -> void:
  var angle := rng.randf_range(0, TAU)
  var position := (player + Vector2.from_angle(angle) * 680).clamp(Vector2(30, 30), ARENA - Vector2(30, 30))
  var tank := not boss and elapsed > 30 and rng.randf() < 0.25
- var hp := (100.0 if tank else 30.0) * (1 + elapsed / 300.0)
+ var hp := (100.0 if tank else 21.0) * (1 + elapsed / 300.0)
  if boss: hp = 32000.0
  var enemy := {"pos": position, "hp": hp, "max_hp": hp, "radius": 38.0 if boss else (44.0 if tank else 13.0), "speed": 120.0 if boss else (65.0 * MOVEMENT_MULTIPLIER * 1.1 if tank else (105.0 + elapsed * 0.1) * MOVEMENT_MULTIPLIER), "contact": 25.0 if boss else (15.0 if tank else 10.0), "boss": boss, "tank": tank, "flash": 0.0}
  var multiplier := pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0
@@ -1563,7 +1560,7 @@ func fire() -> void:
  for i in shot_count:
   var angle := (i - (shot_count - 1) / 2.0) * 0.13
   var piercing: bool = cards.active("perfurante")
-  bullets.append({"pos": player, "velocity": direction.rotated(angle) * 650, "life": ARENA.length() / 650.0 + 0.1 if piercing else 1.6, "piercing": piercing, "remaining_damage": effective_damage(), "hit_enemies": []})
+  bullets.append({"pos": player, "velocity": direction.rotated(angle) * 650, "life": ARENA.length() / 650.0 + 0.1 if piercing else 1.6, "piercing": piercing, "base_damage": effective_damage(), "hit_enemies": []})
 
 func show_upgrades() -> void:
  state = "upgrade"

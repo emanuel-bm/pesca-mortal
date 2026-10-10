@@ -22,19 +22,19 @@ func run() -> void:
  game.spawn_endless_bosses()
  assert(game.enemies.is_empty())
  game.kills = 1000
- game.elapsed = 180
+ game.elapsed = 90
  game.spawn_endless_bosses()
- assert(game.enemies.is_empty() and game.next_boss_time == 240)
- game.elapsed = 239.99
+ assert(game.enemies.is_empty() and game.next_boss_time == 180)
+ game.elapsed = 179.99
  game.spawn_endless_bosses()
  assert(game.enemies.is_empty())
- game.elapsed = 240
+ game.elapsed = 180
  game.spawn_endless_bosses()
- assert(game.enemies.size() == 1 and game.next_boss_time == 360)
+ assert(game.enemies.size() == 1 and game.next_boss_time == 300)
  game.spawn_endless_bosses()
  assert(game.enemies.size() == 1, "Milestone cannot spawn twice")
  game.kills = 3000
- game.elapsed = 840
+ game.elapsed = 780
  game.spawn_endless_bosses()
  assert(game.enemies.size() == 21 and game.endless_wave == 6, "Timed waves must spawn 1+2+3+4+5+6 independent of kills")
  game.spawn_enemy(false)
@@ -53,7 +53,7 @@ func run() -> void:
  assert(is_equal_approx(surviving_boss.max_hp, 32000 * 1.05))
  game.spawn_enemy(false)
  var fresh: Dictionary = game.enemies.back()
- var base_hp: float = (100.0 if fresh.tank else 30.0) * (1 + game.elapsed / 300.0)
+ var base_hp: float = (100.0 if fresh.tank else 21.0) * (1 + game.elapsed / 300.0)
  assert(is_equal_approx(fresh.max_hp, base_hp * 1.05), "New enemies inherit buffs")
  surviving_boss.hp = 0
  game.update_game(0)
@@ -65,7 +65,7 @@ func run() -> void:
  game.finish(false)
  assert(game.run_history.size() == 1 and game.run_history[0].kills == 3002)
  var loaded: Array = game.RUN_HISTORY.load_records(game.history_path)
- assert(loaded.size() == 1 and loaded[0].seconds == 840)
+ assert(loaded.size() == 1 and loaded[0].seconds == 780)
  game.show_menu()
  assert(game.run_history.size() == 1, "Do not record twice")
  game.start_run("endless")
@@ -135,31 +135,31 @@ func run() -> void:
  for id in ["damage", "rate", "shots", "magnet"]:
   for rank in (2 if id == "damage" else 1): game.choose_upgrade(id)
  game.level = 35
- game.elapsed = 690.0
+ game.elapsed = 630.0
  game.kills = 2900
  game.endless_wave = 4
- game.next_boss_time = 720.0
+ game.next_boss_time = 660.0
  game.boss_spawned = true
  for index in 2: game.spawn_enemy(true)
- assert(game.level == 35 and game.kills == 2900 and game.elapsed == 690)
+ assert(game.level == 35 and game.kills == 2900 and game.elapsed == 630)
  assert(game.test_run and game.run_mode == "endless" and game.enemies.size() == 2)
- assert(game.next_boss_time == 720)
+ assert(game.next_boss_time == 660)
  game.kills = 2999
  game.spawn_endless_bosses()
  assert(game.enemies.size() == 2)
  game.kills = 3000
- game.elapsed = 720
+ game.elapsed = 660
  game.spawn_endless_bosses()
- assert(game.enemies.size() == 7 and game.next_boss_time == 840)
+ assert(game.enemies.size() == 7 and game.next_boss_time == 780)
  game.spawn_endless_bosses()
  assert(game.enemies.size() == 7)
  game.kills = 4000
- game.elapsed = 840
+ game.elapsed = 780
  game.spawn_endless_bosses()
- assert(game.enemies.size() == 13 and game.next_boss_time == 960)
+ assert(game.enemies.size() == 13 and game.next_boss_time == 900)
  game.restart_run()
  assert(not game.test_run and game.run_mode == "endless" and game.level == 1 and game.kills == 0 and game.enemies.is_empty())
- assert(game.next_boss_time == 240, "Restart must restore the first boss at four minutes")
+ assert(game.next_boss_time == 180, "Restart must restore the first boss at three minutes")
  var before_test_finish: int = game.run_history.size()
  game.finish(false)
  assert(game.run_history.size() == before_test_finish)

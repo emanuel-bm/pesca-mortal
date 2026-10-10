@@ -7,6 +7,7 @@ var player_point := Vector2.ZERO
 var small_points := PackedVector2Array()
 var large_points := PackedVector2Array()
 var boss_points := PackedVector2Array()
+var card_points := PackedVector2Array()
 
 func setup_batches() -> void:
  for color in [Color(1, 0.2, 0.24), Color(1, 0.2, 0.24), Color(0.75, 0.3, 1)]:
@@ -45,11 +46,14 @@ func refresh(game: Node) -> void:
  small_points.clear()
  large_points.clear()
  boss_points.clear()
+ card_points.clear()
  for enemy in game.enemies:
   var point: Vector2 = origin + Vector2(enemy.pos).clamp(Vector2.ZERO, game.ARENA) * scale_factor
   if enemy.boss: boss_points.append(point)
   elif enemy.tank: large_points.append(point)
   else: small_points.append(point)
+ for pickup in game.cards.pickups:
+  card_points.append(origin + Vector2(pickup.pos).clamp(Vector2.ZERO, game.ARENA) * scale_factor)
  player_point = origin + game.player.clamp(Vector2.ZERO, game.ARENA) * scale_factor
  var visible_world := Rect2(game.camera_offset(), game.get_viewport_rect().size).intersection(Rect2(Vector2.ZERO, game.ARENA))
  viewport_box = Rect2(origin + visible_world.position * scale_factor, visible_world.size * scale_factor)
@@ -65,5 +69,10 @@ func _draw() -> void:
  draw_rect(viewport_box, Color(0.55, 0.7, 0.7, 0.3), false, 1)
  for batch in marker_batches:
   if batch.visible_instance_count > 0: draw_multimesh(batch, null)
+ for point in card_points:
+  var card_rect := Rect2(point - Vector2(3, 4), Vector2(6, 8))
+  draw_rect(card_rect.grow(1), Color(0.01, 0.04, 0.07))
+  draw_rect(card_rect, Color(1, 0.85, 0.3))
+  draw_line(point + Vector2(-1, -1), point + Vector2(1, 1), Color(0.35, 0.2, 0.05), 1)
  draw_circle(player_point, 5, Color(0.01, 0.04, 0.07))
  draw_circle(player_point, 3.5, Color(0.3, 0.85, 1))

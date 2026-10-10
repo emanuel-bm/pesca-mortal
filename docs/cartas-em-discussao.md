@@ -38,8 +38,8 @@ O usuário definiu **carta** como o nome dos power-ups do jogo. Ver `../GLOSSARY
 - Coleta ativa automaticamente a carta, sem inventário ou botão de uso.
 - O objetivo são benefícios ocasionais; a meta inicial discutida é 2–4 coletas por minuto, sujeita a teste.
 - Chefões garantem uma carta no infinito; no modo por chefões, o abate final encerra a partida.
-- O usuário pediu reduzir as chances dos peixes a um quarto: **piranha 0,25%**, **pintado 1,25%**. Mantida a garantia de chefe conforme a decisão anterior.
-- Com 75% de abates de piranha e 25% de pintado, a chance média passa a **0,5%**, uma carta a cada 200 abates em expectativa. A 100/300/600 abates por minuto, são 0,5/1,5/3 cartas por minuto, sem contar chefes. A meta de frequência não é uma garantia de drop.
+- Chances de drop por abate começam em **piranha 1%** e **pintado 5%**, diminuindo linearmente pelo tempo ativo da partida até **0,25%** e **1%**, respectivamente, aos quatro minutos. Depois disso, permanecem na base. Mantida a garantia de chefe conforme a decisão anterior.
+- Com 75% de abates de piranha e 25% de pintado, a chance média por abate vai de **2%** no início a **0,4375%** a partir dos quatro minutos. A composição é ilustrativa; a frequência por minuto depende dos abates. Não há acumulador por falhas nem garantia de drop dos peixes.
 
 ## Decisões confirmadas — segunda rodada
 
@@ -49,7 +49,7 @@ O usuário definiu **carta** como o nome dos power-ups do jogo. Ver `../GLOSSARY
 - Ímã inicia a atração de todo XP existente no mapa, sem conceder experiência imediatamente. Cada XP marcado segue a canoa até ser coletado, independentemente do raio normal, a 630 pixels/s (redução de 25% sobre 840). Novos XP não herdam a atração global. Todo nível ganho na chegada deve oferecer sua própria tela de melhoria, sequencialmente, preservando o XP excedente.
 - **Fúria:** +50% dano, +50% frequência de ataque e +20% velocidade.
 - **Intangível:** não recebe dano durante o efeito.
-- **Perfurante:** novas lanças atravessam os peixes enquanto houver saldo de dano, com um acerto por alvo por lança. Desaparecem ao esgotar o saldo ou atingir a borda.
+- **Perfurante:** novas lanças atravessam peixes e chefes vulneráveis, com um acerto por alvo por lança. Causam 100% do dano base no primeiro alvo, 70% no segundo, 50% no terceiro e 20% em todos os seguintes. Desaparecem na borda ou ao terminar sua duração, mesmo se o último alvo continuar vivo.
 - Efeitos diferentes coexistem; repetir o mesmo efeito renova a duração integral, sem somar potência nem acumular tempo.
 - Coleta apenas por contato com a canoa, sem atração de XP. A carta no chão desaparece após 30 s de jogo ativo, com aviso nos últimos 5 s. Esse prazo é distinto da duração de 6 s do efeito.
 - Fúria e Perfurante respeitam as fases vulneráveis dos chefes; Intangível protege contra contato, emergência e investida.
@@ -73,8 +73,8 @@ Quatro sprites em pixel art inspirados em cartas de baralho foram criados em `as
 - Aos 25 s de existência, alternam visibilidade a cada 0,5 s; aos 30 s desaparecem. Coleta continua possível durante a piscada.
 - Cronômetros, flutuação e brilho usam apenas tempo ativo da partida. Reiniciar limpa drops e efeitos.
 - Ícones com nomes e tempo restante aparecem na parte inferior da tela; não há inventário ou ativação manual.
-- Fúria aplica bônus sobre a build sem modificá-la. Lanças comuns usam o estado da Fúria no instante do acerto; lanças perfurantes fixam seu saldo inicial no disparo, incluindo Fúria se estiver ativa, sem recalcular ou repor esse saldo em voo.
-- Perfurante marca apenas novas lanças, que conservam a perfuração mesmo após o efeito terminar. Colisão amostra o trajeto em intervalos de até oito pixels e registra os inimigos já atingidos. Cada alvo consome o menor valor entre sua vida atual e o saldo de dano da lança. Exemplo confirmado: 50 de dano contra peixe com 30 de vida mata o peixe e deixa 20 de saldo; outro peixe com 30 recebe 20, fica com 10, e a lança desaparece. O dano exibido é o valor efetivamente consumido.
+- Fúria aplica bônus sobre a build sem modificá-la. Lanças comuns usam o estado da Fúria no instante do acerto; lanças perfurantes fixam seu dano base no disparo, incluindo Fúria se estiver ativa, sem recalcular esse valor em voo.
+- Perfurante marca apenas novas lanças, que conservam a perfuração mesmo após o efeito terminar. Colisão amostra o trajeto em intervalos de até oito pixels e registra os inimigos já atingidos. A regra de saldo de dano foi substituída por percentuais do dano base: 100%, 70%, 50%, depois 20% para cada alvo restante. Com 100 de dano base, os acertos causam 100, 70, 50, 20, 20 e assim por diante, independentemente da vida do alvo. Alvos mortos ou chefes invulneráveis são ignorados sem avançar a contagem. Colisões no mesmo quadro são resolvidas em sequência; cada lança mantém sua própria contagem. O dano exibido corresponde ao dano aplicado naquele acerto.
 - Intangível respeita a invulnerabilidade pós-dano já existente; uma não apaga a outra.
 - Na sala de treino, F9 invoca as quatro cartas próximas à canoa.
 - `scripts/test_cards.gd` verifica drops, contato, bônus, XP de múltiplos níveis, frações de XP, perfuração, vulnerabilidade do chefe, piscadas, pausas, reinício e F9. Testes de combate, prévia, velocidade, treino, infinito, Minhocão e grade de colisões também passaram. A renderização foi conferida no Godot com OpenGL.

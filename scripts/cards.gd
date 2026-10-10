@@ -59,7 +59,8 @@ func active(id: String) -> bool:
 func drop_chance(enemy: Dictionary) -> float:
  if game.run_mode == "training" and not game.training.cards_enabled: return 0.0
  if enemy.boss: return 1.0 if game.run_mode in ["endless", "training"] else 0.0
- return 0.0125 if enemy.tank else 0.0025
+ var progress := clampf(game.elapsed / 240.0, 0.0, 1.0)
+ return lerpf(0.05, 0.01, progress) if enemy.tank else lerpf(0.01, 0.0025, progress)
 
 func drop(enemy: Dictionary) -> void:
  if game.rng.randf() < drop_chance(enemy):

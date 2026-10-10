@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Pesca Mortal — Protótipo"
-config/version="0.3.0"
+config/version="0.3.1"
 run/main_scene="res://startup.tscn"
 config/features=PackedStringArray("4.7")
 config/icon="res://assets/pesca-mortal-icon.png"

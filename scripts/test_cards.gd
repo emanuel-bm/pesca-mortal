@@ -20,6 +20,93 @@ func fish(position: Vector2, hp: float = 100.0) -> Dictionary:
  enemy.max_hp = hp
  return enemy
 
+func test_same_frame_piercing() -> void:
+ # Both spears follow the same trajectory in a single update_game call.
+ for hp in [30.0, 70.0, 100.0, 120.0]:
+  fresh()
+  game.magnet = 0.0
+  var target := fish(game.player + Vector2(80, 0), hp)
+  var next_target := fish(game.player + Vector2(150, 0), 200.0)
+  game.damage = 50.0
+  game.cards.activate("perfurante")
+  game.fire()
+  game.fire()
+  assert(game.bullets.size() == 2)
+  var first: Dictionary = game.bullets[1]
+  var second: Dictionary = game.bullets[0]
+  for spear in [first, second]:
+   spear.pos = game.player + Vector2(50, 0)
+   spear.velocity = Vector2(650, 0)
+  game.attack_timer = 1000.0
+  game.update_game(0.1)
+  assert(target.hp == hp - (50.0 if hp <= 50.0 else 100.0), "Same-frame spears must use updated target health")
+  assert(first.base_damage == 50.0 and second.base_damage == 50.0)
+  assert(game.bullets.size() == 2, "Piercing must continue regardless of target health")
+  if hp == 30.0:
+   assert(game.bullets.size() == 2)
+   assert(target in first.hit_enemies and second.hit_enemies.is_empty(), "The second spear must skip the already dead fish without spending damage")
+  elif hp == 70.0:
+   assert(target in first.hit_enemies and target in second.hit_enemies)
+  assert(game.kills == (1 if hp <= 100.0 else 0), "A same-frame kill must count only once")
+  assert(game.gems.size() == (1 if hp <= 100.0 else 0), "A same-frame kill must award XP only once")
+  game.update_game(0.0)
+  assert(first.hit_enemies.size() == 1)
+  assert(second.hit_enemies.size() == (0 if hp == 30.0 else 1), "Repeated overlap must not advance damage tiers")
+  game.update_game(0.1)
+  assert(next_target.hp == (115.0 if hp == 30.0 else 130.0), "Each spear must maintain its own hit tier, skipping dead targets")
+ print("SAME-FRAME PIERCING PASS: 30, 70, 100 and 120 HP; independent hit tiers; single kill and XP")
+
+func test_piercing_through_boss() -> void:
+ fresh()
+ game.spawn_enemy(true)
+ var boss: Dictionary = game.enemies[0]
+ boss.pos = game.player + Vector2(150, 0)
+ boss.phase = "exposed"
+ boss.timer = 100.0
+ var targets: Array = [boss]
+ for index in 4:
+  targets.append(fish(game.player + Vector2(250 + index * 80, 0), 1000.0))
+ game.damage = 100.0
+ game.cards.activate("perfurante")
+ game.fire()
+ var spear: Dictionary = game.bullets[0]
+ spear.velocity = Vector2.ZERO
+ var damage_steps := [100.0, 70.0, 50.0, 20.0, 20.0]
+ for index in targets.size():
+  var target: Dictionary = targets[index]
+  var before: float = target.hp
+  spear.pos = target.pos
+  game.update_game(0.0)
+  assert(target.hp == before - damage_steps[index], "Boss and following targets must receive 100/70/50/20/20 percent")
+  assert(game.bullets.size() == 1, "A surviving boss must not stop the spear")
+  game.update_game(0.0)
+  assert(target.hp == before - damage_steps[index], "Each spear must hit each target only once")
+ game.cards.effects.perfurante = 0.0
+ var last := fish(game.player + Vector2(650, 0), 1000.0)
+ spear.pos = last.pos
+ game.update_game(0.0)
+ assert(last.hp == 980.0, "In-flight spears must retain piercing after card expiry")
+ spear.pos = Vector2(-1, 0)
+ game.update_game(0.0)
+ assert(game.bullets.is_empty(), "Piercing must still disappear outside the arena")
+ fresh()
+ game.spawn_enemy(true)
+ boss = game.enemies[0]
+ boss.pos = game.player + Vector2(150, 0)
+ var behind := fish(game.player + Vector2(250, 0), 1000.0)
+ game.damage = 100.0
+ game.cards.activate("perfurante")
+ game.fire()
+ spear = game.bullets[0]
+ spear.pos = boss.pos
+ spear.velocity = Vector2.ZERO
+ game.update_game(0.0)
+ assert(boss.hp == 32000.0 and spear.hit_enemies.is_empty(), "An immune boss must not consume a hit tier")
+ spear.pos = behind.pos
+ game.update_game(0.0)
+ assert(behind.hp == 900.0)
+ print("BOSS PIERCING PASS: 100/70/50/20/20 percent, repeated overlap, expiry, edge and immunity")
+
 func run() -> void:
  root.set_meta("offline_session", true)
  game = load("res://main.tscn").instantiate()
@@ -37,8 +124,11 @@ func run() -> void:
   assert(game.sounds.volume_group(sound_id) == "cards")
   assert(not game.sounds.effect_enabled(sound_id), "Master mute must mute card sounds")
  fresh()
- assert(game.cards.drop_chance({"boss": false, "tank": false}) == 0.0025)
- assert(game.cards.drop_chance({"boss": false, "tank": true}) == 0.0125)
+ for sample in [[0.0, 0.01, 0.05], [60.0, 0.008125, 0.04], [120.0, 0.00625, 0.03], [240.0, 0.0025, 0.01], [600.0, 0.0025, 0.01]]:
+  game.elapsed = sample[0]
+  assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": false}), sample[1]), "Piranha drop must decrease linearly and stop at its base")
+  assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": true}), sample[2]), "Pintado drop must decrease linearly and stop at its base")
+ fresh()
  assert(game.cards.drop_chance({"boss": true}) == 0.0)
  fresh("endless")
  assert(game.cards.drop_chance({"boss": true}) == 1.0)
@@ -117,6 +207,8 @@ func run() -> void:
  game.update_game(0.2)
  while game.state == "upgrade": game.choose_upgrade(game.choices[0])
  assert(game.level == 2 and game.xp == 11 - first_cost and game.xp_remainder == 0, "Magnet must preserve fractional XP bonuses across pickups")
+ test_same_frame_piercing()
+ test_piercing_through_boss()
  fresh()
  var one := fish(game.player + Vector2(80, 0))
  var two := fish(game.player + Vector2(100, 0))
@@ -130,12 +222,12 @@ func run() -> void:
  game.attack_timer = 1000.0
  game.bullets[0].pos = game.player + Vector2(50, 0)
  game.update_game(0.1)
- assert(one.hp == 0.0 and two.hp == 0.0, "Piercing uses current health, not maximum health")
+ assert(one.hp == -20.0 and two.hp == -11.0, "Piercing applies full tier damage even to low-health targets")
  assert(game.bullets.size() == 1)
- assert(game.bullets[0].remaining_damage == 10.0, "30 damage minus two 10-HP fish must leave 10")
+ assert(game.bullets[0].base_damage == 30.0 and game.bullets[0].hit_enemies.size() == 2)
  game.bullets[0].velocity = Vector2.ZERO
  game.update_game(0.01)
- assert(game.bullets[0].remaining_damage == 10.0, "Repeated overlap must not consume damage twice")
+ assert(game.bullets[0].hit_enemies.size() == 2, "Repeated overlap must not advance damage tiers")
  game.cards.effects.perfurante = 0.0
  game.fire()
  assert(not game.bullets.back().piercing and game.bullets[0].piercing)
@@ -152,8 +244,8 @@ func run() -> void:
  game.attack_timer = 1000.0
  game.bullets[0].pos = game.player + Vector2(50, 0)
  game.update_game(0.15)
- assert(one.hp == 0.0 and two.hp == 10.0 and third.hp == 30.0)
- assert(game.bullets.is_empty(), "50 damage must spend 30 then 20 and stop before the third fish")
+ assert(one.hp == -20.0 and two.hp == -5.0 and third.hp == 5.0)
+ assert(game.bullets.size() == 1, "Piercing must continue after its third target")
  fresh()
  one = fish(game.player + Vector2(80, 0), 50.0)
  two = fish(game.player + Vector2(100, 0), 30.0)
@@ -164,7 +256,7 @@ func run() -> void:
  game.cards.activate("furia")
  game.bullets[0].pos = game.player + Vector2(50, 0)
  game.update_game(0.1)
- assert(one.hp == 0.0 and two.hp == 30.0 and game.bullets.is_empty(), "In-flight damage budget must not refill when Fury activates")
+ assert(one.hp == 0.0 and two.hp == -5.0 and game.bullets.size() == 1, "In-flight base damage must stay fixed when Fury activates")
  fresh()
  game.spawn_enemy(true)
  var boss: Dictionary = game.enemies[0]
@@ -205,8 +297,8 @@ func run() -> void:
  assert(game.cards.drop_chance({"boss": true}) == 0.0)
  game.training.cards_toggle.button_pressed = true
  assert(game.training.cards_enabled)
- assert(game.cards.drop_chance({"boss": false, "tank": false}) == 0.0025)
- assert(game.cards.drop_chance({"boss": false, "tank": true}) == 0.0125)
+ assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": false}), 0.01))
+ assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": true}), 0.05))
  game.spawn_enemy(true)
  game.enemies.back().hp = 0.0
  game.update_game(0.0)

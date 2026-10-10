@@ -1,12 +1,12 @@
 # Pesca Mortal — protótipo
 
-Beta atual: **0.3.0**. Código, arte, áudio, scripts de servidor e testes estão
+Beta atual: **0.3.1**. Código, arte, áudio, scripts de servidor e testes estão
 incluídos no projeto. Ferramentas locais, caches e builds exportadas ficam
 fora do Git; pacotes para jogar são distribuídos pelas Releases.
 
 O menu oferece **Modo infinito** e **Modo por chefões**. O modo por chefões
 mantém o confronto aos cinco minutos e termina ao vencer o Minhocão.
-No infinito, o primeiro chefão aparece aos quatro minutos. Depois, novas ondas
+No infinito, o primeiro chefão aparece aos três minutos. Depois, novas ondas
 aparecem a cada dois minutos, com dois chefões na segunda, três na terceira
 e assim por diante, sem remover chefões ainda vivos. Cada chefão abatido
 multiplica HP, dano e velocidade dos inimigos por 1,05, de forma acumulativa,
@@ -22,13 +22,17 @@ no menu e o botão Histórico abre a lista completa.
 
 A [pesquisa sobre habilidades e cartas](docs/pesquisa-habilidades.md) descreve
 as referências. As [regras das cartas](docs/cartas-em-discussao.md) estão implementadas:
-piranhas têm 0,25% de chance de drop, pintados 1,25% e chefões do infinito 100%.
+piranhas começam com 1% de chance de drop e pintados com 5%. As chances diminuem
+linearmente pelo tempo ativo da partida até 0,25% e 1%, respectivamente, aos
+quatro minutos, e permanecem nesses valores depois. Chefões do infinito têm 100%.
 Cada drop sorteia igualmente Ímã, Fúria, Intangível ou Perfurante. Coletar ativa
 a carta: Ímã atrai todos os XP existentes no mapa até a canoa, a 630 pixels/s;
 a experiência é recebida quando cada XP chega. As outras duram seis segundos.
 Fúria dá +50% dano, +50% frequência e +20% velocidade; Intangível protege de
-todo dano; Perfurante faz novas lanças atravessarem os alvos consumindo seu saldo
-de dano pela vida atual de cada alvo, até esgotar o saldo ou atingir a borda.
+todo dano; Perfurante faz novas lanças atravessarem peixes e chefes vulneráveis,
+causando 100% do dano no primeiro alvo, 70% no segundo, 50% no terceiro e 20%
+em todos os seguintes. Cada lança acerta cada alvo apenas uma vez e segue até
+a borda ou o fim de sua duração. O dano base é fixado no disparo.
 Efeitos diferentes combinam; repetir uma carta renova o tempo sem acumular bônus.
 Cartas flutuam e recebem um brilho de cima para baixo. Desaparecem em 30 segundos,
 piscando a cada meio segundo nos últimos cinco. Pausas e escolhas de melhorias
@@ -55,7 +59,7 @@ Créditos e autorização do autor preservados em `assets/fonts`.
 A abertura verifica versões publicadas e permite **Jogar offline**.
 A instalação automática integrada para Windows consulta as
 [Releases do projeto](https://github.com/emanuel-bm/pesca-mortal/releases).
-Na release 0.3.0, baixe e execute `pesca-mortal-windows-v0.3.0.exe` diretamente. Consulte
+Na release 0.3.1, baixe e execute `pesca-mortal-windows-v0.3.1.exe` diretamente. Consulte
 [distribuição e atualizações](docs/atualizacoes.md).
 
 Os formatos e o comando para preparar Windows, macOS Apple Silicon e Linux
@@ -172,6 +176,6 @@ reflexos se deformam, e a canoa deixa ondulações; a pausa congela a superfíci
 
 ## Desempenho no fim da partida
 
-As colisões de lanças usam uma grade espacial de células de 128 unidades, reconstruída após o movimento dos inimigos. Cada lança consulta apenas células vizinhas; a colisão de silhueta e a ordem dos alvos são preservadas. Inimigos fora da tela continuam sendo simulados e mostrados no minimapa, mas seus sprites não são desenhados. Lanças, XP e números fora da tela também são descartados no desenho.
+As colisões de lanças usam uma grade espacial de células de 128 unidades, reconstruída após o movimento dos inimigos. Cada lança consulta apenas células vizinhas; a colisão de silhueta e a ordem dos alvos são preservadas. Inimigos fora da tela continuam sendo simulados e mostrados no minimapa, mas seus sprites não são desenhados. Cartas no chão aparecem no minimapa como pequenos cartões dourados, inclusive fora da tela; os marcadores desaparecem ao coletar ou expirar a carta. Lanças, XP e números fora da tela também são descartados no desenho.
 
 Benchmark reproduzível: `scripts/benchmark_late.gd`, seed 417, 501 inimigos incluindo chefe, 300 lanças, 30 atualizações. Na máquina de desenvolvimento, a atualização de CPU caiu de 158,91 ms para 12,79 ms. Esse teste isolado não mede FPS total nem custo da GPU. `scripts/test_performance.gd` compara mil consultas com a busca completa e verifica que volume geral zero ou efeito individual zero impede reprodução; zerar interrompe um som já em andamento.

@@ -7,6 +7,26 @@ func run() -> void:
  await process_frame
  game.set_process(false)
  game.start_run("training")
+ var remote_card := Vector2(100, 100)
+ game.cards.spawn("furia", remote_card)
+ game.cards.spawn("ima", game.player)
+ game.minimap_timer = 0
+ game.update_minimap(0)
+ var card_map: Node = game.minimap_renderer
+ assert(card_map.card_points.size() == 2, "Minimap must include all cards, including off-screen drops")
+ assert(card_map.card_points[0].is_equal_approx(game.minimap_point(remote_card)))
+ game.cards.update_pickups(0)
+ game.minimap_timer = 0
+ game.update_minimap(0)
+ assert(card_map.card_points.size() == 1, "Collected cards must disappear from the minimap")
+ game.cards.update_pickups(30)
+ game.minimap_timer = 0
+ game.update_minimap(0)
+ assert(card_map.card_points.is_empty(), "Expired cards must disappear from the minimap")
+ game.cards.spawn("perfurante", remote_card)
+ game.start_run("training")
+ game.update_minimap(0)
+ assert(card_map.card_points.is_empty(), "Restart must clear card markers")
  game.elapsed = 420.0
  game.speed = game.BASE_PLAYER_SPEED * 2.0
  game.attack_timer = INF
@@ -21,6 +41,7 @@ func run() -> void:
   fish.max_hp = fish.hp
  for index in 2: game.spawn_enemy(true)
  game.boss_spawned = true
+ game.minimap_timer = 0
  game.update_minimap(0)
  var map: Node = game.minimap_renderer
  assert(map.small_points.size() == 259 and map.large_points.size() == 259 and map.boss_points.size() == 2)
@@ -79,5 +100,5 @@ func run() -> void:
  for index in game.enemies.size():
   var cell := Vector2i((Vector2(game.enemies[index].pos) / game.COLLISION_CELL_SIZE).floor())
   assert(index in game.enemy_grid.get(cell, []), "Projectile grid must use post-movement positions")
- print("MINIMAP PASS: species markers, transform, refresh rate, resize, menu visibility, post-movement projectile grid")
+ print("MINIMAP PASS: card markers/collection/expiry/restart, species markers, transform, refresh rate, resize, menu visibility, post-movement projectile grid")
  quit(0)
