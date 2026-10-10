@@ -2,6 +2,13 @@ extends Node
 ## Host-authoritative co-op. Team shares health, XP, cards and upgrades.
 const PORT := 24567
 const MAX_PLAYERS := 4
+const SNAPSHOT_INTERVAL := 1.0 / 30.0
+const INPUT_INTERVAL := 1.0 / 60.0
+var received_snapshot := false
+var blend_time := 0.0
+var position_starts: Dictionary = {}
+var position_targets: Dictionary = {}
+var next_entity_id := 1
 var game: Node2D
 var active := false
 var running := false
@@ -12,6 +19,8 @@ var attack_timers: Dictionary = {}
 var timer := 0.0
 var connection_time := 0.0
 var message := ""
+var snapshots_sent := 0
+var inputs_sent := 0
 
 func _ready() -> void:
  multiplayer.peer_connected.connect(_joined)
@@ -61,6 +70,17 @@ func close() -> void:
  inputs.clear()
  input_ages.clear()
  attack_timers.clear()
+ reset_smoothing()
+
+func reset_smoothing() -> void:
+ timer = 0.0
+ snapshots_sent = 0
+ inputs_sent = 0
+ received_snapshot = false
+ blend_time = 0.0
+ position_starts.clear()
+ position_targets.clear()
+ next_entity_id = 1
 
 func leave() -> void:
  game.run_active = false
@@ -124,6 +144,7 @@ func begin(mode: String) -> void:
 @rpc("authority", "call_local", "reliable")
 func _begin(mode: String) -> void:
  if mode not in ["endless", "bosses"]: return
+ reset_smoothing()
  game.start_run(mode)
  running = true
  game.test_run = true # Co-op results must never enter solo rankings.
@@ -144,8 +165,10 @@ func tick(dt: float) -> void:
   return
  timer += dt
  if not multiplayer.is_server():
-  if timer >= 0.05:
-   timer = 0.0
+  smooth_snapshot(dt)
+  if timer + 0.000001 >= INPUT_INTERVAL:
+   timer = fmod(maxf(timer, INPUT_INTERVAL), INPUT_INTERVAL)
+   inputs_sent += 1
    submit_input.rpc_id(1, game.movement())
   return
  if game.state == "playing":
@@ -178,29 +201,75 @@ func tick(dt: float) -> void:
    game.cards.update_pickups(0.0)
   game.player = host_position
   if game.state == "playing": game.show_pending_level_up()
- if timer >= 0.1:
-  timer = 0.0
+ if timer + 0.000001 >= SNAPSHOT_INTERVAL:
+  timer = fmod(maxf(timer, SNAPSHOT_INTERVAL), SNAPSHOT_INTERVAL)
+  snapshots_sent += 1
+  for entities in [game.enemies, game.bullets, game.gems]:
+   for entity in entities:
+    if not entity.has("net_id"):
+     entity.net_id = next_entity_id
+     next_entity_id += 1
   var projectiles: Array = []
   for bullet in game.bullets:
-   projectiles.append({"pos": bullet.pos, "velocity": bullet.velocity, "life": bullet.life, "piercing": bullet.get("piercing", false)})
+   projectiles.append({"net_id": bullet.net_id, "pos": bullet.pos, "velocity": bullet.velocity, "life": bullet.life, "piercing": bullet.get("piercing", false)})
   var pickups: Array = []
   for pickup in game.cards.pickups: pickups.append({"id": pickup.id, "pos": pickup.pos, "age": pickup.age})
-  snapshot.rpc({"positions": positions, "enemies": game.enemies, "bullets": projectiles, "gems": game.gems, "pickups": pickups, "effects": game.cards.effects, "state": game.state, "health": game.health, "max_health": game.max_health, "xp": game.xp, "level": game.level, "kills": game.kills, "elapsed": game.elapsed, "boss_spawned": game.boss_spawned})
+  snapshot.rpc({"positions": positions, "enemies": pack_enemies(game.enemies), "bullets": projectiles, "gems": game.gems, "pickups": pickups, "effects": game.cards.effects, "state": game.state, "health": game.health, "max_health": game.max_health, "xp": game.xp, "level": game.level, "kills": game.kills, "elapsed": game.elapsed, "boss_spawned": game.boss_spawned})
+
+# Packed numeric buffers avoid per-fish Variant and dictionary overhead.
+static func pack_enemies(enemies: Array) -> Dictionary:
+ var ids := PackedInt64Array()
+ var flags := PackedInt32Array()
+ var values := PackedFloat32Array()
+ var bosses: Dictionary = {}
+ for enemy in enemies:
+  ids.append(enemy.net_id)
+  flags.append(int(enemy.boss) | (int(enemy.tank) << 1) | (int(enemy.get("facing_left", false)) << 2))
+  values.append_array(PackedFloat32Array([enemy.pos.x, enemy.pos.y, enemy.radius, enemy.hp, enemy.max_hp, enemy.flash]))
+  if enemy.boss:
+   bosses[ids.size() - 1] = [enemy.phase, enemy.timer, enemy.phase_duration, enemy.target, enemy.dash_start, enemy.dash_end]
+ return {"ids": ids, "flags": flags, "values": values, "bosses": bosses}
+
+static func unpack_enemies(data: Dictionary) -> Array:
+ var result: Array = []
+ var values: PackedFloat32Array = data.values
+ for i in data.ids.size():
+  var offset: int = i * 6
+  var flags: int = data.flags[i]
+  var enemy := {"net_id": data.ids[i], "pos": Vector2(values[offset], values[offset + 1]), "radius": values[offset + 2], "boss": bool(flags & 1), "tank": bool(flags & 2), "hp": values[offset + 3], "max_hp": values[offset + 4], "flash": values[offset + 5], "facing_left": bool(flags & 4)}
+  if enemy.boss:
+   var boss: Array = data.bosses[i]
+   enemy.merge({"phase": boss[0], "timer": boss[1], "phase_duration": boss[2], "target": boss[3], "dash_start": boss[4], "dash_end": boss[5]})
+  result.append(enemy)
+ return result
 
 @rpc("authority", "call_remote", "unreliable_ordered", 2)
 func snapshot(data: Dictionary) -> void:
  if not running: return
- positions = data.positions
+ var immediate: bool = not received_snapshot or data.state != "playing" or game.state != "playing"
+ position_starts = positions.duplicate()
+ position_targets = data.positions.duplicate()
+ positions = data.positions.duplicate()
+ for id in positions:
+  if not immediate and position_starts.has(id): positions[id] = position_starts[id]
  game.player = positions.get(multiplayer.get_unique_id(), game.player)
- game.enemies.assign(data.enemies)
- game.bullets.assign(data.bullets)
- game.gems.assign(data.gems)
+ receive_entities(game.enemies, unpack_enemies(data.enemies), immediate)
+ receive_entities(game.bullets, data.bullets, immediate)
+ receive_entities(game.gems, data.gems, immediate)
+ received_snapshot = true
+ blend_time = 0.0
  for key in ["health", "max_health", "xp", "level", "kills", "elapsed", "boss_spawned"]: game.set(key, data[key])
- game.cards.reset()
+ var rebuild_cards: bool = game.cards.pickups.size() != data.pickups.size()
+ if not rebuild_cards:
+  for i in data.pickups.size():
+   if game.cards.pickups[i].id != data.pickups[i].id: rebuild_cards = true
+ if rebuild_cards: game.cards.reset()
  game.cards.effects = data.effects
- for pickup in data.pickups:
-  game.cards.spawn(pickup.id, pickup.pos)
-  game.cards.pickups.back().age = pickup.age
+ for i in data.pickups.size():
+  var pickup: Dictionary = data.pickups[i]
+  if rebuild_cards: game.cards.spawn(pickup.id, pickup.pos)
+  game.cards.pickups[i].pos = pickup.pos
+  game.cards.pickups[i].age = pickup.age
  var next: String = data.state
  if game.state != next:
   game.state = next
@@ -211,6 +280,35 @@ func snapshot(data: Dictionary) -> void:
    game.title("Vitória!" if next == "won" else "Fim de partida" if next == "lost" else "Aguardando o anfitrião")
    game.title("O anfitrião controla pausas e melhorias da equipe.", 16)
    game.button("Desconectar", leave)
+ game.queue_redraw()
+
+func receive_entities(current: Array, incoming: Array, immediate: bool) -> void:
+ var previous: Dictionary = {}
+ for entity in current: previous[entity.get("net_id", -1)] = entity.pos
+ current.clear()
+ for incoming_entity in incoming:
+  var entity: Dictionary = incoming_entity.duplicate(true)
+  var target: Vector2 = entity.pos
+  var start: Vector2 = previous.get(entity.get("net_id", -1), target)
+  # New entities and teleports must not streak across the arena.
+  if immediate or start.distance_to(target) > 300.0: start = target
+  entity["visual_start"] = start
+  entity["visual_target"] = target
+  entity.pos = start
+  current.append(entity)
+
+func smooth_snapshot(dt: float) -> void:
+ if not received_snapshot or game.state != "playing": return
+ blend_time = minf(blend_time + dt, SNAPSHOT_INTERVAL)
+ var weight := blend_time / SNAPSHOT_INTERVAL
+ for id in positions:
+  var target: Vector2 = position_targets[id]
+  var start: Vector2 = position_starts.get(id, target)
+  positions[id] = start.lerp(target, weight)
+ game.player = positions.get(multiplayer.get_unique_id(), game.player)
+ for entities in [game.enemies, game.bullets, game.gems]:
+  for entity in entities:
+   entity.pos = Vector2(entity.visual_start).lerp(entity.visual_target, weight)
  game.queue_redraw()
 
 func nearest_player(point: Vector2) -> Vector2:
