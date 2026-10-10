@@ -1,5 +1,8 @@
 # Co-op online por IP
 
+Para configuração de acesso restrito, firewall e diagnóstico, consulte o
+[runbook de testes com Tailscale](runbook-co-op-tailscale.md).
+
 No menu, selecione **Co-op online**. O anfitrião escolhe **Criar sala**;
 até três amigos escolhem **Entrar por IP** usando o IP Tailscale do anfitrião.
 Todos devem usar a mesma versão do jogo e conseguir acessar o computador
