@@ -33,6 +33,7 @@ const LABELS := {
 }
 
 var rng := RandomNumberGenerator.new()
+var coop: Node
 var player := ARENA / 2
 var enemies: Array[Dictionary] = []
 var bullets: Array[Dictionary] = []
@@ -158,6 +159,10 @@ var records_personal := {"endless": false, "bosses": false}
 var test_artifact_paths: Array[String] = []
 
 func _ready() -> void:
+ coop = preload("res://scripts/co_op.gd").new()
+ coop.name = "Coop"
+ coop.game = self
+ add_child(coop)
  var cursor_layer := CanvasLayer.new()
  cursor_layer.layer = 100
  add_child(cursor_layer)
@@ -587,6 +592,7 @@ func setup_profile_panel() -> void:
  column.add_child(profile_label)
 
 func show_menu() -> void:
+ if coop and coop.active: coop.close()
  sounds.start_calm_music()
  record_run("menu")
  run_active = false
@@ -603,6 +609,7 @@ func show_menu() -> void:
  button("Modo infinito", start_run.bind("endless"))
  button("Modo por chefões", start_run.bind("bosses"))
  button("Sala de treino", start_run.bind("training"))
+ button("Co-op online", coop.lobby)
  records_personal = {"endless": false, "bosses": false}
  show_records_panel()
  show_boss_records_panel()
@@ -938,6 +945,9 @@ func show_pause() -> void:
  button("Voltar à tela inicial", show_menu)
 
 func restart_run() -> void:
+ if coop.active:
+  coop.begin(run_mode)
+  return
  start_run(run_mode)
 
 func start_run(mode: String = "bosses") -> void:
@@ -1014,6 +1024,7 @@ func _input(event: InputEvent) -> void:
    move_menu_focus(-1 if event.keycode == KEY_UP else 1)
    get_viewport().set_input_as_handled()
    return
+ if coop.active and not multiplayer.is_server(): return
  if state != "upgrade" or not event is InputEventKey or not event.pressed or event.echo or event.ctrl_pressed: return
  var key: int = event.keycode
  if key in [KEY_UP, KEY_LEFT]:
@@ -1029,6 +1040,7 @@ func _input(event: InputEvent) -> void:
  get_viewport().set_input_as_handled()
 
 func _unhandled_key_input(event: InputEvent) -> void:
+ if coop.active and not multiplayer.is_server(): return
  if not event is InputEventKey or not event.pressed or event.echo:
   return
  if event.keycode == KEY_ESCAPE:
@@ -1071,11 +1083,12 @@ func update_cursor_visibility() -> void:
  if Input.mouse_mode != desired: Input.mouse_mode = desired
 
 func _process(delta: float) -> void:
+ coop.tick(minf(delta, 0.05))
  update_cursor_visibility()
  update_minimap(delta)
  if xp_renderer: xp_renderer.queue_redraw()
  layout_modals()
- if state == "playing":
+ if state == "playing" and (not coop.active or multiplayer.is_server()):
   update_game(minf(delta, 0.05))
  cards.refresh()
  update_water(minf(delta, 0.05))
@@ -1177,14 +1190,18 @@ func update_game(dt: float) -> void:
   var special_boss_movement := false
   if enemy.boss:
    var previous_phase: String = enemy.phase
-   var emerged: bool = MINHOCAO.update(enemy, dt, player, ARENA)
+   var emerged: bool = MINHOCAO.update(enemy, dt, coop.nearest_player(enemy.pos), ARENA)
    if emerged: sounds.play_boss_emergence()
    if enemy.phase == "dash" and previous_phase != "dash": sounds.play_boss_dash()
    special_boss_movement = emerged or previous_phase != "exposed" or enemy.phase != "exposed"
    if emerged and player.distance_to(enemy.pos) < MINHOCAO.EMERGENCE_RADIUS + 14:
     receive_hit(enemy.contact, enemy.pos)
    if not MINHOCAO.vulnerable(enemy): continue
-  var toward: Vector2 = player - enemy.pos
+   if emerged and coop.running:
+    for id in coop.positions:
+     if id != 1 and Vector2(coop.positions[id]).distance_to(enemy.pos) < MINHOCAO.EMERGENCE_RADIUS + 14:
+      receive_hit(enemy.contact, enemy.pos)
+  var toward: Vector2 = coop.nearest_player(enemy.pos) - enemy.pos
   enemy.facing_left = toward.x < 0
   var desired_position: Vector2 = enemy.pos if enemy.boss else enemy.pos + toward.normalized() * enemy.speed * dt
   enemy.pos = old_position
@@ -1313,16 +1330,17 @@ func begin_crowd_step() -> void:
 
 func pursue_player(index: int, dt: float) -> void:
  var enemy: Dictionary = enemies[index]
+ var target_player: Vector2 = coop.nearest_player(enemy.pos)
  if dt <= 0: return
  var fish_speed: float = enemy.speed
  var remaining: float = float(enemy.get("separation_timer", 0.0)) - dt
  var desired: Vector2
  if enemy.has("desired_velocity"): desired = enemy.desired_velocity
- else: desired = (player - enemy.pos).normalized() * fish_speed
+ else: desired = (target_player - enemy.pos).normalized() * fish_speed
  var eligible := not crowd_batch_enabled or posmod(index - crowd_window_start, enemies.size()) < CROWD_UPDATES_PER_FRAME
  if remaining <= 0 and eligible:
   crowd_recalculations += 1
-  var direction: Vector2 = (player - enemy.pos).normalized()
+  var direction: Vector2 = (target_player - enemy.pos).normalized()
   var separation := crowd_separation(index, direction)
   desired = ((direction + separation * 1.4) * fish_speed).limit_length(fish_speed)
   enemy["desired_velocity"] = desired
@@ -1331,7 +1349,7 @@ func pursue_player(index: int, dt: float) -> void:
   enemy["separation_timer"] = remaining
  var velocity: Vector2
  if enemy.has("crowd_velocity"): velocity = enemy.crowd_velocity
- else: velocity = (player - enemy.pos).normalized() * fish_speed
+ else: velocity = (target_player - enemy.pos).normalized() * fish_speed
  velocity = velocity.move_toward(desired, maxf(1.0, fish_speed) * 5.0 * dt).limit_length(fish_speed)
  enemy["crowd_velocity"] = velocity
  enemy.pos = (Vector2(enemy.pos) + velocity * dt).clamp(Vector2(6, 6), ARENA - Vector2(6, 6))
@@ -1777,6 +1795,7 @@ func _draw() -> void:
   tint.a = alpha
   draw_string(number_font, text_position, number.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, tint)
  var player_color := Color(0.3, 0.75, 1)
+ coop.draw_players(self, offset)
  if invulnerability > 0 and int(invulnerability * 15) % 2 == 0: player_color = Color.WHITE
  if canoe_texture:
   var canoe_size := canoe_region.size / maxf(canoe_region.size.x, canoe_region.size.y) * 72
