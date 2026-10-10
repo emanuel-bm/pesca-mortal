@@ -2,6 +2,16 @@ extends SceneTree
 
 class SoundProbe extends "res://scripts/sound_effects.gd":
  var attacks: Array[String] = []
+ var boss_deaths := 0
+ var fish_deaths := 0
+
+ func play_boss_death() -> void:
+  boss_deaths += 1
+  super.play_boss_death()
+
+ func play_death() -> void:
+  fish_deaths += 1
+  super.play_death()
 
  func play_boss_emergence() -> void:
   attacks.append("emerge")
@@ -43,6 +53,8 @@ func run() -> void:
   assert(boss.phase == expected)
   if expected != "exposed": assert(sounds.attacks.is_empty(), "Warnings must not trigger attack audio")
  assert(sounds.attacks == ["emerge"])
+ assert(sounds.players.emerge.stream.resource_path == "res://assets/audio/minhocao_emerge_v1.wav")
+ assert(is_equal_approx(sounds.players.emerge.stream.get_length(), 1.15))
  game.update_game(0.01)
  assert(sounds.attacks == ["emerge"], "Emergence audio must not repeat every frame")
  boss.phase = "dash_warning"
@@ -51,12 +63,18 @@ func run() -> void:
  boss.dash_end = game.player + Vector2(250, 0)
  game.update_game(0.01)
  assert(boss.phase == "dash" and sounds.attacks == ["emerge", "dash"])
+ assert(sounds.players.dash.stream.resource_path == "res://assets/audio/minhocao_dash_v3.wav")
+ assert(is_equal_approx(sounds.players.dash.stream.get_length(), 0.7))
  game.update_game(0.01)
  assert(sounds.attacks == ["emerge", "dash"], "Dash audio must not repeat every frame")
- for id in ["emerge", "dash"]: sounds.players[id].play()
+ boss.hp = 0.0
+ game.update_game(0.01)
+ assert(game.state == "won" and sounds.boss_deaths == 1 and sounds.fish_deaths == 0)
+ assert(is_equal_approx(sounds.players.boss_death.stream.get_length(), 2.2))
+ for id in ["emerge", "dash", "boss_death"]: sounds.players[id].play()
  sounds.volumes.boss = 0.0
  sounds.apply_volumes()
- for id in ["boss", "emerge", "dash"]:
+ for id in ["boss", "emerge", "dash", "boss_death"]:
   assert(not sounds.players[id].playing and not sounds.effect_enabled(id))
  assert(sounds.pending_roars.is_empty() and sounds.roar_voices.is_empty())
  sounds.volumes.boss = 1.0
@@ -96,11 +114,21 @@ func run() -> void:
  sounds.reset()
  assert(sounds.roar_voices.is_empty() and sounds.pending_roars.is_empty())
  game.start_run("endless")
- game.elapsed = game.ENDLESS_BOSS_INTERVAL
+ game.elapsed = game.ENDLESS_FIRST_BOSS_TIME
  game.spawn_endless_bosses()
  assert(game.enemies.filter(func(enemy): return enemy.boss).size() == 1)
  assert(is_equal_approx(sounds.players.boss.stream.get_length(), 2.0))
- print("BOSS AUDIO PASS: first emergence, attack sounds at action start, no per-frame repeats, shared boss mute, 10 staggered voices, per-boss emergence, reset, normal first wave, 2s roar")
+ game.test_run = true
+ game.spawn_timer = 1000
+ game.attack_timer = 1000
+ game.invulnerability = 1000
+ var defeated: Dictionary = game.enemies.filter(func(enemy): return enemy.boss)[0]
+ defeated.hp = 0.0
+ game.update_game(0.01)
+ assert(sounds.boss_deaths == 2 and not game.enemies.has(defeated))
+ game.update_game(0.01)
+ assert(sounds.boss_deaths == 2, "Death sound must trigger once per defeated boss")
+ print("BOSS AUDIO PASS: emergence, dash, shared mute, staggered roars, reset, 2.2s V0 death sound once per boss in both modes")
  game.free()
  await create_timer(0.1).timeout
  call_deferred("quit", 0)

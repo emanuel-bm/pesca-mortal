@@ -1226,7 +1226,8 @@ func update_game(dt: float) -> void:
   var enemy := enemies[i]
   enemy.flash = maxf(0, enemy.flash - dt)
   if enemy.hp <= 0:
-   sounds.play_death()
+   if enemy.boss: sounds.play_boss_death()
+   else: sounds.play_death()
    if enemy.boss:
     if run_mode == "bosses":
      finish(true)

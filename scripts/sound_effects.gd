@@ -21,17 +21,18 @@ var music_gain := 1.0
 var outgoing_music_gain := 0.0
 var music_clock := 0.0
 const VOLUME_NAMES := {"master": "Geral", "music": "Música", "boss": "Sons do Minhocão", "shot": "Lança", "death": "Peixes mergulhando", "hurt": "Dano recebido", "level": "Subida de nível", "cards": "Cartas"}
-const MAX_EFFECT_VOLUME := {"boss": 0.65, "emerge": 0.5, "dash": 0.45, "shot": 0.5, "death": 0.2, "hurt": 0.5, "level": 0.55, "card_ima": 0.4, "card_furia": 0.4, "card_intangivel": 0.4, "card_perfurante": 0.4}
+const MAX_EFFECT_VOLUME := {"boss": 0.65, "boss_death": 0.65, "emerge": 0.5, "dash": 0.45, "shot": 0.5, "death": 0.2, "hurt": 0.5, "level": 0.55, "card_ima": 0.4, "card_furia": 0.4, "card_intangivel": 0.4, "card_perfurante": 0.4}
 const VOLUME_VERSION := 2
 var volumes := {"master": 1.0, "music": 0.7, "boss": 0.8, "shot": 1.0, "death": 1.0, "hurt": 1.0, "level": 1.0, "cards": 1.0}
 
 func _ready() -> void:
  random.randomize()
- for id in ["shot", "death", "hurt", "level", "boss", "emerge", "dash", "card_ima", "card_furia", "card_intangivel", "card_perfurante"]:
+ for id in ["shot", "death", "hurt", "level", "boss", "boss_death", "emerge", "dash", "card_ima", "card_furia", "card_intangivel", "card_perfurante"]:
   var player := AudioStreamPlayer.new()
   if id == "boss": player.stream = load("res://assets/audio/minhocao_roar.wav")
-  elif id == "emerge": player.stream = load("res://assets/audio/minhocao_emerge.wav")
-  elif id == "dash": player.stream = load("res://assets/audio/minhocao_dash.wav")
+  elif id == "boss_death": player.stream = load("res://assets/audio/minhocao_death.wav")
+  elif id == "emerge": player.stream = load("res://assets/audio/minhocao_emerge_v1.wav")
+  elif id == "dash": player.stream = load("res://assets/audio/minhocao_dash_v3.wav")
   elif id == "shot": player.stream = load("res://assets/audio/spear_swish.wav")
   elif id.begins_with("card_"):
    var version := "v2" if id == "card_intangivel" else "v3"
@@ -40,7 +41,7 @@ func _ready() -> void:
    if id == "card_perfurante": version = "v6"
    player.stream = load("res://assets/audio/%s_%s.wav" % [id, version])
   else: player.stream = synthesize(id)
-  player.max_polyphony = 3 if id in ["emerge", "dash"] else 1
+  player.max_polyphony = 3 if id in ["emerge", "dash", "boss_death"] else 1
   add_child(player)
   players[id] = player
  # Um player exclusivo preserva a música durante pausas e escolhas de melhorias.
@@ -148,7 +149,7 @@ func update_music(delta: float) -> void:
 
 func volume_group(id: String) -> String:
  if id.begins_with("card_"): return "cards"
- return "boss" if id in ["boss", "emerge", "dash"] else id
+ return "boss" if id in ["boss", "boss_death", "emerge", "dash"] else id
 
 func effect_enabled(id: String) -> bool:
  return volumes.master > 0.0 and volumes[volume_group(id)] > 0.0
@@ -183,6 +184,9 @@ func play_boss_emergence() -> void:
 
 func play_boss_dash() -> void:
  play_effect("dash", 0.98, 1.02)
+
+func play_boss_death() -> void:
+ play_effect("boss_death", 1.0, 1.0)
 
 func announce_boss() -> void:
  request_battle_music()
