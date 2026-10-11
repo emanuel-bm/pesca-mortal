@@ -16,6 +16,12 @@ var effect_row: HBoxContainer
 var indicators: Dictionary = {}
 var blocked_seconds := 0.0
 var block_label: Label
+var visual_age := 0.0
+var magnet_visual_seconds := 0.0
+var fury_burst_seconds := 0.0
+var shield_impact_seconds := 0.0
+var shield_impact_direction := Vector2.UP
+var visuals := preload("res://scripts/card_visuals.gd").new()
 
 func _ready() -> void:
  z_index = 5
@@ -57,6 +63,11 @@ func _ready() -> void:
  refresh()
 
 func reset() -> void:
+ visual_age = 0.0
+ magnet_visual_seconds = 0.0
+ fury_burst_seconds = 0.0
+ shield_impact_seconds = 0.0
+ shield_impact_direction = Vector2.UP
  blocked_seconds = 0.0
  for pickup in pickups:
   remove_child(pickup.sprite)
@@ -94,6 +105,7 @@ func activate(id: String) -> void:
  if blocked_seconds > 0: return
  game.sounds.play_card(id)
  if id == "ima":
+  magnet_visual_seconds = 1.0
   for gem in game.gems: gem["magnetized"] = true
  else:
   effects[id] = EFFECT_SECONDS
@@ -101,8 +113,39 @@ func activate(id: String) -> void:
  refresh()
 
 func tick_effects(dt: float) -> void:
+ visual_age += dt
+ magnet_visual_seconds = maxf(0.0, magnet_visual_seconds - dt)
+ fury_burst_seconds = maxf(0.0, fury_burst_seconds - dt)
+ shield_impact_seconds = maxf(0.0, shield_impact_seconds - dt)
  blocked_seconds = maxf(0.0, blocked_seconds - dt)
  for id in effects: effects[id] = maxf(0.0, effects[id] - dt)
+
+func attack_feedback() -> void:
+ if active("furia"): fury_burst_seconds = 0.24
+
+func shield_feedback(source: Vector2) -> void:
+ # Sustained contact must not restart the animation every simulation frame.
+ if shield_impact_seconds > 0.0: return
+ shield_impact_seconds = 0.32
+ shield_impact_direction = (source - game.player).normalized()
+ if shield_impact_direction.is_zero_approx(): shield_impact_direction = Vector2.UP
+
+func player_tint() -> Color:
+ if not active("perfurante"): return Color.WHITE
+ var fade := minf(1.0, effects.perfurante / 0.25)
+ var pulse := 0.5 + 0.5 * sin(floorf(visual_age * 20.0) / 20.0 * 7.0)
+ return Color(1.0 + fade * (0.15 + pulse * 0.3), 1.0 + fade * (0.1 + pulse * 0.2), 1.0)
+
+func draw_player_effects(canvas: Node2D, center: Vector2) -> void:
+ var time := floorf(visual_age * 20.0) / 20.0
+ if active("intangivel"):
+  visuals.shield(canvas, center, time, shield_impact_seconds, shield_impact_direction, minf(1.0, effects.intangivel / 0.25))
+ if active("perfurante"):
+  visuals.piercing(canvas, center, time, minf(1.0, effects.perfurante / 0.25))
+ if active("furia"):
+  visuals.fury(canvas, center, time, fury_burst_seconds, -1.0 if game.facing_left else 1.0, minf(1.0, effects.furia / 0.25))
+ if magnet_visual_seconds > 0.0:
+  visuals.magnet(canvas, center, magnet_visual_seconds)
 
 func block_activation() -> void:
  blocked_seconds = 5.0

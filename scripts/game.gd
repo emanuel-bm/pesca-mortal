@@ -1685,7 +1685,10 @@ func update_damage_numbers(dt: float) -> void:
   if damage_numbers[i].life <= 0: damage_numbers.remove_at(i)
 
 func receive_hit(amount: float, source: Vector2) -> void:
- if invulnerability > 0 or cards.active("intangivel"): return
+ if cards.active("intangivel"):
+  if amount > 0.0: cards.shield_feedback(source)
+  return
+ if invulnerability > 0: return
  health -= amount
  if prevent_player_death: health = maxf(1.0, health)
  sounds.play_hurt()
@@ -1792,6 +1795,7 @@ func fire() -> void:
    nearest = enemy.pos
  if best == INF: return
  sounds.play_shot()
+ cards.attack_feedback()
  var direction := (nearest - player).normalized()
  if direction.is_zero_approx(): direction = Vector2.RIGHT
  for i in shot_count:
@@ -2069,18 +2073,20 @@ func _draw() -> void:
   tint.a = alpha
   draw_string(number_font, text_position, number.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, tint)
  var player_color := Color(0.3, 0.75, 1)
+ var player_tint: Color = cards.player_tint()
  if invulnerability > 0 and int(invulnerability * 15) % 2 == 0: player_color = Color.WHITE
  if canoe_texture:
   var canoe_size := canoe_region.size / maxf(canoe_region.size.x, canoe_region.size.y) * 72
   draw_set_transform(viewport / 2, 0, Vector2(-1 if facing_left else 1, 1))
   var canoe_art: Texture2D = character_quality.texture_for("canoe", graphics_quality, canoe_texture)
   var region := canoe_region if graphics_quality == 2 else Rect2(Vector2.ZERO, canoe_art.get_size())
-  draw_texture_rect_region(canoe_art, Rect2(-canoe_size / 2, canoe_size), region, Color(2, 2, 2) if player_color == Color.WHITE else Color.WHITE)
+  draw_texture_rect_region(canoe_art, Rect2(-canoe_size / 2, canoe_size), region, Color(2, 2, 2) if player_color == Color.WHITE else player_tint)
   draw_set_transform(Vector2.ZERO)
  elif player_texture:
   draw_set_transform(viewport / 2, 0, Vector2(-1 if facing_left else 1, 1))
-  draw_texture_rect(character_quality.texture_for("player", graphics_quality, player_texture), Rect2(Vector2(-32, -32), Vector2(64, 64)), false, Color(2, 2, 2) if player_color == Color.WHITE else Color.WHITE)
+  draw_texture_rect(character_quality.texture_for("player", graphics_quality, player_texture), Rect2(Vector2(-32, -32), Vector2(64, 64)), false, Color(2, 2, 2) if player_color == Color.WHITE else player_tint)
   draw_set_transform(Vector2.ZERO)
- else: draw_rect(Rect2(viewport / 2 - Vector2(14, 14), Vector2(28, 28)), player_color)
+ else: draw_rect(Rect2(viewport / 2 - Vector2(14, 14), Vector2(28, 28)), player_color * player_tint)
+ if run_active: cards.draw_player_effects(self, viewport / 2)
  if state == "lost":
   draw_arc(viewport / 2, 44, 0, TAU, 48, Color(1, 0.45, 0.35), 2, true)
