@@ -20,6 +20,7 @@ var transition_remaining := -1.0
 var music_gain := 1.0
 var outgoing_music_gain := 0.0
 var music_clock := 0.0
+var focus_paused := false
 const VOLUME_NAMES := {"master": "Geral", "music": "Música", "boss": "Sons do Minhocão", "shot": "Lança", "death": "Peixes mergulhando", "hurt": "Dano recebido", "level": "Subida de nível", "cards": "Cartas"}
 const MAX_EFFECT_VOLUME := {"boss": 0.65, "boss_death": 0.65, "emerge": 0.5, "dash": 0.45, "shot": 0.5, "death": 0.2, "hurt": 1.0, "level": 0.55, "card_ima": 0.4, "card_furia": 0.4, "card_intangivel": 0.4, "card_perfurante": 0.4}
 const VOLUME_VERSION := 2
@@ -91,6 +92,13 @@ func apply_music_volume() -> void:
  outgoing_music_player.volume_linear = 0.45 * volumes.master * volumes.music * outgoing_music_gain
  if outgoing_music_gain > 0.0 and effect_enabled("music") and not outgoing_music_player.playing and DisplayServer.get_name() != "headless":
   outgoing_music_player.play()
+ music_player.stream_paused = focus_paused
+ outgoing_music_player.stream_paused = focus_paused
+
+func set_focus_paused(value: bool) -> void:
+ focus_paused = value
+ for child in get_children():
+  if child is AudioStreamPlayer: child.stream_paused = value
 
 func start_calm_music() -> void:
  var needs_restart := music_track != "calm" or battle_requested
@@ -130,6 +138,7 @@ func request_battle_music() -> void:
  apply_music_volume()
 
 func _process(delta: float) -> void:
+ if focus_paused: return
  update_music(delta)
  update_roars(delta)
 
@@ -217,6 +226,7 @@ func play_roar_voice() -> void:
  roar_voices.append(voice)
  voice.finished.connect(on_roar_finished.bind(voice))
  voice.play()
+ voice.stream_paused = focus_paused
 
 func on_roar_finished(voice: AudioStreamPlayer) -> void:
  roar_voices.erase(voice)
@@ -237,6 +247,7 @@ func play_effect(id: String, pitch_min: float, pitch_max: float) -> void:
  var player: AudioStreamPlayer = players[id]
  player.pitch_scale = random.randf_range(pitch_min, pitch_max)
  player.play()
+ player.stream_paused = focus_paused
 
 func reset() -> void:
  pending_roars.clear()

@@ -956,8 +956,11 @@ func quit_game() -> void:
 
 func _notification(what: int) -> void:
  if what == NOTIFICATION_WM_CLOSE_REQUEST: record_run("quit")
- elif what == NOTIFICATION_WM_WINDOW_FOCUS_OUT and state == "playing":
-  show_pause()
+ elif what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+  if sounds: sounds.set_focus_paused(true)
+  if state == "playing": show_pause()
+ elif what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
+  if sounds: sounds.set_focus_paused(false)
 
 func _exit_tree() -> void:
  for path in test_artifact_paths:
