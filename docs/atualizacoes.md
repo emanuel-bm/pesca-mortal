@@ -1,5 +1,11 @@
 # Atualizações integradas
 
+O cliente agora aceita patches binários menores no Windows. A publicação deve
+incluir o EXE completo e os patches gerados a partir dos EXEs antigos originais.
+Consulte [geração de patches e protótipo das notas](prototipo-notas-e-patches.md).
+Clientes anteriores precisam baixar o EXE completo uma vez para receber essa
+capacidade. Sem patch compatível, o download continua usando o EXE completo.
+
 O próprio aplicativo abre `startup.tscn`, mostra apenas um indicador animado
 e o texto **Verificando atualizações…**, consulta a última release pública do
 GitHub e só depois carrega `main.tscn`. Título, versão e botões aparecem apenas

@@ -14,6 +14,8 @@ var loading: VBoxContainer
 var phase := "check"
 var leaving := false
 var download_path := "user://update.exe"
+var using_patch := false
+var force_full_update := false
 
 class LoadingSpinner extends Control:
  var angle := 0.0
@@ -56,6 +58,12 @@ static func select_asset(data: Dictionary, name_value: String, repo: String) -> 
    return entry
  return {}
 
+static func select_patch(data: Dictionary, repo: String, base_hash: String, full: Dictionary) -> Dictionary:
+ var patch := select_asset(data, "pesca-mortal-windows-" + base_hash + "-v{version}.patch.gz", repo)
+ if not patch.is_empty() and not full.is_empty() and int(patch.get("size", 0)) > 0 and int(patch.get("size", 0)) < int(full.get("size", 0)):
+  return patch
+ return {}
+
 func _ready() -> void:
  get_window().title = "Pesca Mortal"
  var config := ConfigFile.new()
@@ -70,6 +78,7 @@ func _ready() -> void:
  add_child(request)
  request.request_completed.connect(_completed)
  if "--update-install-failed" in OS.get_cmdline_user_args():
+  force_full_update = true
   _error("Não foi possível instalar a atualização. A versão anterior foi preservada.")
  elif repository.is_empty():
   _set_message("As atualizações ainda não foram ativadas.\nVocê pode jogar a versão instalada.")
@@ -186,6 +195,13 @@ func _completed(result: int, code: int, _headers: PackedStringArray, body: Packe
   _play(false)
   return
  asset = select_asset(release, asset_name, repository)
+ using_patch = false
+ if OS.get_name() == "Windows" and OS.has_feature("template") and not force_full_update:
+  var base_hash := FileAccess.get_sha256(OS.get_executable_path())
+  var patch := select_patch(release, repository, base_hash, asset)
+  if not patch.is_empty():
+   asset = patch
+   using_patch = true
  _offer()
 
 func _offer() -> void:
@@ -203,6 +219,7 @@ func _offer() -> void:
 func _download() -> void:
  phase = "download"
  download_path = "user://update.exe" if asset_name.to_lower().ends_with(".exe") else "user://update.zip"
+ if using_patch: download_path = "user://update.patch.gz"
  request.download_file = download_path
  request.timeout = 300.0
  request.body_size_limit = 1024 * 1024 * 1024
@@ -216,6 +233,9 @@ func _process(_delta: float) -> void:
   message.text = "Baixando atualização… %.1f MB" % (request.get_downloaded_bytes() / 1048576.0)
 
 func _error(value: String) -> void:
+ if using_patch:
+  force_full_update = true
+  using_patch = false
  phase = "error"
  _set_message(value)
  _button("Tentar novamente", _check)
@@ -223,6 +243,13 @@ func _error(value: String) -> void:
 
 func _install() -> void:
  phase = "install"
+ if using_patch:
+  var codec := FileAccess.open("user://windows_delta.ps1", FileAccess.WRITE)
+  if codec == null:
+   _error("Não foi possível preparar o patch. Você pode jogar offline.")
+   return
+  codec.store_string(FileAccess.get_file_as_string("res://scripts/windows_delta.ps1"))
+  codec.close()
  var helper := "user://install_update.ps1"
  var script_file := FileAccess.open(helper, FileAccess.WRITE)
  if script_file == null:
@@ -235,7 +262,7 @@ func _install() -> void:
  if file == null:
   _error("Não foi possível preparar a instalação.")
   return
- file.store_string(JSON.stringify({"pid": OS.get_process_id(), "archive": ProjectSettings.globalize_path(download_path), "format": "exe" if asset_name.to_lower().ends_with(".exe") else "zip", "target": OS.get_executable_path(), "entry": executable_name, "sha256": str(asset.digest).trim_prefix("sha256:")}))
+ file.store_string(JSON.stringify({"pid": OS.get_process_id(), "archive": ProjectSettings.globalize_path(download_path), "format": "patch" if using_patch else ("exe" if asset_name.to_lower().ends_with(".exe") else "zip"), "target": OS.get_executable_path(), "entry": executable_name, "sha256": str(asset.digest).trim_prefix("sha256:")}))
  file.close()
  var powershell := OS.get_environment("SystemRoot").path_join("System32/WindowsPowerShell/v1.0/powershell.exe")
  var pid := OS.create_process(powershell, ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", ProjectSettings.globalize_path(helper), "-ParametersPath", ProjectSettings.globalize_path(parameters)], false)

@@ -71,6 +71,39 @@ Os formatos e o comando para preparar Windows, macOS Apple Silicon e Linux
 estão no [guia de distribuição desktop](docs/distribuicao-desktop.md).
 A geração dos arquivos não cria uma release nem envia arquivos ao GitHub.
 
+## Notas de atualização e publicação de releases
+
+**Sempre que publicarmos uma nova release, devemos atualizar as notas de
+atualização.** A descrição da Release no GitHub é a fonte oficial exibida
+pelo botão **?** ao lado da versão na tela inicial do jogo.
+
+O padrão das notas é uma introdução de duas ou três frases, seguida de seções
+por inimigo, habilidade ou sistema alterado. Cada seção pode ter uma explicação
+curta e bullets objetivos. Mudanças de atributos devem apresentar **valor
+anterior → valor novo**, com unidade e condições; recursos novos apresentam
+seus valores iniciais. Não incluir instruções de download, nomes de arquivos,
+comandos de instalação, detalhes técnicos ou relatórios de testes nas notas.
+
+1. Antes de exportar, atualizar a versão em `project.godot` e escrever as notas
+   em `docs/releases/<versão>.md`, descrevendo as novidades, correções e ajustes
+   dessa versão para os jogadores. Executar
+   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync_release_notes.ps1 -IncludeCurrentVersion`
+   para incluir o histórico e as notas dessa versão na build offline.
+2. Incluir essas notas no corpo da nova Release do GitHub, com título e tag
+   correspondentes à versão publicada. Não publicar uma release sem notas.
+3. Depois de publicar, executar
+   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync_release_notes.ps1`
+   e incluir `assets/release_notes.json` atualizado no próximo commit. Esse
+   arquivo mantém o histórico oficial disponível offline nas próximas builds.
+4. Conferir a nova versão na tela **Notas de atualização** do jogo.
+
+A tela consulta as releases públicas estáveis ao ser aberta, da mais recente
+para a mais antiga, e salva o resultado localmente. Novas releases e correções
+em suas descrições aparecem sem precisar alterar o código ou instalar outro
+executável. Consultas na mesma sessão são espaçadas por cinco minutos. Sem
+internet ou em modo offline, o jogo usa o histórico salvo ou o incluído na
+build. Rascunhos e pré-releases não aparecem.
+
 Abra `Jogar.bat`. A engine portátil está em `.tools/godot` nesta máquina.
 Para editar, abra `Abrir-editor.bat` ou importe `project.godot` em Godot 4.7.2.
 A sala de treino está disponível no menu do jogo para configurar inimigos e atributos.

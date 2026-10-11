@@ -1,7 +1,8 @@
 param(
     [ValidateSet('Windows', 'macOS', 'Linux')]
     [string[]]$Platforms = @('Windows', 'macOS', 'Linux'),
-    [switch]$LegacyWindowsZip
+    [switch]$LegacyWindowsZip,
+    [string[]]$WindowsBaseExecutables = @()
 )
 $ErrorActionPreference = 'Stop'
 $projectDirectory = Split-Path -Parent $PSScriptRoot
@@ -13,7 +14,9 @@ $configuredVersion = [regex]::Match($projectText, 'config/version="([^"]+)"').Gr
 if ($configuredVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Use a version such as 0.1.3' }
 
 if ($Platforms -contains 'Windows') {
-    & (Join-Path $PSScriptRoot 'package_windows.ps1') -LegacyZip:$LegacyWindowsZip
+    $windowsParameters = @{ LegacyZip = $LegacyWindowsZip }
+    if ($PSBoundParameters.ContainsKey('WindowsBaseExecutables')) { $windowsParameters.BaseExecutables = $WindowsBaseExecutables }
+    & (Join-Path $PSScriptRoot 'package_windows.ps1') @windowsParameters
 }
 $exports = @(
     @{ Platform = 'macOS'; Preset = 'macOS Apple Silicon'; File = "pesca-mortal-macos-arm64-v$configuredVersion.zip" },

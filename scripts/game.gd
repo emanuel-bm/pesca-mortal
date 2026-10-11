@@ -103,6 +103,10 @@ var choices: Array[String] = []
 var upgrade_buttons: Array[Button] = []
 var selected_upgrade := 0
 var menu_controls: Array[Control] = []
+var version_badge: PanelContainer
+var patch_notes: Node
+var notes_scroll: ScrollContainer
+var notes_actions: VBoxContainer
 var menu_mouse_navigation := false
 var hud: Label
 var xp_bar: ProgressBar
@@ -309,7 +313,34 @@ func _ready() -> void:
  background.set_border_width_all(2)
  background.set_corner_radius_all(12)
  overlay.add_theme_stylebox_override("panel", background)
+ version_badge = PanelContainer.new()
+ ui_root.add_child(version_badge)
+ version_badge.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+ version_badge.offset_left = 16
+ version_badge.offset_top = -40
+ version_badge.offset_right = 124
+ version_badge.offset_bottom = -16
+ version_badge.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+ var badge_row := HBoxContainer.new()
+ badge_row.add_theme_constant_override("separation", 8)
+ version_badge.add_child(badge_row)
+ var version_text := Label.new()
+ version_text.text = "v" + str(ProjectSettings.get_setting("application/config/version", ""))
+ version_text.add_theme_font_size_override("font_size", 16)
+ badge_row.add_child(version_text)
+ var notes_button := Button.new()
+ notes_button.text = "?"
+ notes_button.tooltip_text = "Ver notas de atualização"
+ notes_button.add_theme_font_size_override("font_size", 16)
+ notes_button.custom_minimum_size = Vector2(24, 24)
+ badge_row.add_child(notes_button)
+ style_menu_button(notes_button)
+ notes_button.pressed.connect(open_patch_notes)
  modal_row.add_child(overlay)
+ notes_actions = VBoxContainer.new()
+ notes_actions.add_theme_constant_override("separation", 12)
+ modal_row.add_child(notes_actions)
+ notes_actions.hide()
  var padding := MarginContainer.new()
  for side in ["left", "right", "top", "bottom"]:
   padding.add_theme_constant_override("margin_" + side, 24)
@@ -318,6 +349,9 @@ func _ready() -> void:
  panel.add_theme_constant_override("separation", 16)
  padding.add_child(panel)
  setup_stats_panel()
+ patch_notes = preload("res://scripts/patch_notes.gd").new()
+ add_child(patch_notes)
+ patch_notes.changed.connect(func(): if state == "patch_notes": show_patch_notes())
  training = preload("res://scripts/training_room.gd").new()
  training.game = self
  add_child(training)
@@ -431,6 +465,9 @@ func setup_menu_navigation() -> void:
  menu_controls.clear()
  if not overlay.visible or state in ["playing", "upgrade"]: return
  collect_menu_controls(panel)
+ if state == "patch_notes": collect_menu_controls(notes_actions)
+ if state in ["menu", "nickname"] and version_badge:
+  collect_menu_controls(version_badge)
  for i in menu_controls.size():
   var item := menu_controls[i]
   var previous := item.get_path_to(menu_controls[posmod(i - 1, menu_controls.size())])
@@ -452,6 +489,10 @@ func move_menu_focus(direction: int) -> void:
  enabled[posmod(index + direction, enabled.size())].grab_focus()
 
 func clear_panel() -> void:
+ notes_actions.hide()
+ for child in notes_actions.get_children():
+  notes_actions.remove_child(child)
+  child.queue_free()
  panel.add_theme_constant_override("separation", 16)
  for side in ["left", "right", "top", "bottom"]:
   panel.get_parent().add_theme_constant_override("margin_" + side, 24)
@@ -511,6 +552,16 @@ func setup_stats_panel() -> void:
 func layout_modals() -> void:
  if not overlay: return
  var viewport := get_viewport_rect().size
+ if state == "patch_notes":
+  var action_width := 120.0
+  var notes_width := minf(868.0, viewport.x - 2.0 * (action_width + 32.0))
+  overlay.custom_minimum_size.x = notes_width
+  overlay.scale = Vector2.ONE
+  overlay.size = Vector2(notes_width, viewport.y - 24.0)
+  overlay.position = Vector2((viewport.x - notes_width) / 2.0, 12.0)
+  notes_actions.size = Vector2(action_width, notes_actions.get_combined_minimum_size().y)
+  notes_actions.position = Vector2(viewport.x - action_width - 16.0, viewport.y - notes_actions.size.y - 16.0)
+  return
  overlay.size = overlay.get_combined_minimum_size()
  stats_panel.size = stats_panel.get_combined_minimum_size()
  var factor := minf(1.0, (viewport.y - 40) / maxf(overlay.size.y, stats_panel.size.y if stats_panel.visible else 0.0))
@@ -540,6 +591,8 @@ func layout_modals() -> void:
   overlay.position.y = viewport.y - overlay.size.y * factor - 20
  stats_panel.scale = Vector2.ONE * factor
  stats_panel.position = Vector2(viewport.x - 24 - stats_panel.size.x * factor, (viewport.y - stats_panel.size.y * factor) / 2)
+ if state == "menu" and records_panel: version_badge.scale = records_panel.scale
+ else: version_badge.scale = Vector2.ONE
 
 func projected_stats(id: String = "") -> Dictionary:
  var values := {"damage": damage, "rate": 1.0 / attack_delay, "shots": shot_count, "speed": speed, "magnet": magnet, "max_health": max_health, "xp_bonus": xp_bonus}
@@ -636,6 +689,50 @@ func show_menu() -> void:
  button("Configurações", show_settings)
  button("Fechar jogo", quit_game)
  online.synchronize()
+
+func open_patch_notes() -> void:
+ show_patch_notes()
+ patch_notes.refresh()
+
+func show_patch_notes() -> void:
+ var scroll_position := notes_scroll.scroll_vertical if state == "patch_notes" and is_instance_valid(notes_scroll) else 0
+ state = "patch_notes"
+ clear_panel()
+ title("NOTAS DE ATUALIZAÇÃO", 26)
+ if not patch_notes.status.is_empty(): title(patch_notes.status, 16)
+ notes_scroll = ScrollContainer.new()
+ notes_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+ notes_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+ panel.add_child(notes_scroll)
+ var content := VBoxContainer.new()
+ content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ content.add_theme_constant_override("separation", 18)
+ notes_scroll.add_child(content)
+ for entry: Dictionary in patch_notes.entries:
+  if content.get_child_count() > 0:
+   var divider := HSeparator.new()
+   var divider_style := StyleBoxLine.new()
+   divider_style.color = Color(0.23, 0.32, 0.43)
+   divider_style.thickness = 2
+   divider.add_theme_stylebox_override("separator", divider_style)
+   content.add_child(divider)
+  var body := RichTextLabel.new()
+  body.bbcode_enabled = true
+  body.fit_content = true
+  body.scroll_active = false
+  body.text = preload("res://scripts/patch_notes.gd").text(entry)
+  content.add_child(body)
+ if patch_notes.entries.is_empty():
+  var empty := Label.new()
+  empty.text = "Nenhuma nota de atualização disponível."
+  content.add_child(empty)
+ var back := button("Voltar", show_menu)
+ panel.remove_child(back)
+ notes_actions.add_child(back)
+ back.add_theme_font_size_override("font_size", 16)
+ notes_actions.show()
+ layout_modals()
+ notes_scroll.set_deferred("scroll_vertical", scroll_position)
 
 func show_nickname() -> void:
  nickname_attempted = false
@@ -1070,6 +1167,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
    resume()
   elif state == "settings":
    leave_settings()
+  elif state == "patch_notes":
+   show_menu()
  if state == "upgrade" and not event.ctrl_pressed:
   var index := -1
   if event.keycode == KEY_1: index = 0
@@ -1103,6 +1202,7 @@ func update_cursor_visibility() -> void:
  if Input.mouse_mode != desired: Input.mouse_mode = desired
 
 func _process(delta: float) -> void:
+ if version_badge: version_badge.visible = state in ["menu", "nickname"]
  update_boss_arrival(minf(delta, 0.05))
  update_cursor_visibility()
  update_minimap(delta)
@@ -1132,7 +1232,7 @@ func _process(delta: float) -> void:
   var remaining := maxi(0, ceili(next_boss_time - elapsed))
   hud.text += "\nINFINITO · PRÓXIMOS CHEFÕES EM %02d:%02d" % [floori(remaining / 60.0), remaining % 60]
  if not profile_panel: setup_profile_panel()
- profile_panel.visible = not run_active and state not in ["nickname", "lost"]
+ profile_panel.visible = not run_active and state not in ["nickname", "lost", "patch_notes"]
  hud.visible = run_active
  if not run_active:
   hud.text = "ELIMINAÇÕES TOTAIS %d\nTEMPO TOTAL %s\nNÍVEIS CONQUISTADOS %d" % [player_totals.kills, RUN_HISTORY.time_text(player_totals.seconds), player_totals.levels]

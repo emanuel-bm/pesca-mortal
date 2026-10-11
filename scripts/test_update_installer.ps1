@@ -80,4 +80,27 @@ $settings | ConvertTo-Json | Set-Content -LiteralPath $parametersPath -Encoding 
 & $installer -ParametersPath $parametersPath
 for ($attempt = 0; $attempt -lt 40 -and -not (Test-Path -LiteralPath $marker); $attempt++) { Start-Sleep -Milliseconds 100 }
 if (-not (Test-Path -LiteralPath $marker) -or (Get-Content -LiteralPath $marker -Raw) -notmatch '--update-install-failed') { throw 'Direct executable checksum failure was not recovered' }
-Write-Output 'Installer checks passed: EXE and ZIP replacement, restart, checksum failures and rollback.'
+Remove-Item -LiteralPath $marker
+. (Join-Path $PSScriptRoot 'windows_delta.ps1')
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'windows_delta.ps1') -Destination (Join-Path $testDirectory 'windows_delta.ps1')
+$patchPath = Join-Path $testDirectory 'update.patch.gz'
+# Add harmless trailing bytes to the runnable fixture so the patch has a real change.
+$newBytes = [IO.File]::ReadAllBytes($targetPath) + [byte[]](1, 2, 3, 4)
+[IO.File]::WriteAllBytes($newPath, $newBytes)
+[MortalDelta]::Create($targetPath, $newPath, $patchPath)
+$settings.format = 'patch'
+$settings.archive = $patchPath
+$settings.sha256 = (Get-FileHash -LiteralPath $patchPath -Algorithm SHA256).Hash
+$settings | ConvertTo-Json | Set-Content -LiteralPath $parametersPath -Encoding UTF8
+& $installer -ParametersPath $parametersPath
+for ($attempt = 0; $attempt -lt 40 -and -not (Test-Path -LiteralPath $marker); $attempt++) { Start-Sleep -Milliseconds 100 }
+if (-not (Test-Path -LiteralPath $marker)) { throw 'Patched executable was not relaunched' }
+if ((Get-FileHash -LiteralPath $targetPath).Hash -ne (Get-FileHash -LiteralPath $newPath).Hash) { throw 'Patch reconstruction differs' }
+Remove-Item -LiteralPath $marker
+$installedHash = (Get-FileHash -LiteralPath $targetPath).Hash
+# The same patch is invalid against the now updated base; preserve that installation.
+& $installer -ParametersPath $parametersPath
+for ($attempt = 0; $attempt -lt 40 -and -not (Test-Path -LiteralPath $marker); $attempt++) { Start-Sleep -Milliseconds 100 }
+if ((Get-FileHash -LiteralPath $targetPath).Hash -ne $installedHash) { throw 'Wrong patch damaged installed executable' }
+if (-not (Test-Path -LiteralPath $marker) -or (Get-Content -LiteralPath $marker -Raw) -notmatch '--update-install-failed') { throw 'Wrong patch did not reopen original' }
+Write-Output 'Installer checks passed: patch, EXE and ZIP replacement, restart, checksum failures and rollback.'

@@ -37,6 +37,20 @@ func run() -> void:
  startup._completed(HTTPRequest.RESULT_SUCCESS, 200, [], JSON.stringify(data).to_utf8_buffer())
  assert(startup.played.is_empty(), "A newer release must offer a choice before loading the game")
  assert(not startup.asset.is_empty())
+ var patch_data: Dictionary = data.duplicate(true)
+ var full: Dictionary = patch_data.assets[0]
+ full.size = 1000000
+ var patch: Dictionary = full.duplicate(true)
+ patch.name = "pesca-mortal-windows-" + "b".repeat(64) + "-v1.1.0.patch.gz"
+ patch.size = 10000
+ patch_data.assets.append(patch)
+ assert(not startup.select_patch(patch_data, startup.repository, "b".repeat(64), full).is_empty())
+ assert(startup.select_patch(patch_data, startup.repository, "c".repeat(64), full).is_empty(), "Different installed EXEs must use full download")
+ patch.size = 2000000
+ assert(startup.select_patch(patch_data, startup.repository, "b".repeat(64), full).is_empty(), "Oversized patches must use full download")
+ patch.size = 10000
+ patch.digest = ""
+ assert(startup.select_patch(patch_data, startup.repository, "b".repeat(64), full).is_empty(), "Patch requires checksum")
  var future: Dictionary = data.duplicate(true)
  future.tag_name = "v1.2.0"
  assert(startup.select_asset(future, startup.asset_name, startup.repository).is_empty(), "A release must not install an executable named for a different version")
@@ -52,16 +66,19 @@ func run() -> void:
  data.assets[0].digest = ""
  assert(startup.select_asset(data, startup.asset_name, startup.repository).is_empty())
  startup.phase = "download"
- startup.download_path = "user://test-invalid-update.zip"
+ startup.download_path = "res://.tools/test-invalid-update.zip"
  var file := FileAccess.open(startup.download_path, FileAccess.WRITE)
  file.store_string("incomplete archive")
  file.close()
  startup._completed(HTTPRequest.RESULT_SUCCESS, 200, [], PackedByteArray())
  assert(not startup.installed and startup.phase == "error")
+ startup.using_patch = true
+ startup._error("Patch inválido")
+ assert(startup.force_full_update and not startup.using_patch, "Retry after patch failure must select full download")
  DirAccess.remove_absolute(startup.download_path)
  startup.queue_free()
  var ranking: Node = load("res://scripts/online_ranking.gd").new()
- ranking.storage_path = "user://test-offline-outbox.json"
+ ranking.storage_path = "res://.tools/test-offline-outbox.json"
  ranking.disabled = true
  root.add_child(ranking)
  ranking.endpoint = "https://example.invalid/ranking"
@@ -76,7 +93,7 @@ func run() -> void:
  var game: Node = load("res://main.tscn").instantiate()
  root.add_child(game)
  assert(game.state == "menu", "First-time offline players must not be blocked by nickname registration")
- assert(game.online.disabled and not game.online.busy)
+ assert(game.online.network_disabled and not game.online.busy)
  set_meta("offline_session", false)
  game.online.disabled = false
  game.online.profile = {}

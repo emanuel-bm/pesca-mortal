@@ -15,7 +15,10 @@ $installed = $false
 try {
     if ([IO.Path]::GetFileName([string]$settings.entry) -ne [string]$settings.entry -or -not ([string]$settings.entry).EndsWith('.exe')) { throw 'Invalid executable name' }
     if ((Get-FileHash -LiteralPath $settings.archive -Algorithm SHA256).Hash -ne [string]$settings.sha256) { throw 'Checksum mismatch' }
-    if ($settings.format -eq 'exe') {
+    if ($settings.format -eq 'patch') {
+        . (Join-Path ([IO.Path]::GetDirectoryName($ParametersPath)) 'windows_delta.ps1')
+        [MortalDelta]::Apply($targetPath, [string]$settings.archive, $stagedPath)
+    } elseif ($settings.format -eq 'exe') {
         $download = Get-Item -LiteralPath $settings.archive
         if ($download.Length -lt 2 -or $download.Length -gt 1GB) { throw 'Executable size invalid' }
         Copy-Item -LiteralPath $settings.archive -Destination $stagedPath
