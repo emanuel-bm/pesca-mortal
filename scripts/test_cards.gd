@@ -156,7 +156,7 @@ func run() -> void:
  game.cards.activate("perfurante")
  game.cards.activate("intangivel")
  game.receive_hit(25.0, game.player + Vector2.RIGHT)
- assert(game.health == 50.0 and game.knockback_velocity == Vector2.ZERO)
+ assert(game.health == game.MAX_HEALTH and game.knockback_velocity == Vector2.ZERO)
  game.update_game(5.0)
  game.cards.activate("furia")
  assert(game.cards.effects.furia == 6.0, "Repeat refreshes duration without stacking")
@@ -166,7 +166,7 @@ func run() -> void:
  assert(not game.cards.active("intangivel") and not game.cards.active("perfurante"))
  game.invulnerability = 0.4
  game.receive_hit(10.0, game.player + Vector2.RIGHT)
- assert(game.health == 50.0, "Card expiry must not cancel post-hit invulnerability")
+ assert(game.health == game.MAX_HEALTH, "Card expiry must not cancel post-hit invulnerability")
  game.update_game(5.0)
  assert(not game.cards.active("furia") and is_equal_approx(game.effective_speed(), game.speed))
  fresh()

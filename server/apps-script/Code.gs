@@ -111,8 +111,11 @@ function validateRecord_(r) {
   if (r.mode === 'bosses' && (r.reason !== 'won' || r.seconds + 0.001 < 300)) return fail_('invalid_record', 'Vitória antes do surgimento do chefão.');
   if (r.mode === 'endless' && !['death', 'menu', 'restart', 'quit'].includes(r.reason)) return fail_('invalid_record', 'Encerramento inválido.');
   if (r.kills > maximumKills_(r.seconds, r.mode)) return fail_('invalid_record', 'Eliminações acima do máximo possível nesse tempo.');
-  // Each kill yields at most 9 base XP (boss radius=38) and +100% XP doubles it.
-  const budget = r.kills * 18;
+  // Preserve the 9-XP allowance for ordinary kills; endless bosses yield 100.
+  // +100% XP doubles both allowances.
+  const waves = r.mode === 'endless' ? Math.max(0, Math.floor((r.seconds + 0.001 - 180) / 120) + 1) : 0;
+  const bossKills = Math.min(r.kills, waves * (waves + 1) / 2);
+  const budget = (r.kills - bossKills) * 18 + bossKills * 200;
   let required = 0;
   for (let level = 1; level < r.level; level++) {
     required += Math.ceil((5 + (level - 1) * 3) * 1.4 * Math.pow(1.05, level - 1));

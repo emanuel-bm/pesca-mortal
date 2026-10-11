@@ -32,6 +32,8 @@ func setup(game: Node) -> void:
  if game.canoe_texture: register_art("canoe", game.canoe_texture, game.canoe_region, 64, 32)
  if game.player_texture: register_art("player", game.player_texture, Rect2(Vector2.ZERO, game.player_texture.get_size()), 64, 32)
  if game.boss_texture: register_art("boss", game.boss_texture, Rect2(Vector2.ZERO, game.boss_texture.get_size()), 96, 48)
+ if not game.dourado_art.is_empty(): register_art("dourado", game.dourado_art.texture, Rect2(game.dourado_art.region), 40, 24)
+ if not game.pacu_art.is_empty(): register_art("pacu", game.pacu_art.texture, Rect2(game.pacu_art.region), 40, 24)
 
 func texture_for(id: String, quality: int, original: Texture2D) -> Texture2D:
  if quality == 2 or not variants.has(id): return original
@@ -45,6 +47,7 @@ func draw_fish(game: Node2D, view: Rect2, offset: Vector2) -> void:
   if batch.instance_count < game.enemies.size():
    batch.instance_count = maxi(64, game.enemies.size() * 2)
  for enemy in game.enemies:
+  if enemy.get("species", "") in ["dourado", "pacu"]: continue
   if enemy.boss or not view.grow(enemy.radius + 2).has_point(enemy.pos): continue
   var species := 1 if enemy.tank else 0
   var size: Vector2 = fish_sizes[species] * float(enemy.radius) * 2.0

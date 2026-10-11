@@ -26,7 +26,7 @@ func run() -> void:
  game.player = Vector2(1100, 900)
  game.rebuild_enemy_grid()
  var moved_sideways := false
- var previous_velocity := Vector2(126, 0)
+ var previous_velocity := Vector2(back.speed, 0)
  for frame in 240:
   var previous: Vector2 = back.pos
   game.rebuild_enemy_grid()

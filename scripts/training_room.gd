@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 var game: Node
+var development_debug_frame: PanelContainer
 var frame: PanelContainer
 var auto_spawn := false
 var cards_enabled := false
@@ -34,7 +35,9 @@ const ACTIONS := {
  KEY_F6: ["F6 · Avançar 1 minuto", "time"],
  KEY_F7: ["F7 · Subir um nível", "level"],
  KEY_F8: ["F8 · Restaurar vida", "heal"],
- KEY_F9: ["F9 · Invocar quatro cartas", "cards"]
+ KEY_F9: ["F9 · Invocar quatro cartas", "cards"],
+ KEY_F10: ["F10 · +10 Dourados", "dourado"],
+ KEY_F11: ["F11 · +10 Pacus", "pacu"]
 }
 const CARD_KEYS := {KEY_1: "ima", KEY_2: "furia", KEY_3: "intangivel", KEY_4: "perfurante"}
 
@@ -50,6 +53,19 @@ func _ready() -> void:
  background.content_margin_top = 10
  background.content_margin_bottom = 10
  frame.add_theme_stylebox_override("panel", background)
+ development_debug_frame = PanelContainer.new()
+ development_debug_frame.add_theme_stylebox_override("panel", background)
+ add_child(development_debug_frame)
+ var development_debug_contents := VBoxContainer.new()
+ development_debug_frame.add_child(development_debug_contents)
+ for caption in ["ATALHOS · DEBUG", "F1 · Avançar 1 minuto", "F2 · Subir um nível"]:
+  var label := Label.new()
+  label.text = caption
+  label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+  development_debug_contents.add_child(label)
+ development_debug_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+ development_debug_contents.mouse_filter = Control.MOUSE_FILTER_IGNORE
+ development_debug_frame.hide()
  var contents := VBoxContainer.new()
  contents.add_theme_constant_override("separation", 8)
  frame.add_child(contents)
@@ -163,6 +179,9 @@ func reset() -> void:
  editor.hide()
 
 func _process(_dt: float) -> void:
+ development_debug_frame.visible = development_debug_available() and game.state in ["playing", "paused"]
+ development_debug_frame.scale = Vector2.ONE * 0.5
+ development_debug_frame.position = Vector2(16, 140)
  var active: bool = game.run_active and game.run_mode == "training"
  var paused: bool = active and game.state == "paused"
  update_interaction(paused)
@@ -215,6 +234,11 @@ func open_attributes() -> void:
  select_tab(1)
 
 func _input(event: InputEvent) -> void:
+ if development_debug_available() and game.state == "playing" and event is InputEventKey and event.pressed and not event.echo:
+  if event.keycode in [KEY_F1, KEY_F2]:
+   act_development_debug("time" if event.keycode == KEY_F1 else "level")
+   get_viewport().set_input_as_handled()
+   return
  if not game.run_active or game.run_mode != "training": return
  if not event is InputEventKey or not event.pressed or event.echo: return
  if game.state in ["playing", "paused"] and event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed and CARD_KEYS.has(event.keycode):
@@ -255,21 +279,43 @@ func change_stat(id: String, direction: int) -> void:
  var current: float = 1.0 / game.attack_delay if id == "rate" else float(game.get(id))
  set_stat(current + direction * float(data[1]), id)
 
+func development_debug_available() -> bool:
+ return OS.has_feature("editor") and OS.is_debug_build() and game.run_active and game.run_mode in ["bosses", "endless"]
+
+func act_development_debug(action: String) -> void:
+ if not development_debug_available() or game.state != "playing" or action not in ["time", "level"]: return
+ game.test_run = true
+ act_progression(action)
+
+func act_progression(action: String) -> void:
+ if action == "time":
+  game.elapsed += 60.0
+ elif action == "level":
+  game.level = mini(100, game.level + 1)
+  game.xp = 0
+  game.health = game.max_health
+  game.show_upgrades()
+
 func act(action: String) -> void:
  if game.run_mode != "training" or game.state not in ["playing", "paused"]: return
  match action:
+  "dourado", "pacu":
+   var start_angle: float = game.rng.randf_range(0, TAU)
+   for index in mini(10, maxi(0, game.MAX_ENEMIES - game.enemies.size())):
+    game.spawn_enemy(false, action)
+    game.enemies.back().pos = (game.player + Vector2.from_angle(start_angle + index * TAU / 10.0) * 300).clamp(Vector2(50, 50), game.ARENA - Vector2(50, 50))
   "piranha", "pintado", "boss":
    for index in mini(1 if action == "boss" else 100, maxi(0, game.MAX_ENEMIES - game.enemies.size())):
-    game.spawn_enemy(action == "boss")
+    game.spawn_enemy(action == "boss", "" if action == "boss" else action)
     var enemy: Dictionary = game.enemies.back()
     enemy.pos = (game.player + Vector2.from_angle(game.rng.randf_range(0, TAU)) * 300).clamp(Vector2(50, 50), game.ARENA - Vector2(50, 50))
     if action != "boss":
      enemy.tank = action == "pintado"
      enemy.radius = 44.0 if enemy.tank else 13.0
-     enemy.hp = (100.0 if enemy.tank else 30.0) * (1 + game.elapsed / 300.0)
+     enemy.hp = (200.0 if enemy.tank else 30.0) * game.fish_stat_multiplier()
      enemy.max_hp = enemy.hp
-     enemy.speed = 85.8 if enemy.tank else (105.0 + game.elapsed * 0.1) * game.MOVEMENT_MULTIPLIER
-     enemy.contact = 15.0 if enemy.tank else 10.0
+     enemy.speed = (80.0 if enemy.tank else 125.0) * game.fish_stat_multiplier()
+     enemy.contact = (20.0 if enemy.tank else 10.0) * game.fish_stat_multiplier()
     else: game.boss_spawned = true
   "fish_clear", "clear":
    for index in range(game.enemies.size() - 1, -1, -1):
@@ -279,12 +325,9 @@ func act(action: String) -> void:
    if action == "clear": game.boss_spawned = false
    game.crowd_refresh_timer = 0.0
   "time":
-   game.elapsed += 60.0
+   act_progression(action)
   "level":
-   game.level = mini(100, game.level + 1)
-   game.xp = 0
-   game.health = game.max_health
-   game.show_upgrades()
+   act_progression(action)
   "heal": game.health = game.max_health
   "cards":
    for index in game.cards.IDS.size():

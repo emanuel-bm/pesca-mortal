@@ -41,6 +41,8 @@ function tests() {
   assert.equal(api.call({action: 'register', nickname: 'Outra', token}).player_id, account.player_id, 'Registration retries do not create orphan accounts');
   const record = {mode: 'endless', seconds: 60, kills: 10, level: 1, character: 'Pescador', reason: 'death', ruleset: 'pesca-1', run_id: '1'.repeat(32)};
   const send = r => api.call({action: 'submit', player_id: account.player_id, token, record: r});
+  assert.equal(api.context.validateRecord_({...record, seconds: 180, kills: 1, level: 8}), null, 'A 100-XP boss pickup with XP bonus can grant multiple levels');
+  assert.equal(api.context.validateRecord_({...record, seconds: 179, kills: 1, level: 8}).error, 'invalid_record', 'Boss XP allowance starts at the first boss wave');
   assert.equal(send(record).updated, true);
   assert.equal(send(record).updated, false, 'Repeated score is idempotent');
   assert.equal(send({...record, seconds: 50}).updated, false);

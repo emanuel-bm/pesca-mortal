@@ -21,7 +21,7 @@ func run() -> void:
  game.bullets.append({"pos": enemy.pos, "velocity": Vector2.ZERO, "life": 1.0})
  game.update_game(0.01)
  assert(game.damage_numbers.size() == 1 and game.damage_numbers[0].text == "20")
- assert(is_equal_approx(enemy.hp, 10.0))
+ assert(is_equal_approx(enemy.hp, 1.0))
  game.bullets.append({"pos": enemy.pos, "velocity": Vector2.ZERO, "life": 1.0})
  game.update_game(0.01)
  assert(game.enemies.is_empty() and game.damage_numbers.size() == 2, "Lethal hits must show damage too")

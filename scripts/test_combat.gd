@@ -10,8 +10,8 @@ func run() -> void:
  game.start_run()
  game.update_game(0.01)
  assert(game.enemies.size() == 3, "Initial wave must spawn three enemies")
- assert(game.MAX_HEALTH == 50.0, "Base health must remain 50")
- assert(game.health == 50.0 and game.max_health == 50.0, "Health must start at 50")
+ assert(game.MAX_HEALTH == 100.0, "Base health must be 100")
+ assert(game.health == 100.0 and game.max_health == 100.0, "Health must start at 100")
  for direction in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN, Vector2.ZERO]:
   game.start_run()
   game.spawn_timer = 100
@@ -22,13 +22,13 @@ func run() -> void:
   enemy.speed = 0
   var before: Vector2 = game.player
   game.update_game(0.01)
-  assert(game.health == 40.0, "Contact must deal 10 damage")
+  assert(game.health == game.MAX_HEALTH - 10.0, "Contact must deal 10 damage")
   var push: Vector2 = game.knockback_velocity
   assert(push.length() > 0, "Hit must cause knockback, including exact overlap")
   if direction != Vector2.ZERO:
    assert(push.dot(direction) < 0, "Knockback must point away from attacker")
   game.update_game(0.02)
-  assert(game.health == 40.0, "Invulnerability must prevent repeated contact damage")
+  assert(game.health == game.MAX_HEALTH - 10.0, "Invulnerability must prevent repeated contact damage")
   assert((game.player - before).dot(push) > 0, "Knockback must move player")
   for step in 30: game.update_game(0.01)
   assert(game.knockback_velocity.is_zero_approx(), "Knockback must decay")
@@ -64,7 +64,7 @@ func run() -> void:
  game.update_game(0.01)
  assert(game.level == 2 and game.xp == 0 and game.gems.is_empty(), "Pintado pickup must grant five XP and reach level two")
  assert(game.level == 2 and game.health == game.MAX_HEALTH and game.state == "upgrade", "Level up must fully heal")
- assert(game.level_healing == 40, "Level up must restore the missing 40 health")
+ assert(game.level_healing == game.MAX_HEALTH - 10, "Level up must restore all missing health")
  game.add_xp_number(game.player, 5)
  assert(game.damage_numbers.back().text == "+5 XP" and game.damage_numbers.back().color == game.XP_COLOR and game.damage_numbers.back().font_size == 12)
  assert(game.sounds.players.has("level"))

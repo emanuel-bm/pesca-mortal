@@ -30,8 +30,8 @@ func run() -> void:
  assert(game.enemies.size() > enemy_count, "Hordes must continue during boss fight")
  for enemy in game.enemies:
   if not enemy.boss:
-   var expected_speed: float = 85.8 if enemy.tank else (105.0 + game.elapsed * 0.1) * game.MOVEMENT_MULTIPLIER
-   assert(is_equal_approx(enemy.speed, expected_speed))
+   var expected_speed: float = 80.0 if enemy.tank else 125.0
+   assert(is_equal_approx(enemy.speed, expected_speed * game.fish_stat_multiplier()))
  game.start_run()
  game.enemies.clear()
  game.spawn_enemy(true)

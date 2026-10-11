@@ -21,7 +21,7 @@ var music_gain := 1.0
 var outgoing_music_gain := 0.0
 var music_clock := 0.0
 const VOLUME_NAMES := {"master": "Geral", "music": "Música", "boss": "Sons do Minhocão", "shot": "Lança", "death": "Peixes mergulhando", "hurt": "Dano recebido", "level": "Subida de nível", "cards": "Cartas"}
-const MAX_EFFECT_VOLUME := {"boss": 0.65, "boss_death": 0.65, "emerge": 0.5, "dash": 0.45, "shot": 0.5, "death": 0.2, "hurt": 0.5, "level": 0.55, "card_ima": 0.4, "card_furia": 0.4, "card_intangivel": 0.4, "card_perfurante": 0.4}
+const MAX_EFFECT_VOLUME := {"boss": 0.65, "boss_death": 0.65, "emerge": 0.5, "dash": 0.45, "shot": 0.5, "death": 0.2, "hurt": 1.0, "level": 0.55, "card_ima": 0.4, "card_furia": 0.4, "card_intangivel": 0.4, "card_perfurante": 0.4}
 const VOLUME_VERSION := 2
 var volumes := {"master": 1.0, "music": 0.7, "boss": 0.8, "shot": 1.0, "death": 1.0, "hurt": 1.0, "level": 1.0, "cards": 1.0}
 

@@ -69,7 +69,7 @@ func run() -> void:
  assert(sounds.attacks == ["emerge", "dash"], "Dash audio must not repeat every frame")
  boss.hp = 0.0
  game.update_game(0.01)
- assert(game.state == "won" and sounds.boss_deaths == 1 and sounds.fish_deaths == 0)
+ assert(game.state == "playing" and game.bosses_defeated == 1 and sounds.boss_deaths == 1 and sounds.fish_deaths == 0)
  assert(is_equal_approx(sounds.players.boss_death.stream.get_length(), 2.2))
  for id in ["emerge", "dash", "boss_death"]: sounds.players[id].play()
  sounds.volumes.boss = 0.0

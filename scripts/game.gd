@@ -6,16 +6,17 @@ const ENDLESS_BOSS_INTERVAL := 120.0
 const ARENA := Vector2(2400, 1800)
 const ENEMY_SEPARATION_SCALE := 0.3
 const MAX_ENEMIES := 1000
-const MAX_HEALTH := 50.0
+const MAX_HEALTH := 100.0
 const XP_GROWTH_PER_LEVEL := 1.06
 const XP_COLOR := Color(0.25, 0.65, 1.0)
 const XP_ATTRACTION_SPEED := 630.0
 const KNOCKBACK_SPEED := 420.0
 const KNOCKBACK_DECELERATION := 1800.0
 const MOVEMENT_MULTIPLIER := 1.2
-const FASTEST_ENEMY_SPEED := 135.0 * MOVEMENT_MULTIPLIER
+const FASTEST_ENEMY_SPEED := 125.0
 const BASE_PLAYER_SPEED := 190.0
 const MINHOCAO = preload("res://scripts/minhocao.gd")
+const DOURADO = preload("res://scripts/dourado.gd")
 const FISH_VISUALS = preload("res://scripts/fish_visuals.gd")
 const RUN_HISTORY = preload("res://scripts/run_history.gd")
 const MAX_COLLECTION_RANGE := 500.0
@@ -137,6 +138,8 @@ var damage_numbers: Array[Dictionary] = []
 var game_font: FontFile
 var piranha_art: Dictionary = {}
 var pintado_art: Dictionary = {}
+var dourado_art: Dictionary = {}
+var pacu_art: Dictionary = {}
 var water_texture: Texture2D
 var canoe_texture: Texture2D
 var canoe_region: Rect2
@@ -172,13 +175,15 @@ func _ready() -> void:
  game_font.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
  piranha_art = FISH_VISUALS.load_art("res://assets/piranha.png")
  pintado_art = FISH_VISUALS.load_art("res://assets/pintado-v2.png")
+ dourado_art = FISH_VISUALS.load_art("res://assets/dourado-v1.png")
+ pacu_art = FISH_VISUALS.load_art("res://assets/pacu-v4.png")
  if ResourceLoader.exists("res://assets/water.png"): water_texture = load("res://assets/water.png")
  if ResourceLoader.exists("res://assets/ventrescha-v3.png"):
   xp_texture = load("res://assets/ventrescha-v3.png")
   xp_region = Rect2(xp_texture.get_image().get_used_rect())
   xp_outline_material = ShaderMaterial.new()
   xp_outline_material.shader = load("res://assets/xp_outline.gdshader")
-  xp_outline_material.set_shader_parameter("outline_color", XP_COLOR)
+  xp_outline_material.set_shader_parameter("outline_color", Color(0.30, 0.14, 0.05))
   xp_renderer = preload("res://scripts/xp_pickups.gd").new()
   xp_renderer.material = xp_outline_material
   xp_renderer.z_index = -1
@@ -1147,6 +1152,7 @@ func update_game(dt: float) -> void:
  cards.tick_effects(dt)
  update_damage_numbers(dt)
  elapsed += dt
+ update_minute_buffs()
  if not boss_spawned and run_mode in ["bosses", "endless"]:
   var first_boss_time: float = RUN_SECONDS if run_mode == "bosses" else next_boss_time
   sounds.prepare_boss_music(first_boss_time - elapsed)
@@ -1174,6 +1180,12 @@ func update_game(dt: float) -> void:
  for enemy_index in enemies.size():
   var enemy: Dictionary = enemies[enemy_index]
   var old_position: Vector2 = enemy.pos
+  if enemy.get("species", "") == "dourado":
+   DOURADO.update(enemy, dt, player, ARENA, movement() * effective_speed())
+   if invulnerability <= 0 and enemy_overlaps(enemy, player, 14):
+    receive_hit(enemy.contact, enemy.pos)
+   if state != "playing": return
+   continue
   var special_boss_movement := false
   if enemy.boss:
    var previous_phase: String = enemy.phase
@@ -1193,7 +1205,10 @@ func update_game(dt: float) -> void:
    else: move_enemy_if_free(enemy_index, desired_position)
   else: pursue_player(enemy_index, dt)
   if invulnerability <= 0 and enemy_overlaps(enemy, player, 14):
+   var health_before := health
    receive_hit(enemy.contact, enemy.pos)
+   if enemy.get("species", "") == "pacu" and health < health_before:
+    cards.block_activation()
   if state != "playing": return
  rebuild_projectile_grid()
  for i in range(bullets.size() - 1, -1, -1):
@@ -1228,12 +1243,11 @@ func update_game(dt: float) -> void:
   if enemy.hp <= 0:
    if enemy.boss: sounds.play_boss_death()
    else: sounds.play_death()
+   gems.append({"pos": enemy.pos, "xp": enemy_xp_reward(enemy), "giant": enemy.boss})
    if enemy.boss:
     if run_mode == "bosses":
-     finish(true)
-     return
-    buff_endless_enemies()
-   gems.append({"pos": enemy.pos, "xp": enemy_xp_reward(enemy)})
+     bosses_defeated += 1
+    elif run_mode == "endless": buff_endless_enemies()
    cards.drop(enemy)
    kills += 1
    enemies.remove_at(i)
@@ -1294,6 +1308,20 @@ func buff_endless_enemies() -> void:
   enemy.speed *= 1.05
   enemy.contact *= 1.05
   enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * 1.05
+
+func fish_stat_multiplier() -> float:
+ return pow(1.1, floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
+
+func update_minute_buffs() -> void:
+ var minute := floori(elapsed / 60.0)
+ for enemy in enemies:
+  if enemy.boss or enemy.hp <= 0: continue
+  var previous := int(enemy.get("buff_minute", minute))
+  if minute <= previous: continue
+  var multiplier := pow(1.1, minute - previous)
+  for stat in ["hp", "max_hp", "speed", "contact"]: enemy[stat] *= multiplier
+  enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * multiplier
+  enemy.buff_minute = minute
 
 func separation_radius(enemy: Dictionary) -> float:
  # Boss sprite is 140 px wide; fish sprites use radius * 2.
@@ -1481,7 +1509,12 @@ func enemy_overlaps(enemy: Dictionary, point: Vector2, padding: float) -> bool:
  if enemy.boss:
   var reach: float = enemy.radius + padding
   return point.distance_squared_to(enemy.pos) < reach * reach
- return FISH_VISUALS.overlaps(pintado_art if enemy.tank else piranha_art, enemy, point, padding)
+ return FISH_VISUALS.overlaps(fish_art(enemy), enemy, point, padding)
+
+func fish_art(enemy: Dictionary) -> Dictionary:
+ if enemy.get("species", "") == "pacu": return pacu_art
+ if enemy.get("species", "") == "dourado": return dourado_art
+ return pintado_art if enemy.tank else piranha_art
 
 func current_xp() -> float:
  return xp + xp_remainder / 100.0
@@ -1498,6 +1531,9 @@ func collect_xp(base_amount: int) -> int:
  return gained
 
 func enemy_xp_reward(enemy: Dictionary) -> int:
+ if enemy.get("boss", false): return 100
+ if enemy.get("species", "") == "pacu": return 4
+ if enemy.get("species", "") == "dourado": return 8
  if enemy.get("tank", false): return 5
  return maxi(1, roundi(pow(float(enemy.radius) / 13.0, 2)))
 
@@ -1531,14 +1567,56 @@ func receive_hit(amount: float, source: Vector2) -> void:
  knockback_velocity = away * KNOCKBACK_SPEED
  if health <= 0: finish(false)
 
-func spawn_enemy(boss: bool) -> void:
+func pacu_unlocked() -> bool:
+ return (run_mode == "endless" and endless_wave >= 2) or (run_mode == "bosses" and bosses_defeated >= 1)
+
+func fish_spawn_weights() -> Array:
+ if pacu_unlocked(): return [0.5, 0.15, 0.25, 0.1]
+ if boss_spawned: return [0.7, 0.3, 0.0, 0.0]
+ if elapsed >= 60.0: return [0.8, 0.2, 0.0, 0.0]
+ return [1.0, 0.0, 0.0, 0.0]
+
+func roll_fish_species() -> String:
+ var roll := rng.randf()
+ var weights := fish_spawn_weights()
+ var cumulative := 0.0
+ var species := ["piranha", "pintado", "pacu", "dourado"]
+ for index in weights.size():
+  cumulative += float(weights[index])
+  if roll < cumulative: return species[index]
+ return "dourado"
+
+func spawn_enemy(boss: bool, species: String = "") -> void:
  var angle := rng.randf_range(0, TAU)
  var position := (player + Vector2.from_angle(angle) * 680).clamp(Vector2(30, 30), ARENA - Vector2(30, 30))
- var tank := not boss and elapsed > 30 and rng.randf() < 0.25
- var hp := (100.0 if tank else 21.0) * (1 + elapsed / 300.0)
+ if not boss and species.is_empty(): species = roll_fish_species()
+ var tank := not boss and species == "pintado"
+ var is_dourado := not boss and species == "dourado"
+ var is_pacu := not boss and species == "pacu"
+ if is_pacu: tank = false
+ if is_dourado: tank = false
+ var hp := 200.0 if tank else 21.0
  if boss: hp = 32000.0
- var enemy := {"pos": position, "hp": hp, "max_hp": hp, "radius": 38.0 if boss else (44.0 if tank else 13.0), "speed": 120.0 if boss else (65.0 * MOVEMENT_MULTIPLIER * 1.1 if tank else (105.0 + elapsed * 0.1) * MOVEMENT_MULTIPLIER), "contact": 25.0 if boss else (15.0 if tank else 10.0), "boss": boss, "tank": tank, "flash": 0.0}
+ var enemy := {"pos": position, "hp": hp, "max_hp": hp, "radius": 38.0 if boss else (44.0 if tank else 13.0), "speed": 120.0 if boss else (80.0 if tank else 125.0), "contact": 60.0 if boss else (20.0 if tank else 10.0), "boss": boss, "tank": tank, "flash": 0.0}
+ if is_dourado:
+  enemy.species = "dourado"
+  enemy.hp = DOURADO.BASE_HEALTH
+  enemy.max_hp = enemy.hp
+  enemy.radius = 23.0
+  enemy.speed = 100.0
+  enemy.contact = 15.0
+  DOURADO.initialize(enemy)
+ if is_pacu:
+  enemy.species = "pacu"
+  enemy.hp = 80.0
+  enemy.max_hp = enemy.hp
+  enemy.radius = 23.0
+  enemy.speed = 80.0
+  enemy.contact = 30.0
  var multiplier := pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0
+ if not boss:
+  multiplier = fish_stat_multiplier()
+  enemy.buff_minute = floori(elapsed / 60.0)
  enemy["stat_multiplier"] = multiplier
  for stat in ["hp", "max_hp", "speed", "contact"]: enemy[stat] *= multiplier
  if boss: MINHOCAO.initialize(enemy)
@@ -1716,7 +1794,7 @@ func _draw() -> void:
   draw_spear(self, tip, direction)
  if graphics_quality < 2: character_quality.draw_fish(self, visible_world, offset)
  for enemy in enemies:
-  if graphics_quality < 2 and character_quality.fish_batches.size() == 2 and not enemy.boss: continue
+  if graphics_quality < 2 and character_quality.fish_batches.size() == 2 and not enemy.boss and enemy.get("species", "") not in ["dourado", "pacu"]: continue
   if not enemy.boss and not visible_world.grow(enemy.radius + 2).has_point(enemy.pos): continue
   var position: Vector2 = enemy.pos - offset
   var radius: float = enemy.radius
@@ -1750,11 +1828,18 @@ func _draw() -> void:
      var hp_position := bar_position + Vector2(50 - game_font.get_string_size(hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x / 2, 18)
      draw_string(game_font, hp_position.round(), hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
   else:
-   var art: Dictionary = pintado_art if enemy.tank else piranha_art
+   if enemy.get("species", "") == "dourado" and enemy.phase == "warning":
+    var end: Vector2 = position + enemy.dash_direction * DOURADO.DASH_SPEED * DOURADO.DASH_TIME * float(enemy.get("stat_multiplier", 1.0))
+    draw_line(position, end, Color(1, 0.55, 0.1, 0.25), 18)
+    draw_line(position, end, Color(1, 0.75, 0.2, 0.9), 2)
+   var art: Dictionary = fish_art(enemy)
    if not art.is_empty():
     var sprite_size: Vector2 = FISH_VISUALS.size_for(art, radius)
     draw_set_transform(position, 0, Vector2(-1 if enemy.get("facing_left", false) else 1, 1))
-    draw_texture_rect_region(art.texture, Rect2(-sprite_size / 2, sprite_size), Rect2(art.region), Color(1.7, 1.7, 1.7) if enemy.flash > 0 else Color.WHITE)
+    if enemy.get("species", "") in ["dourado", "pacu"] and graphics_quality < 2:
+     draw_texture_rect(character_quality.texture_for(enemy.species, graphics_quality, art.texture), Rect2(-sprite_size / 2, sprite_size), false, Color(1.7, 1.7, 1.7) if enemy.flash > 0 else Color.WHITE)
+    else:
+     draw_texture_rect_region(art.texture, Rect2(-sprite_size / 2, sprite_size), Rect2(art.region), Color(1.7, 1.7, 1.7) if enemy.flash > 0 else Color.WHITE)
     draw_set_transform(Vector2.ZERO)
    else: draw_rect(Rect2(position - Vector2.ONE * radius, Vector2.ONE * radius * 2), color)
  var boss_health := 0.0
@@ -1764,8 +1849,15 @@ func _draw() -> void:
    boss_health += maxf(0, enemy.hp)
    boss_max_health += enemy.max_hp
  if run_mode == "bosses" and boss_max_health > 0:
+  var boss_bar_color := Color(0.7, 0.3, 1)
+  var boss_title := "MINHOCÃO"
+  var boss_title_size := 24
+  var boss_title_width := game_font.get_string_size(boss_title, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_title_size).x
+  var boss_title_position := Vector2((viewport.x - boss_title_width) / 2, viewport.y - 47).round()
+  draw_string_outline(game_font, boss_title_position, boss_title, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_title_size, 4, Color(0.05, 0.02, 0.08))
+  draw_string(game_font, boss_title_position, boss_title, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_title_size, boss_bar_color)
   draw_rect(Rect2(Vector2(230, viewport.y - 35), Vector2(viewport.x - 460, 14)), Color(0.2, 0.1, 0.25))
-  draw_rect(Rect2(Vector2(230, viewport.y - 35), Vector2((viewport.x - 460) * boss_health / boss_max_health, 14)), Color(0.7, 0.3, 1))
+  draw_rect(Rect2(Vector2(230, viewport.y - 35), Vector2((viewport.x - 460) * boss_health / boss_max_health, 14)), boss_bar_color)
  var number_font: Font = game_font
  for number in damage_numbers:
   if not visible_world.grow(80).has_point(number.pos): continue

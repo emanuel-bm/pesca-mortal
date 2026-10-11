@@ -28,6 +28,48 @@ func run() -> void:
   assert(game.run_active and game.run_mode == mode)
   assert(game.test_run == (mode == "training"))
   game.run_recorded = true
+ game.start_run("bosses")
+ game.training._process(0.0)
+ assert(game.training.development_debug_frame.visible == (OS.has_feature("editor") and OS.is_debug_build()))
+ if game.training.development_debug_available():
+  var event := InputEventKey.new()
+  event.pressed = true
+  event.keycode = KEY_F1
+  game.training._input(event)
+  assert(game.elapsed == 60.0 and game.test_run)
+  event.echo = true
+  game.training._input(event)
+  assert(game.elapsed == 60.0)
+  event.echo = false
+  for index in 4: game.training._input(event)
+  game.update_game(0.0)
+  assert(game.boss_spawned)
+  event.keycode = KEY_F2
+  game.training._input(event)
+  assert(game.level == 2 and game.state == "upgrade")
+  game.training._input(event)
+  assert(game.level == 2)
+ game.start_run("endless")
+ game.training._process(0.0)
+ assert(game.training.development_debug_frame.visible == (OS.has_feature("editor") and OS.is_debug_build()))
+ if game.training.development_debug_available():
+  var event := InputEventKey.new()
+  event.pressed = true
+  event.keycode = KEY_F1
+  game.training._input(event)
+  assert(game.elapsed == 60.0 and game.test_run)
+  for index in 2: game.training._input(event)
+  game.update_game(0.0)
+  assert(game.boss_spawned and game.endless_wave == 1)
+  event.keycode = KEY_F2
+  game.training._input(event)
+  assert(game.level == 2 and game.state == "upgrade")
+ game.start_run("training")
+ game.training._process(0.0)
+ assert(not game.training.development_debug_available() and not game.training.development_debug_frame.visible)
+ game.training.act_development_debug("time")
+ assert(game.elapsed == 0.0)
+ game.run_recorded = true
  game.free()
  print("GAME MODES PASS: somente treino, infinito e chefões; configurações sem testes; modos antigos removidos")
  quit()

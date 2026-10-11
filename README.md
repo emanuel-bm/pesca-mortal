@@ -1,17 +1,22 @@
 # Pesca Mortal — protótipo
 
-Beta atual: **0.3.1**. Código, arte, áudio, scripts de servidor e testes estão
+Beta atual: **0.3.2**. Código, arte, áudio, scripts de servidor e testes estão
 incluídos no projeto. Ferramentas locais, caches e builds exportadas ficam
 fora do Git; pacotes para jogar são distribuídos pelas Releases.
 
 O menu oferece **Modo infinito** e **Modo por chefões**. O modo por chefões
-mantém o confronto aos cinco minutos e termina ao vencer o Minhocão.
+mantém o confronto aos cinco minutos e continua após vencer o Minhocão,
+liberando pacus e dourados. O próximo chefão ainda não foi implementado.
 No infinito, o primeiro chefão aparece aos três minutos. Depois, novas ondas
 aparecem a cada dois minutos, com dois chefões na segunda, três na terceira
 e assim por diante, sem remover chefões ainda vivos. Cada chefão abatido
 multiplica HP, dano e velocidade dos inimigos por 1,05, de forma acumulativa,
 atingindo os atuais e os próximos. Tamanho e XP dos peixes não mudam com o buff.
 O contador de eliminações inclui chefões no modo infinito.
+Cada chefão deixa uma ventrecha gigante de 112 pixels (8 vezes a comum),
+com 100 XP base, sujeitos ao bônus de experiência. No modo por chefões,
+o drop pode ser coletado, pois a partida continua após derrotar o chefe.
+As ventrechas usam contorno marrom com espessura de 1,5 pixel.
 
 O histórico do infinito é local, em `user://endless_runs.json`. O ranking ordena
 por tempo ativo de sobrevivência, depois por eliminações. Pausas, configurações
@@ -59,7 +64,7 @@ Créditos e autorização do autor preservados em `assets/fonts`.
 A abertura verifica versões publicadas e permite **Jogar offline**.
 A instalação automática integrada para Windows consulta as
 [Releases do projeto](https://github.com/emanuel-bm/pesca-mortal/releases).
-Na release 0.3.1, baixe e execute `pesca-mortal-windows-v0.3.1.exe` diretamente. Consulte
+Na release 0.3.2, baixe e execute `pesca-mortal-windows-v0.3.2.exe` diretamente. Consulte
 [distribuição e atualizações](docs/atualizacoes.md).
 
 Os formatos e o comando para preparar Windows, macOS Apple Silicon e Linux
@@ -72,6 +77,40 @@ A sala de treino está disponível no menu do jogo para configurar inimigos e at
 Os atalhos dependem da engine portátil local; não são um pacote de distribuição.
 
 ## Controles
+
+O pacu voltou como inimigo separado do dourado: usa `assets/pacu-v4.png`,
+tem 80 HP base escalados pelo tempo, 30 de dano, 4 XP e velocidade de 80 pixels/s,
+sem arrancada. Compartilha a liberação do dourado. **F11** invoca 10 pacus no treino.
+Um dano de pacu bloqueia novas ativações de cartas por cinco segundos de jogo;
+outro dano renova o tempo. Cartas no chão e ícones dos efeitos ficam cinza durante
+o bloqueio. Cartas não são consumidas ao tocar nelas enquanto bloqueadas, mas
+continuam expirando normalmente. Efeitos já ativos continuam; invulnerabilidade
+e Intangível impedem o bloqueio quando impedem o dano. Pausas congelam o tempo.
+
+O dourado usa o sprite `assets/dourado-v1.png`, com 46 pixels de comprimento e
+colisão pelo contorno. Aproxima-se a 100 pixels/s, anuncia por 1,1 segundo uma
+arrancada em direção fixa, mirando a posição prevista da canoa após 0,5 segundo
+com sua velocidade atual (incluindo melhorias). A previsão é calculada uma vez
+no início do aviso e limitada à arena. Avança a 756 pixels/s por 0,21125 segundo (159,705 pixels
+antes dos buffs por minuto e por chefão). Inicia o preparo a até 70% do alcance
+atual da arrancada; esse limite cresce junto com os buffs. Descansa
+por 0,75 segundo. Ao terminar cada arrancada, sorteia um cooldown de 1 a 3
+segundos antes de poder preparar outra; o descanso conta dentro desse tempo.
+Depois do descanso, volta a nadar enquanto aguarda. Tem 200 de vida base, 15 de dano e dá
+8 XP; recebe os mesmos buffs acumulativos dos demais.
+Na sala de treino, **F10** invoca 10 dourados ao redor da canoa.
+
+Distribuição por surgimento automático (um único sorteio):
+
+| Etapa | Piranha | Pintado | Pacu | Dourado |
+| --- | --- | --- | --- | --- |
+| Antes de 1 minuto | 100% | 0% | 0% | 0% |
+| A partir de 1 minuto | 80% | 20% | 0% | 0% |
+| Primeiro chefão apareceu | 70% | 30% | 0% | 0% |
+| Segunda horda no infinito ou primeiro chefe morto no modo por chefões | 50% | 15% | 25% | 10% |
+
+A última distribuição permanece até o fim da partida. Invocações manuais no
+treino continuam gerando somente o tipo solicitado.
 
 - WASD ou setas: movimentar.
 - Ataque automático ao inimigo mais próximo.
@@ -91,28 +130,36 @@ O contador de FPS pode ser ativado nas configurações e aparece no canto superi
 Tela cheia utiliza a resolução do monitor; em janela, tamanhos maiores que a área útil são limitados.
 
 Sobreviva por cinco minutos. O Minhocão aparece e as hordas continuam surgindo
-durante a luta. Derrote o chefe para vencer.
+durante a luta. Derrotar o chefe libera pacus e dourados e a partida continua.
 
 ## Escopo
 
-Uma arena delimitada, dois inimigos comuns, um chefe perseguidor,
+Uma arena delimitada, quatro tipos de peixes, um chefe perseguidor,
 cinco melhorias (sem limite de escolhas; velocidade sem teto), dano com invulnerabilidade
 temporária e knockback para longe do atacante, pausa, derrota, vitória e reinício.
-Vida máxima inicial de 50; dano comum de 10, resistente de 15 e chefe de 25.
+Vida máxima inicial de 100; dano base de piranha 10, pintado 20, pacu 30,
+dourado 15 e Minhocão 60.
+Pintados têm 200 HP base, antes dos buffs por minuto e por chefão derrotado.
 Minhocão com 32.000 de vida; somente o chefe exibe barra de vida.
 Alterna mergulho de 0,6 s, marca que acompanha por 0,375 s e trava por 0,75 s,
 emergência, exposição por 3 s e investida em linha anunciada por 0,9 s.
 A investida atravessa o trajeto em 0,5 s; movimento à superfície de 54.
-Enterrado, não recebe dano nem atrai disparos. Emergência causa 25 de dano
+Enterrado, não recebe dano nem atrai disparos. Emergência causa 60 de dano
 na área anunciada; contato mantém a invulnerabilidade de 0,8 s do jogador.
 Velocidade inicial do jogador: 190; melhorias de 4%, sem teto.
 Peixes usam sua própria velocidade, sem limite baseado na velocidade do jogador.
-Resistentes se movem a 78; perseguidores começam a 126. Todas as velocidades
-de movimento aumentaram 20% em relação à versão anterior.
+Piranhas se movem a 125 pixels/s, pintados e pacus a 80 pixels/s e dourados
+a 100 pixels/s. A cada minuto completo de jogo, todos os peixes vivos recebem
++10% de vida atual, vida máxima, dano e velocidade, de forma multiplicativa.
+Novos peixes herdam todos os minutos completos: atributos base × 1,1 elevado
+ao número de minutos. Isso substitui o antigo crescimento linear da vida.
+No infinito, os +5% por chefão morto se multiplicam com esse bônus. Chefões
+não recebem o bônus por minuto. XP, tamanho e tempos de aviso não aumentam;
+a velocidade da arrancada do dourado recebe o multiplicador dos atributos.
 Velocidades do jogador, dos peixes e dos chefões crescem sem teto de progressão. Movimentos na superfície e investidas do Minhocão recebem o multiplicador completo dos buffs; os tempos dos avisos continuam iguais.
 Melhorias de vida máxima e dano de ataque aumentam o valor atual em 20% por escolha.
 Valores exibidos são arredondados para inteiros; cálculos mantêm a precisão.
-Experiência por inimigo escala com sua área: pequenos dão 1 XP e laranjas 3 XP.
+Experiência base: piranha 1 XP, pintado 5 XP, pacu 4 XP, dourado 8 XP e chefão 100 XP.
 Cristais de maior valor aparecem maiores e concedem todo o XP ao serem coletados.
 Projéteis são lanças orientadas pelo disparo. Personagem, canoa, Minhocão,
 piranhas, pintados e água usam pixel art gerada com ImageGen.
@@ -122,7 +169,7 @@ do desenho. A arena recebe água em mosaico, e o personagem original foi
 preservado numa canoa de madeira; o sprite original segue em `assets/player.png`.
 Cada intervalo de surgimento gera dois inimigos (dobro da versão inicial).
 Ao esgotar todas as melhorias, novos níveis restauram 25 de vida.
-Há limite de 520 inimigos simultâneos.
+Há limite de 1.000 inimigos simultâneos.
 Áudio: gravação de haste de bambu para lançamento da lança (qubodup, CC0),
 com créditos em `assets/audio/CREDITS.md`; morte e dano usam impactos secos sintetizados.
 Um som por rajada; mortes simultâneas têm intervalo mínimo de 65 ms.
