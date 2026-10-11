@@ -997,10 +997,11 @@ func update_window_pause() -> void:
 
 func _notification(what: int) -> void:
  if what == NOTIFICATION_WM_CLOSE_REQUEST: record_run("quit")
- elif what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+ # Dropdowns can take focus from the main window while the app stays active.
+ elif what == NOTIFICATION_APPLICATION_FOCUS_OUT:
   window_focus_lost = true
   update_window_pause()
- elif what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
+ elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
   window_focus_lost = false
   update_window_pause()
 
