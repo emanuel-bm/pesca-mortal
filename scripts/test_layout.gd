@@ -28,9 +28,17 @@ func check_menu(game: Node) -> bool:
   return false
  if game.stats_panel.visible:
   var stats: Rect2 = game.stats_panel.get_global_rect()
-  if stats.intersects(rect) or stats.position.x <= rect.end.x or stats.size.y <= rect.size.y:
-   push_error("Atributos devem ficar à direita, separados e mais altos")
+  if stats.intersects(rect) or stats.position.x <= rect.end.x or (game.state != "upgrade" and stats.size.y <= rect.size.y):
+   push_error("Atributos devem ficar à direita e separados; fora das cartas, devem ser mais altos")
    return false
+ if game.state == "upgrade":
+  var previous: Rect2
+  for index in game.upgrade_buttons.size():
+   var card: Rect2 = game.upgrade_buttons[index].get_global_rect()
+   if not rect.encloses(card) or (index > 0 and (card.position.x < previous.end.x or not is_equal_approx(card.position.y, previous.position.y))):
+    push_error("Cartas de melhoria devem ficar lado a lado e dentro do painel")
+    return false
+   previous = card
  if not visible_area.encloses(rect):
   push_error("Menu fora da tela: %s; tela: %s" % [rect, visible_area])
   return false

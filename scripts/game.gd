@@ -80,6 +80,11 @@ var spawn_timer := 0.0
 var spawn_remainder := 0.0
 var attack_timer := 0.0
 var boss_spawned := false
+const BOSS_ARRIVAL_DURATION := 3.5
+const BOSS_SHAKE_DURATION := 0.85
+var boss_arrival_label: Label
+var boss_arrival_timer := 0.0
+var boss_shake_timer := 0.0
 var state := "menu"
 var run_mode := "bosses"
 var run_active := false
@@ -217,6 +222,22 @@ func _ready() -> void:
  online.changed.connect(online_changed)
  var layer := CanvasLayer.new()
  add_child(layer)
+ var arrival_layer := CanvasLayer.new()
+ arrival_layer.layer = 10
+ add_child(arrival_layer)
+ boss_arrival_label = Label.new()
+ boss_arrival_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+ boss_arrival_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+ boss_arrival_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+ var arrival_font := FontVariation.new()
+ arrival_font.base_font = game_font
+ arrival_font.variation_embolden = 1.2
+ boss_arrival_label.add_theme_font_override("font", arrival_font)
+ boss_arrival_label.add_theme_color_override("font_color", Color(0.7, 0.3, 1.0))
+ boss_arrival_label.add_theme_color_override("font_outline_color", Color(0.05, 0.02, 0.08))
+ boss_arrival_label.add_theme_constant_override("outline_size", 8)
+ boss_arrival_label.hide()
+ arrival_layer.add_child(boss_arrival_label)
  hud = Label.new()
  hud.position = Vector2(22, 46)
  hud.add_theme_font_size_override("font_size", 16)
@@ -801,6 +822,8 @@ func quit_game() -> void:
 
 func _notification(what: int) -> void:
  if what == NOTIFICATION_WM_CLOSE_REQUEST: record_run("quit")
+ elif what == NOTIFICATION_WM_WINDOW_FOCUS_OUT and state == "playing":
+  show_pause()
 
 func _exit_tree() -> void:
  for path in test_artifact_paths:
@@ -991,6 +1014,10 @@ func start_run(mode: String = "bosses") -> void:
  spawn_remainder = 0.0
  attack_timer = 0.0
  boss_spawned = false
+ boss_arrival_timer = 0.0
+ boss_shake_timer = 0.0
+ position = Vector2.ZERO
+ boss_arrival_label.hide()
  upgrade_levels.clear()
  state = "playing"
  if records_panel: records_panel.hide()
@@ -1076,6 +1103,7 @@ func update_cursor_visibility() -> void:
  if Input.mouse_mode != desired: Input.mouse_mode = desired
 
 func _process(delta: float) -> void:
+ update_boss_arrival(minf(delta, 0.05))
  update_cursor_visibility()
  update_minimap(delta)
  if xp_renderer: xp_renderer.queue_redraw()
@@ -1619,9 +1647,39 @@ func spawn_enemy(boss: bool, species: String = "") -> void:
   enemy.buff_minute = floori(elapsed / 60.0)
  enemy["stat_multiplier"] = multiplier
  for stat in ["hp", "max_hp", "speed", "contact"]: enemy[stat] *= multiplier
- if boss: MINHOCAO.initialize(enemy)
+ if boss:
+  enemy.display_name = "Minhocão"
+  MINHOCAO.initialize(enemy)
  enemies.append(enemy)
- if boss: sounds.announce_boss()
+ if boss:
+  sounds.announce_boss()
+  announce_boss_arrival(enemy)
+
+func announce_boss_arrival(enemy: Dictionary) -> void:
+ boss_arrival_label.text = "O MINHOCAO DESPERTOU!"
+ boss_arrival_timer = BOSS_ARRIVAL_DURATION
+ boss_shake_timer = BOSS_SHAKE_DURATION
+ update_boss_arrival(0.0)
+
+func update_boss_arrival(dt: float) -> void:
+ if state == "playing":
+  boss_arrival_timer = maxf(0.0, boss_arrival_timer - dt)
+  boss_shake_timer = maxf(0.0, boss_shake_timer - dt)
+ position = Vector2.ZERO
+ if state == "playing" and boss_shake_timer > 0.0:
+  var age := BOSS_SHAKE_DURATION - boss_shake_timer
+  var strength := 16.0 * pow(boss_shake_timer / BOSS_SHAKE_DURATION, 2.0)
+  position = Vector2(sin(age * 93.0), cos(age * 117.0)) * strength
+ boss_arrival_label.visible = run_active and state == "playing" and boss_arrival_timer > 0.0
+ if not boss_arrival_label.visible: return
+ var viewport := get_viewport_rect().size
+ var font_size := mini(80, roundi(viewport.x * 0.075))
+ var text_width := boss_arrival_label.get_theme_font("font").get_string_size(boss_arrival_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+ font_size = maxi(1, floori(font_size * minf(1.0, (viewport.x - 48.0) / maxf(1.0, text_width))))
+ boss_arrival_label.add_theme_font_size_override("font_size", font_size)
+ boss_arrival_label.size = Vector2(viewport.x, font_size * 2.0)
+ boss_arrival_label.position = Vector2(0, viewport.y * 0.35 - boss_arrival_label.size.y / 2.0)
+ boss_arrival_label.modulate.a = minf(1.0, boss_arrival_timer / 0.6)
 
 func fire() -> void:
  var nearest := player
@@ -1644,7 +1702,7 @@ func fire() -> void:
 func show_upgrades() -> void:
  state = "upgrade"
  clear_panel()
- overlay.custom_minimum_size.x = 480
+ overlay.custom_minimum_size.x = 770
  title("NÍVEL %d" % level)
  title("Escolha uma melhoria", 20)
  stats_panel.show()
@@ -1665,9 +1723,50 @@ func show_upgrades() -> void:
   health = minf(max_health, health + 25)
   resume()
   return
+ var hand := HBoxContainer.new()
+ hand.add_theme_constant_override("separation", 18)
+ panel.add_child(hand)
+ var current := projected_stats()
  for i in choices.size():
   var id := choices[i]
-  var option := button("%d · %s — %s" % [i + 1, LABELS[id][0], LABELS[id][1]], choose_upgrade.bind(id))
+  var option := Button.new()
+  option.custom_minimum_size = Vector2(228, 260)
+  option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+  var frame := StyleBoxFlat.new()
+  frame.bg_color = Color(0.12, 0.19, 0.26)
+  frame.set_corner_radius_all(12)
+  frame.set_border_width_all(3)
+  frame.border_color = Color(0.65, 0.53, 0.30)
+  option.add_theme_stylebox_override("normal", frame)
+  style_menu_button(option)
+  option.get_theme_stylebox("normal").border_color = frame.border_color
+  option.pressed.connect(choose_upgrade.bind(id))
+  hand.add_child(option)
+  var inset := MarginContainer.new()
+  inset.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+  for side in ["left", "right", "top", "bottom"]:
+   inset.add_theme_constant_override("margin_" + side, 18)
+  inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
+  option.add_child(inset)
+  var content := VBoxContainer.new()
+  content.add_theme_constant_override("separation", 14)
+  content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+  inset.add_child(content)
+  var next := projected_stats(id)
+  var lines := [str(i + 1) + " · MELHORIA", LABELS[id][0], LABELS[id][1], "ATUAL → PRÓXIMO", format_stat(id, current[id]) + " → " + format_stat(id, next[id])]
+  for line_index in lines.size():
+   var label := Label.new()
+   label.text = lines[line_index]
+   label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+   label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+   label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+   label.add_theme_font_size_override("font_size", 24 if line_index == 1 else (20 if line_index == 4 else 16))
+   if line_index in [0, 3]: label.add_theme_color_override("font_color", Color(0.8, 0.72, 0.52))
+   if line_index == 4: label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.65))
+   if line_index == 2:
+    label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+   content.add_child(label)
   upgrade_buttons.append(option)
   option.mouse_entered.connect(select_upgrade.bind(i))
   option.focus_entered.connect(update_stats_preview.bind(id))

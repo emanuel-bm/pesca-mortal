@@ -1,6 +1,6 @@
 # Pesca Mortal — protótipo
 
-Beta atual: **0.3.2**. Código, arte, áudio, scripts de servidor e testes estão
+Beta atual: **0.3.3**. Código, arte, áudio, scripts de servidor e testes estão
 incluídos no projeto. Ferramentas locais, caches e builds exportadas ficam
 fora do Git; pacotes para jogar são distribuídos pelas Releases.
 
@@ -64,7 +64,7 @@ Créditos e autorização do autor preservados em `assets/fonts`.
 A abertura verifica versões publicadas e permite **Jogar offline**.
 A instalação automática integrada para Windows consulta as
 [Releases do projeto](https://github.com/emanuel-bm/pesca-mortal/releases).
-Na release 0.3.2, baixe e execute `pesca-mortal-windows-v0.3.2.exe` diretamente. Consulte
+Na release 0.3.3, baixe e execute `pesca-mortal-windows-v0.3.3.exe` diretamente. Consulte
 [distribuição e atualizações](docs/atualizacoes.md).
 
 Os formatos e o comando para preparar Windows, macOS Apple Silicon e Linux
@@ -118,8 +118,8 @@ treino continuam gerando somente o tipo solicitado.
 - Escolha melhorias com mouse ou teclas 1, 2 e 3.
 - Na escolha de melhorias, a tabela à direita mostra atributos atuais.
   Passe o mouse ou dê foco a uma opção para ver o valor atual e a prévia em verde.
-  A prévia só aplica a mudança ao escolher; velocidade pode aumentar sem teto.
-- ESC: pausar ou continuar.
+  As opções aparecem em cartas lado a lado com os valores atual e próximo. A prévia só aplica a mudança ao escolher; velocidade pode aumentar sem teto.
+- ESC: pausar ou continuar. Ao perder o foco da janela, a partida pausa; voltar à janela mantém a pausa até continuar.
 
 Configurações de tela estão disponíveis no menu inicial e no menu de pausa.
 Escolha resolução de janela ou tela cheia e clique em Aplicar e salvar.
@@ -129,6 +129,7 @@ Resoluções disponíveis até QHD (2560 × 1440) e 4K (3840 × 2160).
 O contador de FPS pode ser ativado nas configurações e aparece no canto superior direito.
 Tela cheia utiliza a resolução do monitor; em janela, tamanhos maiores que a área útil são limitados.
 
+A chegada do Minhocão mostra um aviso roxo e um breve tremor da arena.
 Sobreviva por cinco minutos. O Minhocão aparece e as hordas continuam surgindo
 durante a luta. Derrotar o chefe libera pacus e dourados e a partida continua.
 
