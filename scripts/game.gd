@@ -2168,6 +2168,18 @@ func _draw() -> void:
     draw_colored_polygon(PackedVector2Array([start + side, end + side, end - side, start - side]), Color(1, 0.35, 0.12, 0.22))
     draw_line(start + side, end + side, Color(1, 0.55, 0.1), 3)
     draw_line(start - side, end - side, Color(1, 0.55, 0.1), 3)
+    var dash_direction: Vector2 = (end - start).normalized()
+    var dash_length: float = start.distance_to(end)
+    var arrow_side: Vector2 = dash_direction.orthogonal() * (MINHOCAO.DASH_WIDTH - 10)
+    var arrow_color := Color(1, 0.9, 0.4)
+    var arrow_count: int = maxi(1, ceili(dash_length / 56.0))
+    var arrow_spacing: float = maxf(0.0, dash_length - 56.0) / maxf(1.0, arrow_count - 1)
+    for arrow_index in range(arrow_count):
+     var arrow_base: Vector2 = start + dash_direction * (14.0 + arrow_index * arrow_spacing)
+     var arrow_tip: Vector2 = arrow_base + dash_direction * 28
+     var chevron := PackedVector2Array([arrow_base + arrow_side, arrow_tip, arrow_base - arrow_side])
+     draw_polyline(chevron, Color(0.15, 0.08, 0.02, 0.8), 7, true)
+     draw_polyline(chevron, arrow_color, 3, true)
    if MINHOCAO.vulnerable(enemy):
     if boss_texture:
      draw_texture_rect(character_quality.texture_for("boss", graphics_quality, boss_texture), Rect2(position - Vector2(70, 85), Vector2(140, 140)), false, Color.WHITE if enemy.flash <= 0 else Color(1.7, 1.7, 1.7))
