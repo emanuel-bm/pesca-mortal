@@ -144,7 +144,7 @@ atual da arrancada; esse limite cresce junto com os buffs. Descansa
 por 0,75 segundo. Ao terminar cada arrancada, sorteia um cooldown de 1 a 3
 segundos antes de poder preparar outra; o descanso conta dentro desse tempo.
 Depois do descanso, volta a nadar enquanto aguarda. Tem 200 de vida base, 15 de dano e dá
-8 XP; recebe +10% de vida e velocidade, +4% de dano e +5% de velocidade da arrancada por minuto, além de +5% por chefão no infinito.
+8 XP; recebe +8% de vida e velocidade, +4% de dano e +5% de velocidade da arrancada por minuto, além de +5% por chefão no infinito.
 Na sala de treino, **F10** invoca 10 dourados ao redor da canoa.
 
 Distribuição por surgimento automático (um único sorteio):
@@ -198,14 +198,14 @@ Velocidade inicial do jogador: 190; melhorias de 10%, sem teto.
 Peixes usam sua própria velocidade, sem limite baseado na velocidade do jogador.
 Piranhas e pacus se movem a 125 pixels/s, pintados a 80 pixels/s e dourados
 a 100 pixels/s. A cada minuto completo de jogo, os peixes vivos recebem
-+10% de vida atual, vida máxima e velocidade, e +4% de dano, de forma multiplicativa.
-Novos peixes herdam todos os minutos completos: vida e velocidade base × 1,1 elevado
++8% de vida atual, vida máxima e velocidade, e +4% de dano, de forma multiplicativa.
+Novos peixes herdam todos os minutos completos: vida e velocidade base × 1,08 elevado
 ao número de minutos; dano base × 1,04 elevado ao número de minutos.
 A velocidade e o alcance da arrancada do dourado crescem +5% por minuto.
 No infinito, os +5% por chefão morto se multiplicam com esses bônus. Chefões
 não recebem o bônus por minuto. XP, tamanho e tempos de aviso não aumentam.
 Velocidades do jogador, dos peixes e dos chefões crescem sem teto de progressão. Movimentos na superfície e investidas do Minhocão recebem o multiplicador completo dos buffs; os tempos dos avisos continuam iguais.
-Melhorias de vida máxima e dano de ataque aumentam o valor atual em 20% por escolha.
+Melhorias de vida máxima e dano de ataque aumentam o valor atual em 20% por escolha, sem teto de evolução.
 Valores exibidos são arredondados para inteiros; cálculos mantêm a precisão.
 O alcance de coleta de XP é fixo em 180, sem melhoria e oculto nos atributos do pescador.
 Aprendizado aumenta o bônus de ganho de XP em 20 pontos percentuais por escolha, sem limite máximo.

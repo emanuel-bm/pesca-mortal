@@ -22,7 +22,6 @@ const DOURADO = preload("res://scripts/dourado.gd")
 const FISH_VISUALS = preload("res://scripts/fish_visuals.gd")
 const RUN_HISTORY = preload("res://scripts/run_history.gd")
 const BASE_COLLECTION_RANGE := 180.0
-const HEALTH_CAP := 500.0
 const UPGRADES := ["damage", "rate", "shots", "speed", "max_health", "xp_bonus", "luck", "persistence", "crit_chance"]
 const LABELS := {
  "damage": ["Impacto", "+20% de dano"],
@@ -639,7 +638,7 @@ func projected_stats(id: String = "") -> Dictionary:
   "rate": values.rate = 1.2 / attack_delay
   "shots": values.shots = shot_count + 1
   "speed": values.speed = speed * 1.10
-  "max_health": values.max_health = maxf(max_health, minf(HEALTH_CAP, max_health * 1.20))
+  "max_health": values.max_health = max_health * 1.20
   "xp_bonus": values.xp_bonus = xp_bonus + 20
   "luck": values.luck = luck + 10
   "persistence": values.persistence = persistence + 5
@@ -650,7 +649,6 @@ func format_stat(id: String, value: float) -> String:
  if id == "rate": return ("%.2f" % value).replace(".", ",")
  if id == "crit_chance": return "%d%%" % roundi(value) + (" (MAX)" if value >= 100 else "")
  var text := ("+%d%%" % roundi(value)) if id in ["xp_bonus", "luck", "persistence"] else str(roundi(value))
- if id == "max_health" and value >= HEALTH_CAP: text += " (MAX)"
  return text
 
 func update_stats_preview(id: String = "") -> void:
@@ -1563,10 +1561,10 @@ func buff_endless_enemies() -> void:
   enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * 1.05
 
 func fish_minute_multiplier(species: String = "") -> float:
- return 1.05 if species == "dourado" else 1.1
+ return 1.05 if species == "dourado" else 1.08
 
 func fish_stat_multiplier(species: String = "") -> float:
- return pow(1.1, floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
+ return pow(1.08, floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
 
 func fish_damage_multiplier() -> float:
  return pow(1.04, floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
@@ -1577,7 +1575,7 @@ func update_minute_buffs() -> void:
   if enemy.boss or enemy.hp <= 0: continue
   var previous := int(enemy.get("buff_minute", minute))
   if minute <= previous: continue
-  var multiplier := pow(1.1, minute - previous)
+  var multiplier := pow(1.08, minute - previous)
   for stat in ["hp", "max_hp", "speed"]: enemy[stat] *= multiplier
   enemy.contact *= pow(1.04, minute - previous)
   enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * pow(fish_minute_multiplier(enemy.get("species", "")), minute - previous)
@@ -2031,7 +2029,6 @@ func show_upgrades() -> void:
  upgrade_buttons.clear()
  var available: Array[String] = []
  for id in UPGRADES:
-  if id == "max_health" and max_health >= HEALTH_CAP: continue
   if id == "crit_chance" and crit_chance >= 100: continue
   available.append(id)
  while choices.size() < 3 and not available.is_empty():

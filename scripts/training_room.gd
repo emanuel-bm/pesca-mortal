@@ -155,6 +155,7 @@ func _ready() -> void:
     var value := SpinBox.new()
     value.min_value = STATS[id][2]
     value.max_value = STATS[id][3]
+    value.allow_greater = id in ["health", "max_health", "luck"]
     value.step = 0.1 if id == "rate" else 1.0
     value.custom_minimum_size.x = 110
     value.value_changed.connect(set_stat.bind(id))
@@ -267,7 +268,7 @@ func refresh() -> void:
 func set_stat(requested: float, id: String) -> void:
  if game.run_mode != "training" or game.state != "paused" or selected_tab != 1: return
  var data: Array = STATS[id]
- var value := clampf(requested, float(data[2]), float(data[3]))
+ var value := maxf(requested, float(data[2])) if id in ["health", "max_health", "luck"] else clampf(requested, float(data[2]), float(data[3]))
  if id == "rate": game.attack_delay = 1.0 / value
  elif id in ["level", "shot_count", "xp_bonus", "luck", "persistence", "crit_chance"]: game.set(id, roundi(value))
  else: game.set(id, value)

@@ -24,7 +24,7 @@ func run() -> void:
  assert(is_equal_approx(game.max_health, game.MAX_HEALTH * 1.20))
  assert(is_equal_approx(game.health, 40 + game.MAX_HEALTH * 0.20))
  for rank in 20: game.choose_upgrade("max_health")
- assert(game.max_health == 500 and game.health_bar.max_value == 500)
+ assert(is_equal_approx(game.max_health, game.MAX_HEALTH * pow(1.20, 21)))
  game.choose_upgrade("xp_bonus")
  game.collect_xp(1)
  assert(is_equal_approx(game.current_xp(), 1.2))
@@ -51,9 +51,9 @@ func run() -> void:
  game.speed = 1000.0
  game.show_upgrades()
  assert(game.choices.size() == 3)
- for id in ["magnet", "max_health"]: assert(not id in game.choices)
+ assert(not "magnet" in game.choices)
  game.update_stats_preview()
- assert(game.stat_values.max_health.text == "500 (MAX)")
+ assert(game.stat_values.max_health.text == str(roundi(game.max_health)))
  assert(game.stat_values.xp_bonus.text == "+420%")
  game.resume()
  game.health = 10
@@ -61,10 +61,10 @@ func run() -> void:
  game.spawn_timer = INF
  game.attack_timer = INF
  game.update_game(0)
- assert(game.health == 500)
+ assert(game.health == game.max_health)
  game.start_run()
  assert(game.max_health == game.MAX_HEALTH and game.health == game.MAX_HEALTH and game.xp_bonus == 0 and game.xp_remainder == 0)
  game.update_stats_preview()
  assert(game.stat_names.speed.text == "Velocidade")
- print("HEALTH/XP PASS: caps, fractional rewards, unlimited XP bonus, max labels, capped choices, full heal and reset")
+ print("HEALTH/XP PASS: unlimited health, fractional rewards, unlimited XP bonus, labels, choices, full heal and reset")
  quit()
