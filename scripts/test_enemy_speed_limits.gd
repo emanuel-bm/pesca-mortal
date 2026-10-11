@@ -18,7 +18,7 @@ func run() -> void:
   var multiplier: float = game.fish_stat_multiplier(fish.get("species", ""))
   var base_speed: float = 80.0 if fish.tank else 125.0
   if fish.get("species", "") == "dourado": base_speed = 100.0
-  if fish.get("species", "") == "pacu": base_speed = 80.0
+  if fish.get("species", "") == "pacu": base_speed = 125.0
   assert(is_equal_approx(fish.speed, base_speed * multiplier))
  var original_speed: float = game.enemies.back().speed
  game.buff_endless_enemies()

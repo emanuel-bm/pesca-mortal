@@ -1566,7 +1566,10 @@ func fish_minute_multiplier(species: String = "") -> float:
  return 1.05 if species == "dourado" else 1.1
 
 func fish_stat_multiplier(species: String = "") -> float:
- return pow(fish_minute_multiplier(species), floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
+ return pow(1.1, floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
+
+func fish_damage_multiplier() -> float:
+ return pow(1.04, floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
 
 func update_minute_buffs() -> void:
  var minute := floori(elapsed / 60.0)
@@ -1574,9 +1577,10 @@ func update_minute_buffs() -> void:
   if enemy.boss or enemy.hp <= 0: continue
   var previous := int(enemy.get("buff_minute", minute))
   if minute <= previous: continue
-  var multiplier := pow(fish_minute_multiplier(enemy.get("species", "")), minute - previous)
-  for stat in ["hp", "max_hp", "speed", "contact"]: enemy[stat] *= multiplier
-  enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * multiplier
+  var multiplier := pow(1.1, minute - previous)
+  for stat in ["hp", "max_hp", "speed"]: enemy[stat] *= multiplier
+  enemy.contact *= pow(1.04, minute - previous)
+  enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * pow(fish_minute_multiplier(enemy.get("species", "")), minute - previous)
   enemy.buff_minute = minute
 
 func separation_radius(enemy: Dictionary) -> float:
@@ -1951,14 +1955,17 @@ func spawn_enemy(boss: bool, species: String = "") -> void:
   enemy.hp = 80.0
   enemy.max_hp = enemy.hp
   enemy.radius = 23.0
-  enemy.speed = 80.0
+  enemy.speed = 125.0
   enemy.contact = 30.0
  var multiplier := pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0
  if not boss:
   multiplier = fish_stat_multiplier(species)
   enemy.buff_minute = floori(elapsed / 60.0)
  enemy["stat_multiplier"] = multiplier
- for stat in ["hp", "max_hp", "speed", "contact"]: enemy[stat] *= multiplier
+ if is_dourado:
+  enemy.stat_multiplier = pow(1.05, floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
+ for stat in ["hp", "max_hp", "speed"]: enemy[stat] *= multiplier
+ enemy.contact *= multiplier if boss else fish_damage_multiplier()
  if boss:
   enemy.display_name = "Minhocão"
   MINHOCAO.initialize(enemy)
