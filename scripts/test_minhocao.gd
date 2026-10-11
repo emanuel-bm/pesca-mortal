@@ -18,7 +18,7 @@ func run() -> void:
  await process_frame
  game.start_run()
  for i in 5: game.choose_upgrade("speed")
- assert(is_equal_approx(game.speed, 190.0 * pow(1.04, 5)))
+ assert(is_equal_approx(game.speed, 190.0 * pow(1.10, 5)))
  game.start_run()
  assert(is_equal_approx(game.speed, 190.0))
  game.elapsed = 300

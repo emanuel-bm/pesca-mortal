@@ -12,7 +12,7 @@ func run() -> void:
  game.choose_upgrade("speed")
  game.update_stats_preview()
  assert(game.stat_names.speed.text == "Velocidade (2)")
- assert(is_equal_approx(game.speed, game.BASE_PLAYER_SPEED * 1.04))
+ assert(is_equal_approx(game.speed, game.BASE_PLAYER_SPEED * 1.10))
  game.choose_upgrade("speed")
  game.update_stats_preview()
  assert(game.stat_names.speed.text == "Velocidade (3)")

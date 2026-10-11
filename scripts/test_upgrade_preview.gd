@@ -43,7 +43,7 @@ func run() -> void:
   assert(not game.stats_panel.visible)
  game.speed = 250.0
  game.update_stats_preview("speed")
- assert(game.stat_values.speed.text == "250 → 260")
+ assert(game.stat_values.speed.text == "250 → 275")
  game.start_run()
  game.show_upgrades()
  for child in game.panel.get_children():
@@ -83,7 +83,7 @@ func run() -> void:
  game.speed = 250.0
  game.show_upgrades()
  assert(game.state == "upgrade" and game.choices.size() == 3)
- assert(is_equal_approx(game.projected_stats("speed").speed, 260.0))
+ assert(is_equal_approx(game.projected_stats("speed").speed, 275.0))
  var prior: float = game.damage
  game.choose_upgrade("damage")
  assert(game.damage > prior and game.upgrade_levels.damage == 51)

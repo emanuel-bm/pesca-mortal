@@ -180,7 +180,7 @@ emergência, exposição por 3 s e investida em linha anunciada por 0,9 s.
 A investida atravessa o trajeto em 0,5 s; movimento à superfície de 54.
 Enterrado, não recebe dano nem atrai disparos. Emergência causa 60 de dano
 na área anunciada; contato mantém a invulnerabilidade de 0,8 s do jogador.
-Velocidade inicial do jogador: 190; melhorias de 4%, sem teto.
+Velocidade inicial do jogador: 190; melhorias de 10%, sem teto.
 Peixes usam sua própria velocidade, sem limite baseado na velocidade do jogador.
 Piranhas se movem a 125 pixels/s, pintados e pacus a 80 pixels/s e dourados
 a 100 pixels/s. A cada minuto completo de jogo, todos os peixes vivos recebem

@@ -27,7 +27,7 @@ const LABELS := {
  "damage": ["Impacto", "+20% de dano"],
  "rate": ["Ritmo", "+20% de frequência de ataque"],
  "shots": ["Rajada", "+1 projétil por disparo"],
- "speed": ["Passo leve", "+4% de velocidade"],
+ "speed": ["Passo leve", "+10% de velocidade"],
  "magnet": ["Atração", "+40% de alcance de coleta"],
  "max_health": ["Vitalidade", "+20% de vida máxima"],
  "xp_bonus": ["Aprendizado", "+10% de ganho de XP"]
@@ -615,7 +615,7 @@ func projected_stats(id: String = "") -> Dictionary:
   "damage": values.damage = damage * 1.20
   "rate": values.rate = 1.2 / attack_delay
   "shots": values.shots = shot_count + 1
-  "speed": values.speed = speed * 1.04
+  "speed": values.speed = speed * 1.10
   "magnet": values.magnet = minf(MAX_COLLECTION_RANGE, magnet * 1.4)
   "max_health": values.max_health = maxf(max_health, minf(HEALTH_CAP, max_health * 1.20))
   "xp_bonus": values.xp_bonus = mini(XP_BONUS_CAP, xp_bonus + 10)
