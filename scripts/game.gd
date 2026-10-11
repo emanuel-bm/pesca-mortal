@@ -70,6 +70,8 @@ var level_healing := 0
 var xp := 0
 var kills := 0
 var damage := 20.0
+var fatal_hit: Dictionary = {}
+var fatal_hit_panel: PanelContainer
 var attack_delay := 0.65
 var shot_count := 1
 var speed := BASE_PLAYER_SPEED
@@ -504,6 +506,7 @@ func move_menu_focus(direction: int) -> void:
  enabled[posmod(index + direction, enabled.size())].grab_focus()
 
 func clear_panel() -> void:
+ clear_fatal_hit_panel()
  notes_actions.hide()
  for child in notes_actions.get_children():
   notes_actions.remove_child(child)
@@ -578,8 +581,14 @@ func layout_modals() -> void:
   notes_actions.position = Vector2(viewport.x - action_width - 16.0, viewport.y - notes_actions.size.y - 16.0)
   return
  overlay.size = overlay.get_combined_minimum_size()
+ var death_stack_height := overlay.size.y
+ if state == "lost" and is_instance_valid(fatal_hit_panel):
+  fatal_hit_panel.size = fatal_hit_panel.get_combined_minimum_size()
+  death_stack_height += fatal_hit_panel.size.y + 60
  stats_panel.size = stats_panel.get_combined_minimum_size()
- var factor := minf(1.0, (viewport.y - 40) / maxf(overlay.size.y, stats_panel.size.y if stats_panel.visible else 0.0))
+ var factor := minf(1.0, (viewport.y - 40) / maxf(death_stack_height, stats_panel.size.y if stats_panel.visible else 0.0))
+ if state == "lost" and is_instance_valid(fatal_hit_panel):
+  factor = minf(factor, (viewport.x - 40) / fatal_hit_panel.size.x)
  if stats_panel.visible or (records_panel and records_panel.visible):
   factor = minf(factor, (viewport.x - 96) / (overlay.size.x + stats_panel.size.x * 2))
  else:
@@ -604,6 +613,10 @@ func layout_modals() -> void:
  overlay.position = (viewport - overlay.size * factor) / 2
  if state == "lost":
   overlay.position.y = viewport.y - overlay.size.y * factor - 20
+  if is_instance_valid(fatal_hit_panel):
+   fatal_hit_panel.scale = Vector2.ONE * factor
+   var bars_bottom := maxf(health_bar.position.y + health_bar.size.y, xp_bar.position.y + xp_bar.size.y)
+   fatal_hit_panel.position = Vector2((viewport.x - fatal_hit_panel.size.x * factor) / 2, bars_bottom + 8)
  stats_panel.scale = Vector2.ONE * factor
  stats_panel.position = Vector2(viewport.x - 24 - stats_panel.size.x * factor, (viewport.y - stats_panel.size.y * factor) / 2)
  if state == "menu" and records_panel: version_badge.scale = records_panel.scale
@@ -941,6 +954,9 @@ func record_run(reason: String) -> void:
  var previous_rank: Array = RUN_HISTORY.ranked(RUN_HISTORY.for_version(run_history, online.competitive_version)) if run_mode == "endless" else RUN_HISTORY.boss_ranked(RUN_HISTORY.for_version(run_history, online.competitive_version))
  var previous: Dictionary = previous_rank[0] if not previous_rank.is_empty() else {}
  var record := {"seconds": elapsed, "kills": kills, "date": Time.get_datetime_string_from_system(), "reason": reason, "character": "Pescador", "level": level, "mode": run_mode, "competitive_version": online.competitive_version}
+ if reason == "death":
+  record.merge(RUN_HISTORY.killer_details(fatal_hit.get("enemy", {})))
+  record["fatal_attack"] = str(fatal_hit.get("attack", ""))
  run_history.append(record)
  run_history = RUN_HISTORY.chronological(run_history)
  player_totals = RUN_HISTORY.totals(run_history)
@@ -1108,6 +1124,8 @@ func restart_run() -> void:
 
 func start_run(mode: String = "bosses") -> void:
  if mode not in ["endless", "bosses", "training"]: return
+ fatal_hit.clear()
+ clear_fatal_hit_panel()
  reset_damage_flash()
  sounds.start_calm_music()
  record_run("restart")
@@ -1353,7 +1371,7 @@ func update_game(dt: float) -> void:
   if enemy.get("species", "") == "dourado":
    DOURADO.update(enemy, dt, player, ARENA, movement() * effective_speed())
    if invulnerability <= 0 and enemy_overlaps(enemy, player, 14):
-    receive_hit(enemy.contact, enemy.pos)
+    receive_hit(enemy.contact, enemy.pos, enemy, "Investida" if enemy.phase == "dash" else "Contato")
    if state != "playing": return
    continue
   var special_boss_movement := false
@@ -1364,7 +1382,8 @@ func update_game(dt: float) -> void:
    if enemy.phase == "dash" and previous_phase != "dash": sounds.play_boss_dash()
    special_boss_movement = emerged or previous_phase != "exposed" or enemy.phase != "exposed"
    if emerged and player.distance_to(enemy.pos) < MINHOCAO.EMERGENCE_RADIUS + 14:
-    receive_hit(enemy.contact, enemy.pos)
+    receive_hit(enemy.contact, enemy.pos, enemy, "Emergência")
+    if state != "playing": return
    if not MINHOCAO.vulnerable(enemy): continue
   var toward: Vector2 = player - enemy.pos
   enemy.facing_left = toward.x < 0
@@ -1376,7 +1395,7 @@ func update_game(dt: float) -> void:
   else: pursue_player(enemy_index, dt)
   if invulnerability <= 0 and enemy_overlaps(enemy, player, 14):
    var health_before := health
-   receive_hit(enemy.contact, enemy.pos)
+   receive_hit(enemy.contact, enemy.pos, enemy, "Investida" if enemy.boss and enemy.phase == "dash" else "Contato")
    if enemy.get("species", "") == "pacu" and health < health_before:
     cards.block_activation()
   if state != "playing": return
@@ -1729,11 +1748,12 @@ func update_damage_numbers(dt: float) -> void:
   damage_numbers[i].pos.y -= 42 * dt
   if damage_numbers[i].life <= 0: damage_numbers.remove_at(i)
 
-func receive_hit(amount: float, source: Vector2) -> void:
+func receive_hit(amount: float, source: Vector2, attacker: Dictionary = {}, attack: String = "Contato") -> void:
  if cards.active("intangivel"):
   if amount > 0.0: cards.shield_feedback(source)
   return
  if invulnerability > 0: return
+ var health_before := health
  health -= amount
  if amount > 0.0:
   add_damage_number(player - Vector2(0, 48), amount, Color(1.0, 0.15, 0.15), 1.4, 28)
@@ -1747,7 +1767,65 @@ func receive_hit(amount: float, source: Vector2) -> void:
  var away := (player - source).normalized()
  if away.is_zero_approx(): away = Vector2.LEFT
  knockback_velocity = away * KNOCKBACK_SPEED
- if health <= 0: finish(false)
+ if health <= 0:
+  fatal_hit = {"enemy": attacker.duplicate(true), "damage": amount, "health_before": health_before, "attack": attack}
+  finish(false)
+
+func clear_fatal_hit_panel() -> void:
+ if is_instance_valid(fatal_hit_panel):
+  fatal_hit_panel.hide()
+  fatal_hit_panel.queue_free()
+ fatal_hit_panel = null
+
+func show_fatal_hit() -> void:
+ clear_fatal_hit_panel()
+ if fatal_hit.is_empty(): return
+ var enemy: Dictionary = fatal_hit.enemy
+ var name: String = RUN_HISTORY.killer_details(enemy).killer_name
+ var texture: Texture2D
+ if not enemy.is_empty():
+  if enemy.get("boss", false):
+   texture = boss_texture
+  else:
+   var art := fish_art(enemy)
+   var atlas := AtlasTexture.new()
+   atlas.atlas = art.texture
+   atlas.region = Rect2(art.region)
+   texture = atlas
+ var card := PanelContainer.new()
+ fatal_hit_panel = card
+ var style := StyleBoxFlat.new()
+ style.bg_color = Color("30202a")
+ style.border_color = Color("ec716f")
+ style.set_border_width_all(2)
+ style.set_corner_radius_all(8)
+ style.content_margin_left = 8
+ style.content_margin_right = 8
+ style.content_margin_top = 6
+ style.content_margin_bottom = 6
+ card.add_theme_stylebox_override("panel", style)
+ modal_row.add_child(card)
+ var row := HBoxContainer.new()
+ row.add_theme_constant_override("separation", 8)
+ card.add_child(row)
+ if texture:
+  var portrait := TextureRect.new()
+  portrait.texture = texture
+  portrait.custom_minimum_size = Vector2(40, 40)
+  portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+  portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+  portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+  row.add_child(portrait)
+ var details := VBoxContainer.new()
+ details.add_theme_constant_override("separation", 2)
+ details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ row.add_child(details)
+ for line in ["QUEM TE MATOU: %s" % name, "%s · %s de dano" % [fatal_hit.attack, format_xp(fatal_hit.damage)], "Vida antes do golpe: %s" % format_xp(fatal_hit.health_before)]:
+  var label := Label.new()
+  label.text = line
+  label.autowrap_mode = TextServer.AUTOWRAP_OFF
+  label.add_theme_font_size_override("font_size", 12)
+  details.add_child(label)
 
 func reset_damage_flash() -> void:
  if damage_flash_tween != null:
@@ -1976,6 +2054,7 @@ func finish(won: bool) -> void:
   title("%s · Tempo: %02d:%02d" % [online.nickname(), int(elapsed) / 60, int(elapsed) % 60], 16)
   title("Nível: %d · Eliminações: %d" % [level, kills], 16)
   title("Peixes vivos: %d · Chefes vivos: %d" % [living_fish, living_bosses], 16)
+  show_fatal_hit()
   var actions := HBoxContainer.new()
   actions.add_theme_constant_override("separation", 12)
   panel.add_child(actions)
@@ -1985,7 +2064,7 @@ func finish(won: bool) -> void:
    item.custom_minimum_size.y = 48
    item.add_theme_font_size_override("font_size", 16)
    item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-  profile_panel.hide()
+  if profile_panel: profile_panel.hide()
   layout_modals()
   queue_redraw()
   return

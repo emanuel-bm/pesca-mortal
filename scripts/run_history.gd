@@ -18,7 +18,7 @@ static func normalized(records: Array) -> Array:
   var seconds: float = float(record.get("seconds", -1))
   var kills: int = int(record.get("kills", -1))
   if not is_finite(seconds) or seconds < 0 or kills < 0: continue
-  result.append({"seconds": seconds, "kills": kills, "date": str(record.get("date", "")), "reason": str(record.get("reason", "death")), "character": str(record.get("character", "Pescador")), "level": maxi(0, int(record.get("level", 0))), "mode": str(record.get("mode", "endless")), "competitive_version": str(record.get("competitive_version", LEGACY_VERSION))})
+  result.append({"seconds": seconds, "kills": kills, "date": str(record.get("date", "")), "reason": str(record.get("reason", "death")), "character": str(record.get("character", "Pescador")), "level": maxi(0, int(record.get("level", 0))), "mode": str(record.get("mode", "endless")), "competitive_version": str(record.get("competitive_version", LEGACY_VERSION)), "killer_id": str(record.get("killer_id", "")), "killer_name": str(record.get("killer_name", "")), "fatal_attack": str(record.get("fatal_attack", ""))})
  return result
 
 static func ranked(records: Array) -> Array:
@@ -43,7 +43,7 @@ static func load_records(path: String = "user://endless_runs.json") -> Array:
 static func save_records(records: Array, path: String = "user://endless_runs.json") -> Error:
  var file := FileAccess.open(path, FileAccess.WRITE)
  if file == null: return FileAccess.get_open_error()
- file.store_string(JSON.stringify({"version": 3, "runs": chronological(records)}, "\t"))
+ file.store_string(JSON.stringify({"version": 4, "runs": chronological(records)}, "\t"))
  return OK
 
 static func time_text(seconds: float) -> String:
@@ -70,3 +70,19 @@ static func totals(records: Array) -> Dictionary:
   total.kills += record.kills
   total.levels += maxi(0, record.level - 1)
  return total
+
+## IDs estáveis agrupam variantes do mesmo inimigo, independentemente do nome exibido.
+static func killer_details(enemy: Dictionary) -> Dictionary:
+ if enemy.is_empty(): return {"killer_id": "unknown", "killer_name": "Origem desconhecida"}
+ if enemy.get("boss", false): return {"killer_id": "minhocao", "killer_name": str(enemy.get("display_name", "Minhocão"))}
+ var species := str(enemy.get("species", ""))
+ if species not in ["pacu", "dourado"]: species = "pintado" if enemy.get("tank", false) else "piranha"
+ return {"killer_id": species, "killer_name": {"piranha": "Piranha", "pintado": "Pintado", "pacu": "Pacu", "dourado": "Dourado"}[species]}
+
+static func deaths_by_enemy(records: Array) -> Dictionary:
+ var counts: Dictionary = {}
+ for record in normalized(records):
+  if record.reason != "death": continue
+  var killer_id: String = record.killer_id if not record.killer_id.is_empty() else "unknown"
+  counts[killer_id] = int(counts.get(killer_id, 0)) + 1
+ return counts

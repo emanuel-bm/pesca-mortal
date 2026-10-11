@@ -75,5 +75,32 @@ func run() -> void:
   assert(cost > previous_cost)
   assert(cost == ceili((5 + (rank - 1) * 3) * pow(1.06, rank - 1)))
   previous_cost = cost
- print("COMBAT PASS: waves, HP, damage, knockback, FPS, XP scaling and collection")
+ for species in ["piranha", "pintado", "pacu", "dourado"]:
+  game.start_run()
+  game.spawn_timer = 100
+  game.attack_timer = 100
+  game.spawn_enemy(false, species)
+  var killer: Dictionary = game.enemies[0]
+  killer.pos = game.player
+  killer.speed = 0
+  game.health = 1
+  game.update_game(0.01)
+  assert(game.state == "lost", "Contact must end the run")
+  assert(game.fatal_hit.damage == killer.contact and game.fatal_hit.health_before == 1)
+  assert(game.fatal_hit.enemy.pos == killer.pos, "Fatal damage must retain its actual attacker")
+  assert(game.fatal_hit.enemy.get("tank", false) == killer.tank)
+ game.start_run()
+ assert(game.fatal_hit.is_empty(), "Restart must clear the previous killer")
+ game.spawn_enemy(true)
+ var boss: Dictionary = game.enemies[0]
+ game.health = 35
+ game.invulnerability = 1
+ game.receive_hit(80, boss.pos, boss, "Emergência")
+ assert(game.fatal_hit.is_empty(), "Ignored hits must not become the death cause")
+ game.invulnerability = 0
+ game.receive_hit(80, boss.pos, boss, "Emergência")
+ boss.display_name = "Changed after death"
+ assert(game.fatal_hit.enemy.display_name == "Minhocão", "Death attribution must be a snapshot")
+ assert(game.fatal_hit.damage == 80 and game.fatal_hit.health_before == 35 and game.fatal_hit.attack == "Emergência")
+ print("COMBAT PASS: waves, HP, damage, knockback, FPS, XP scaling, collection and fatal hit attribution")
  quit(0)
