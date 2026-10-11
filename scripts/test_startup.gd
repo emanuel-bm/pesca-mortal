@@ -84,9 +84,10 @@ func run() -> void:
  ranking.endpoint = "https://example.invalid/ranking"
  ranking.pending = {}
  ranking.queue_record({"mode": "endless", "seconds": 45.0, "kills": 10, "level": 3, "character": "default", "reason": "died"})
- assert(ranking.pending.has("endless") and not ranking.busy, "Offline scores must be saved without making a network request")
+ var outbox_key: String = ranking.competitive_version + ":endless"
+ assert(ranking.pending.has(outbox_key) and not ranking.busy, "Offline scores must be saved without making a network request")
  var saved: Variant = JSON.parse_string(FileAccess.get_file_as_string(ranking.storage_path))
- assert(saved.pending.endless.kills == 10)
+ assert(saved.pending[outbox_key].kills == 10)
  DirAccess.remove_absolute(ranking.storage_path)
  ranking.queue_free()
  set_meta("offline_session", true)
