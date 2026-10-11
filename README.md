@@ -47,6 +47,9 @@ Na **Sala de treino**, **F9** invoca as quatro cartas para experimentar.
 diretamente, mesmo com os drops desligados. Também há botões na guia Treino.
 Pause com ESC e ative **Habilitar cartas** na guia Treino para habilitar drops:
 peixes usam as mesmas chances da partida e chefões deixam uma carta garantida.
+Pintado tem chance de carta de 5% no início, pacu de 5% e dourado de 10%.
+As chances diminuem linearmente até 1%, 2% e 5%, respectivamente, aos quatro
+minutos e permanecem nesses valores depois.
 A opção começa desligada e volta a ficar desligada ao reiniciar o treino.
 
 Protótipo 2D em Godot 4.7.2. O título é provisório.

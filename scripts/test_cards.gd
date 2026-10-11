@@ -128,6 +128,11 @@ func run() -> void:
   game.elapsed = sample[0]
   assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": false}), sample[1]), "Piranha drop must decrease linearly and stop at its base")
   assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": true}), sample[2]), "Pintado drop must decrease linearly and stop at its base")
+  for species in ["pacu", "dourado"]:
+   var enemy := {"boss": false, "tank": false, "species": species}
+   var progress: float = clampf(sample[0] / 240.0, 0.0, 1.0)
+   var expected: float = lerpf(0.05, 0.02, progress) if species == "pacu" else lerpf(0.10, 0.05, progress)
+   assert(is_equal_approx(game.cards.drop_chance(enemy), expected), "Pacu and Dourado drops must decrease to 2% and 5% at four minutes")
  fresh()
  assert(game.cards.drop_chance({"boss": true}) == 0.0)
  fresh("endless")
