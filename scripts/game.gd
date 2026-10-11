@@ -75,6 +75,8 @@ var shot_count := 1
 var speed := BASE_PLAYER_SPEED
 var magnet := 85.0
 var invulnerability := 0.0
+var damage_flash: ColorRect
+var damage_flash_tween: Tween
 var prevent_player_death := false
 var spawn_timer := 0.0
 var spawn_remainder := 0.0
@@ -226,6 +228,14 @@ func _ready() -> void:
  online.changed.connect(online_changed)
  var layer := CanvasLayer.new()
  add_child(layer)
+ var damage_layer := CanvasLayer.new()
+ damage_layer.layer = 20
+ add_child(damage_layer)
+ damage_flash = ColorRect.new()
+ damage_flash.color = Color(1.0, 0.0, 0.0, 0.0)
+ damage_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+ damage_layer.add_child(damage_flash)
+ damage_flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
  var arrival_layer := CanvasLayer.new()
  arrival_layer.layer = 10
  add_child(arrival_layer)
@@ -666,6 +676,7 @@ func setup_profile_panel() -> void:
  column.add_child(profile_label)
 
 func show_menu() -> void:
+ reset_damage_flash()
  sounds.start_calm_music()
  record_run("menu")
  run_active = false
@@ -1067,6 +1078,7 @@ func restart_run() -> void:
 
 func start_run(mode: String = "bosses") -> void:
  if mode not in ["endless", "bosses", "training"]: return
+ reset_damage_flash()
  sounds.start_calm_music()
  record_run("restart")
  run_mode = mode
@@ -1668,12 +1680,12 @@ func enemy_xp_reward(enemy: Dictionary) -> int:
  if enemy.get("tank", false): return 5
  return maxi(1, roundi(pow(float(enemy.radius) / 13.0, 2)))
 
-func add_damage_number(position: Vector2, amount: float) -> void:
+func add_damage_number(position: Vector2, amount: float, color: Color = Color(1, 0.88, 0.45), duration: float = 0.7, font_size: int = 24) -> void:
  var limit := floating_number_limit()
  if limit == 0: return
  if damage_numbers.size() >= limit: damage_numbers.pop_front()
  var text := str(roundi(amount))
- damage_numbers.append({"pos": position + Vector2((damage_numbers.size() % 5 - 2) * 8, 0), "text": text, "life": 0.7})
+ damage_numbers.append({"pos": position + Vector2((damage_numbers.size() % 5 - 2) * 8, 0), "text": text, "life": duration, "color": color, "font_size": font_size})
 
 func add_xp_number(position: Vector2, amount: float) -> void:
  var limit := floating_number_limit()
@@ -1693,6 +1705,12 @@ func receive_hit(amount: float, source: Vector2) -> void:
   return
  if invulnerability > 0: return
  health -= amount
+ if amount > 0.0:
+  add_damage_number(player - Vector2(0, 48), amount, Color(1.0, 0.15, 0.15), 1.4, 28)
+  reset_damage_flash()
+  damage_flash.color.a = 0.28
+  damage_flash_tween = create_tween()
+  damage_flash_tween.tween_property(damage_flash, "color:a", 0.0, 0.25)
  if prevent_player_death: health = maxf(1.0, health)
  sounds.play_hurt()
  invulnerability = 0.8
@@ -1700,6 +1718,12 @@ func receive_hit(amount: float, source: Vector2) -> void:
  if away.is_zero_approx(): away = Vector2.LEFT
  knockback_velocity = away * KNOCKBACK_SPEED
  if health <= 0: finish(false)
+
+func reset_damage_flash() -> void:
+ if damage_flash_tween != null:
+  damage_flash_tween.kill()
+  damage_flash_tween = null
+ if damage_flash != null: damage_flash.color.a = 0.0
 
 func pacu_unlocked() -> bool:
  return (run_mode == "endless" and endless_wave >= 2) or (run_mode == "bosses" and bosses_defeated >= 1)
