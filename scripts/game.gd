@@ -218,6 +218,9 @@ func _ready() -> void:
  if ResourceLoader.exists("res://assets/minhocao.png"): boss_texture = load("res://assets/minhocao.png")
  sounds = preload("res://scripts/sound_effects.gd").new()
  add_child(sounds)
+ var visibility_monitor := preload("res://scripts/window_visibility.gd").new()
+ visibility_monitor.obscured_changed.connect(set_window_obscured)
+ add_child(visibility_monitor)
  character_quality.setup(self)
  load_display_settings()
  var automated_test := false
@@ -979,13 +982,26 @@ func quit_game() -> void:
  record_run("quit")
  get_tree().quit()
 
+var window_obscured := false
+var window_focus_lost := false
+
+func set_window_obscured(value: bool) -> void:
+ window_obscured = value
+ update_window_pause()
+
+func update_window_pause() -> void:
+ var blocked := window_focus_lost or window_obscured
+ if sounds: sounds.set_focus_paused(blocked)
+ if blocked and state == "playing": show_pause()
+
 func _notification(what: int) -> void:
  if what == NOTIFICATION_WM_CLOSE_REQUEST: record_run("quit")
  elif what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
-  if sounds: sounds.set_focus_paused(true)
-  if state == "playing": show_pause()
+  window_focus_lost = true
+  update_window_pause()
  elif what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
-  if sounds: sounds.set_focus_paused(false)
+  window_focus_lost = false
+  update_window_pause()
 
 func _exit_tree() -> void:
  for path in test_artifact_paths:
@@ -1250,6 +1266,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
    choose_upgrade(choices[index])
 
 func resume() -> void:
+ if window_obscured or window_focus_lost: return
  state = "playing"
  update_cursor_visibility()
  if training: training.update_interaction(false)
@@ -1274,6 +1291,8 @@ func update_cursor_visibility() -> void:
  if Input.mouse_mode != desired: Input.mouse_mode = desired
 
 func _process(delta: float) -> void:
+ if window_obscured or window_focus_lost:
+  update_window_pause()
  if version_badge: version_badge.visible = state in ["menu", "nickname"]
  update_boss_arrival(minf(delta, 0.05))
  update_cursor_visibility()
