@@ -31,7 +31,7 @@ const LABELS := {
  "speed": ["Velocidade", "+10% de velocidade"],
  "max_health": ["Vitalidade", "+20% de vida máxima"],
  "xp_bonus": ["Aprendizado", "+20% de ganho de XP"],
- "luck": ["Sorte", "+20% de drop de cartas"],
+ "luck": ["Sorte", "+10% de drop de cartas"],
  "persistence": ["Persistência", "+5% de duração das cartas"],
  "crit_chance": ["Crítico", "+5% de chance de crítico"]
 }
@@ -641,7 +641,7 @@ func projected_stats(id: String = "") -> Dictionary:
   "speed": values.speed = speed * 1.10
   "max_health": values.max_health = maxf(max_health, minf(HEALTH_CAP, max_health * 1.20))
   "xp_bonus": values.xp_bonus = xp_bonus + 20
-  "luck": values.luck = luck + 20
+  "luck": values.luck = luck + 10
   "persistence": values.persistence = persistence + 5
   "crit_chance": values.crit_chance = mini(100, crit_chance + 5)
  return values
