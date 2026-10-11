@@ -4,10 +4,22 @@ const HISTORY = preload("res://scripts/run_history.gd")
 const ONLINE = preload("res://scripts/online_ranking.gd")
 var game: Node
 
+class RegistrationProbe extends ONLINE:
+ var sent_action := ""
+ func _send(operation: String, _payload: Dictionary) -> void:
+  sent_action = operation
+
 func _initialize() -> void:
  call_deferred("run")
 
 func run() -> void:
+ var probe := RegistrationProbe.new()
+ probe.endpoint = "http://127.0.0.1:18745/exec"
+ probe.profile = {"nickname": "Teste", "token": "a".repeat(64)}
+ probe.pending = {"0.4:endless": {"seconds": 53.0}}
+ probe.synchronize()
+ assert(probe.sent_action == "register", "A saved nickname without player_id must complete registration before uploading scores")
+ probe.free()
  assert(HISTORY.competitive_version("v0.3.99") == "0.3")
  assert(HISTORY.competitive_version("1.0.0") == "1.0")
  var old := {"mode": "endless", "seconds": 500.0, "kills": 10, "level": 1, "character": "Pescador", "reason": "death"}
@@ -19,6 +31,21 @@ func run() -> void:
  client.competitive_version = "0.4"
  client.network_disabled = true
  root.add_child(client)
+ # A deployed pre-seasons backend returns rankings without version metadata.
+ var notifications := [0]
+ client.changed.connect(func() -> void: notifications[0] += 1)
+ client.action = "ranking"
+ client.busy = true
+ client._completed(HTTPRequest.RESULT_SUCCESS, 200, [], JSON.stringify({"ok": true, "rankings": {"endless": [{"nickname": "Legado", "seconds": 500.0, "kills": 10}], "bosses": []}}).to_utf8_buffer())
+ assert(not client.busy and notifications[0] == 1, "Rejected legacy response must notify the UI to stop loading")
+ assert(client.status == "O serviço de ranking precisa ser atualizado para separar os recordes por versão.")
+ assert(client.rankings.endless.is_empty(), "Legacy records must not enter the current ranking")
+ client.action = "legends"
+ client.requested_version = "0.3"
+ client.busy = true
+ client._completed(HTTPRequest.RESULT_SUCCESS, 200, [], JSON.stringify({"ok": true, "competitive_version": "0.4", "rankings": {"endless": [], "bosses": []}}).to_utf8_buffer())
+ assert(not client.busy and notifications[0] == 2, "Wrong archive version must also release the loading UI")
+ assert(not client.legends.has("0.3"), "Wrong-version response must not overwrite an archive")
  client.queue_record(records[0])
  var fresh: Dictionary = old.duplicate()
  fresh.competitive_version = "0.4"

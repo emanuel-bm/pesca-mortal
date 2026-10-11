@@ -18,6 +18,8 @@ Cada versão encerrada guarda até 100 jogadores por modo: 100 de Infinito e 100
 
 O código local e os testes não atualizam automaticamente o serviço publicado na conta Google. Antes de distribuir o jogo com Lendas, publique o backend atualizado.
 
+Se as consultas de 0.3 e 0.4 retornarem os mesmos recordes sem os campos `competitive_version`, `active_version` e `seasons`, a implantação ainda usa o backend anterior. O cliente 0.4 descarta esses dados para não incorporar os recordes de 0.3 à classificação atual. Execute os passos acima e, para o jogo 0.4, execute também `iniciarNovaVersaoCompetitiva`. Não apague manualmente Records nem marque seus resultados antigos como 0.4: a operação administrativa arquiva esses resultados como 0.3 antes de abrir a nova classificação. Depois, confira as abas `Lendas_0_3` e `Seasons` e recarregue o jogo; 0.3 deve aparecer no seletor de Lendas, enquanto 0.4 começa vazio até receber novos recordes.
+
 ## Publicar uma nova versão competitiva
 
 Ao publicar 0.4.0, execute `iniciarNovaVersaoCompetitiva` pelo editor do Apps Script. O destino inicial no código é `0.4`; nas publicações seguintes, altere esse destino para o novo X.Y e salve antes de executar. A função administrativa não é exposta pela API pública do jogo.

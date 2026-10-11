@@ -139,7 +139,11 @@ func synchronize() -> void:
 
 func _next() -> void:
  if busy or disabled or network_disabled or endpoint.is_empty(): return
- if profile.has("player_id") and not pending.is_empty():
+ # A saved name/token can outlive a lost registration response. Resume using
+ # the same token so the server returns the existing account on a retry.
+ if not profile.has("player_id") and valid_nickname(nickname()) and profile.has("token"):
+  _send("register", {"nickname": nickname()})
+ elif profile.has("player_id") and not pending.is_empty():
   var mode: String = str(pending.keys()[0])
   sent_record = pending[mode].duplicate(true)
   _send("submit", {"record": sent_record})
@@ -226,6 +230,12 @@ func _completed(result: int, code: int, headers: PackedStringArray, body: Packed
   if not save_state(): return
   status = "Recorde sincronizado."
  elif action in ["ranking", "legends"]:
+  var expected_version := requested_version if action == "legends" else competitive_version
+  var fallback_version := "" if action == "legends" else HISTORY.LEGACY_VERSION
+  if str(data.get("competitive_version", fallback_version)) != expected_version:
+   status = "O serviço de ranking precisa ser atualizado para separar os recordes por versão." if not data.has("competitive_version") else "O serviço retornou recordes de outra versão. Tente recarregar."
+   changed.emit()
+   return
   if not data.get("rankings") is Dictionary:
    status = "Não foi possível ler o ranking."
    changed.emit()
@@ -241,10 +251,8 @@ func _completed(result: int, code: int, headers: PackedStringArray, body: Packed
      changed.emit()
      return
   if action == "legends":
-   if str(data.get("competitive_version", "")) != requested_version: return
    legends[requested_version] = data.rankings
   else:
-   if str(data.get("competitive_version", HISTORY.LEGACY_VERSION)) != competitive_version: return
    rankings = data.rankings
    active_version = str(data.get("active_version", competitive_version))
    if data.get("seasons") is Array: seasons = data.seasons

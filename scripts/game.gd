@@ -909,7 +909,8 @@ func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
      cell.add_theme_font_override("font", bold)
  if ranked.is_empty():
   var empty := Label.new()
-  empty.text = "Nenhuma partida registrada." if personal else "Nenhum recorde global recebido."
+  empty.text = "Nenhuma partida registrada." if personal else (online.status if not online.busy and not online.status.is_empty() and online.status != "Ranking atualizado." else "Nenhum recorde global recebido.")
+  empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
   empty.add_theme_font_size_override("font_size", 16)
   column.add_child(empty)
  if not personal:
@@ -2392,7 +2393,13 @@ func render_legends() -> void:
  scroll.add_child(list)
  for index in range(3, records.size()):
   list.add_child(make_legend_row(legend_values(records[index], str(int(records[index].get("position", index + 1))))))
- if records.is_empty(): title("Nenhum recorde disponível nesta versão.", 16)
+ if records.is_empty():
+  var empty := Label.new()
+  empty.text = online.status if not online.busy and not online.status.is_empty() and online.status != "Ranking atualizado." else "Nenhum recorde disponível nesta versão."
+  empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+  empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+  empty.add_theme_font_size_override("font_size", 16)
+  panel.add_child(empty)
  var personal_records := RUN_HISTORY.for_version(run_history, legends_version)
  var personal_rank: Array = RUN_HISTORY.ranked(personal_records) if legends_mode == "endless" else RUN_HISTORY.boss_ranked(personal_records)
  var own: Dictionary = personal_rank[0] if not personal_rank.is_empty() else {}
