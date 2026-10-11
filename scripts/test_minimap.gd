@@ -15,6 +15,17 @@ func run() -> void:
  var card_map: Node = game.minimap_renderer
  assert(card_map.card_points.size() == 2, "Minimap must include all cards, including off-screen drops")
  assert(card_map.card_points[0].is_equal_approx(game.minimap_point(remote_card)))
+ assert(card_map.card_colors[0] == card_map.CARD_COLOR, "Fresh cards must keep their yellow marker")
+ game.cards.pickups[0].age = game.cards.FLOOR_SECONDS - 5.01
+ card_map.refresh(game)
+ assert(card_map.card_colors[0] == card_map.CARD_COLOR, "Cards must stay yellow before the last five seconds")
+ game.cards.pickups[0].age = game.cards.FLOOR_SECONDS - 5.0
+ card_map.refresh(game)
+ assert(card_map.card_colors[0] == card_map.EXPIRING_CARD_COLOR, "Cards must turn red exactly five seconds before expiry")
+ assert(card_map.card_colors[1] == card_map.CARD_COLOR, "Each card must use its own remaining lifetime")
+ game.cards.pickups[0].age = game.cards.FLOOR_SECONDS - 0.1
+ card_map.refresh(game)
+ assert(card_map.card_colors[0] == card_map.EXPIRING_CARD_COLOR, "Cards must stay red until expiry")
  game.cards.update_pickups(0)
  game.minimap_timer = 0
  game.update_minimap(0)
@@ -23,6 +34,7 @@ func run() -> void:
  game.minimap_timer = 0
  game.update_minimap(0)
  assert(card_map.card_points.is_empty(), "Expired cards must disappear from the minimap")
+ assert(card_map.card_colors.is_empty(), "Expired cards must clear their marker colors")
  game.cards.spawn("perfurante", remote_card)
  game.start_run("training")
  game.update_minimap(0)

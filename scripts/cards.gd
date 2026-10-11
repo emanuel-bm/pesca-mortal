@@ -170,7 +170,7 @@ func update_pickups(dt: float) -> void:
  refresh()
 
 func blink_visible(age: float) -> bool:
- return age < FLOOR_SECONDS - 5.0 or floori((age - (FLOOR_SECONDS - 5.0)) / 0.5) % 2 == 0
+ return age < FLOOR_SECONDS - 5.0 or floori((age - (FLOOR_SECONDS - 5.0)) / 0.5) % 2 == 1
 
 func refresh_pickup(pickup: Dictionary) -> void:
  var sprite: Sprite2D = pickup.sprite

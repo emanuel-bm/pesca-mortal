@@ -8,6 +8,10 @@ var small_points := PackedVector2Array()
 var large_points := PackedVector2Array()
 var boss_points := PackedVector2Array()
 var card_points := PackedVector2Array()
+var card_colors := PackedColorArray()
+const CARD_COLOR := Color(1, 0.85, 0.3)
+const EXPIRING_CARD_COLOR := Color(1, 0.2, 0.24)
+const CARD_WARNING_SECONDS := 5.0
 
 func setup_batches() -> void:
  for color in [Color(1, 0.2, 0.24), Color(1, 0.2, 0.24), Color(0.75, 0.3, 1)]:
@@ -47,6 +51,7 @@ func refresh(game: Node) -> void:
  large_points.clear()
  boss_points.clear()
  card_points.clear()
+ card_colors.clear()
  for enemy in game.enemies:
   var point: Vector2 = origin + Vector2(enemy.pos).clamp(Vector2.ZERO, game.ARENA) * scale_factor
   if enemy.boss: boss_points.append(point)
@@ -54,6 +59,8 @@ func refresh(game: Node) -> void:
   else: small_points.append(point)
  for pickup in game.cards.pickups:
   card_points.append(origin + Vector2(pickup.pos).clamp(Vector2.ZERO, game.ARENA) * scale_factor)
+  var remaining: float = game.cards.FLOOR_SECONDS - pickup.age
+  card_colors.append(EXPIRING_CARD_COLOR if remaining <= CARD_WARNING_SECONDS else CARD_COLOR)
  player_point = origin + game.player.clamp(Vector2.ZERO, game.ARENA) * scale_factor
  var visible_world := Rect2(game.camera_offset(), game.get_viewport_rect().size).intersection(Rect2(Vector2.ZERO, game.ARENA))
  viewport_box = Rect2(origin + visible_world.position * scale_factor, visible_world.size * scale_factor)
@@ -69,10 +76,11 @@ func _draw() -> void:
  draw_rect(viewport_box, Color(0.55, 0.7, 0.7, 0.3), false, 1)
  for batch in marker_batches:
   if batch.visible_instance_count > 0: draw_multimesh(batch, null)
- for point in card_points:
+ for index in card_points.size():
+  var point := card_points[index]
   var card_rect := Rect2(point - Vector2(3, 4), Vector2(6, 8))
   draw_rect(card_rect.grow(1), Color(0.01, 0.04, 0.07))
-  draw_rect(card_rect, Color(1, 0.85, 0.3))
+  draw_rect(card_rect, card_colors[index])
   draw_line(point + Vector2(-1, -1), point + Vector2(1, 1), Color(0.35, 0.2, 0.05), 1)
  draw_circle(player_point, 5, Color(0.01, 0.04, 0.07))
  draw_circle(player_point, 3.5, Color(0.3, 0.85, 1))
