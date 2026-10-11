@@ -2,6 +2,7 @@ extends Node
 ## Identity, personal-record outbox and cached public ranking. No admin secrets.
 signal changed
 
+const HISTORY = preload("res://scripts/run_history.gd")
 const RULESET := "pesca-1"
 const DEFAULT_PATH := "user://online_ranking.json"
 var storage_path := DEFAULT_PATH
@@ -9,6 +10,12 @@ var endpoint := ""
 var profile: Dictionary = {}
 var pending: Dictionary = {}
 var rankings: Dictionary = {"endless": [], "bosses": []}
+var competitive_version := HISTORY.competitive_version()
+var active_version := ""
+var seasons: Array = []
+var legends: Dictionary = {}
+var legends_requested: Array = []
+var requested_version := ""
 var fetched_at := ""
 var status := ""
 var busy := false
@@ -38,9 +45,17 @@ func load_state() -> void:
  var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(storage_path))
  if not data is Dictionary: return
  if data.get("profile") is Dictionary: profile = data.profile
- if data.get("pending") is Dictionary: pending = data.pending
- if data.get("rankings") is Dictionary: rankings = data.rankings
- fetched_at = str(data.get("fetched_at", ""))
+ if data.get("pending") is Dictionary:
+  for key in data.pending:
+   var record: Dictionary = data.pending[key]
+   record["competitive_version"] = str(record.get("competitive_version", HISTORY.LEGACY_VERSION))
+   pending[outbox_key(record)] = record
+ if str(data.get("competitive_version", HISTORY.LEGACY_VERSION)) == competitive_version and data.get("rankings") is Dictionary:
+  rankings = data.rankings
+  fetched_at = str(data.get("fetched_at", ""))
+ if data.get("legends") is Dictionary: legends = data.legends
+ if data.get("seasons") is Array: seasons = data.seasons
+ active_version = str(data.get("active_version", ""))
 
 func save_state() -> bool:
  var temporary := storage_path + ".tmp"
@@ -49,7 +64,7 @@ func save_state() -> bool:
   status = "Não foi possível salvar os dados da conta neste computador."
   changed.emit()
   return false
- file.store_string(JSON.stringify({"profile": profile, "pending": pending, "rankings": rankings, "fetched_at": fetched_at}))
+ file.store_string(JSON.stringify({"profile": profile, "pending": pending, "rankings": rankings, "fetched_at": fetched_at, "competitive_version": competitive_version, "active_version": active_version, "seasons": seasons, "legends": legends}))
  file.flush()
  var write_error := file.get_error()
  file.close()
@@ -93,12 +108,21 @@ func set_nickname(value: String) -> void:
   if not save_state(): return
  _send("rename" if profile.has("player_id") else "register", {"nickname": value})
 
+static func outbox_key(record: Dictionary) -> String:
+ return str(record.get("competitive_version", HISTORY.LEGACY_VERSION)) + ":" + str(record.mode)
+
+func fetch_legends(version: String) -> void:
+ if version not in legends_requested: legends_requested.append(version)
+ if not busy: _next()
+
 func queue_record(record: Dictionary) -> void:
  if record.mode == "bosses" and record.reason != "won": return
  var mode: String = record.mode
- if pending.has(mode) and not better(record, pending[mode]): return
+ var version := str(record.get("competitive_version", competitive_version))
+ var key := version + ":" + mode
+ if pending.has(key) and not better(record, pending[key]): return
  var previous: Dictionary = pending.duplicate(true)
- pending[mode] = {"mode": mode, "seconds": record.seconds, "kills": record.kills, "level": record.level, "character": record.character, "reason": record.reason, "ruleset": RULESET, "run_id": Crypto.new().generate_random_bytes(16).hex_encode()}
+ pending[key] = {"competitive_version": version, "mode": mode, "seconds": record.seconds, "kills": record.kills, "level": record.level, "character": record.character, "reason": record.reason, "ruleset": RULESET, "run_id": Crypto.new().generate_random_bytes(16).hex_encode()}
  if not save_state():
   pending = previous
   return
@@ -121,7 +145,10 @@ func _next() -> void:
   _send("submit", {"record": sent_record})
  elif refresh_requested:
   refresh_requested = false
-  _send("ranking", {})
+  _send("ranking", {"competitive_version": competitive_version})
+ elif not legends_requested.is_empty():
+  requested_version = str(legends_requested.pop_front())
+  _send("legends", {"competitive_version": requested_version})
 
 func _send(operation: String, payload: Dictionary) -> void:
  if not endpoint.begins_with("https://") and not endpoint.begins_with("http://127.0.0.1:"):
@@ -131,11 +158,11 @@ func _send(operation: String, payload: Dictionary) -> void:
  action = operation
  response_redirects = 0
  payload["action"] = operation
- if operation != "ranking":
+ if operation not in ["ranking", "legends"]:
   payload["token"] = profile.get("token", "")
   payload["player_id"] = profile.get("player_id", "")
  busy = true
- status = "Atualizando ranking…" if operation in ["ranking", "submit"] else "Salvando nome…"
+ status = "Atualizando ranking…" if operation in ["ranking", "legends", "submit"] else "Salvando nome…"
  changed.emit()
  # Only the first request sends credentials; the redirect reads a JSON response.
  var error := request.request(endpoint, ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify(payload))
@@ -169,13 +196,16 @@ func _completed(result: int, code: int, headers: PackedStringArray, body: Packed
   if error_code == "nickname_taken": status = "Esse nome já está em uso. Escolha outro."
   elif error_code == "invalid_nickname": status = "Use de 3 a 20 letras sem acentos, números ou _."
   elif error_code == "unauthorized": status = "Não foi possível autenticar esta conta."
-  elif error_code in ["invalid_record", "unsupported_ruleset"]:
-   var mode := str(sent_record.get("mode", ""))
+  elif error_code == "unknown_version": status = "Esta versão ainda não tem classificação disponível."
+  elif error_code in ["invalid_record", "unsupported_ruleset", "version_closed"]:
+   var mode := outbox_key(sent_record)
    if pending.get(mode, {}).get("run_id", "") == sent_record.get("run_id", ""):
     pending.erase(mode)
     save_state()
+   if error_code == "version_closed": refresh_requested = true
    status = "Recorde recusado: " + str(data.get("message", "dados incompatíveis com as regras."))
   changed.emit()
+  if error_code == "version_closed": _next()
   return
  if action in ["register", "rename"]:
   if not data.get("player_id") is String or not data.get("nickname") is String or not valid_nickname(data.nickname):
@@ -191,11 +221,11 @@ func _completed(result: int, code: int, headers: PackedStringArray, body: Packed
   status = "Nome salvo."
   refresh_requested = true
  elif action == "submit":
-  var mode: String = str(sent_record.mode)
+  var mode: String = outbox_key(sent_record)
   if pending.get(mode, {}).get("run_id", "") == sent_record.run_id: pending.erase(mode)
   if not save_state(): return
   status = "Recorde sincronizado."
- elif action == "ranking":
+ elif action in ["ranking", "legends"]:
   if not data.get("rankings") is Dictionary:
    status = "Não foi possível ler o ranking."
    changed.emit()
@@ -210,9 +240,19 @@ func _completed(result: int, code: int, headers: PackedStringArray, body: Packed
      status = "Não foi possível ler o ranking."
      changed.emit()
      return
-  rankings = data.rankings
-  fetched_at = Time.get_datetime_string_from_system()
+  if action == "legends":
+   if str(data.get("competitive_version", "")) != requested_version: return
+   legends[requested_version] = data.rankings
+  else:
+   if str(data.get("competitive_version", HISTORY.LEGACY_VERSION)) != competitive_version: return
+   rankings = data.rankings
+   active_version = str(data.get("active_version", competitive_version))
+   if data.get("seasons") is Array: seasons = data.seasons
+   fetched_at = Time.get_datetime_string_from_system()
+   for version in seasons.slice(0, 3):
+    if not legends.has(version) and version not in legends_requested: legends_requested.append(version)
   save_state()
   status = "Ranking atualizado."
+  if competitive_version in seasons: status = "Versão encerrada. Atualize o jogo para competir no ranking atual."
  changed.emit()
  _next()

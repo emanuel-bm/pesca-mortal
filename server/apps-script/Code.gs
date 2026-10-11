@@ -1,7 +1,10 @@
 /** Private Sheets backend. Deploy as owner; public web-app access. */
 const RULESET = 'pesca-1';
+const LEGACY_VERSION = '0.3';
+const ARCHIVE = ['mode', 'position', 'nickname', 'seconds', 'kills', 'level', 'player_id'];
+const SEASONS = ['version', 'closed_at'];
 const PLAYERS = ['player_id', 'nickname', 'nickname_key', 'token_hash'];
-const RECORDS = ['player_id', 'mode', 'seconds', 'kills', 'level', 'character', 'reason', 'ruleset', 'run_id', 'updated_at'];
+const RECORDS = ['player_id', 'mode', 'seconds', 'kills', 'level', 'character', 'reason', 'ruleset', 'run_id', 'updated_at', 'competitive_version'];
 
 function setupRanking() {
   const book = SpreadsheetApp.getActiveSpreadsheet();
@@ -9,11 +12,15 @@ function setupRanking() {
   PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', book.getId());
   sheet_(book, 'Players', PLAYERS);
   sheet_(book, 'Records', RECORDS);
+  sheet_(book, 'Seasons', SEASONS);
+  const props = PropertiesService.getScriptProperties();
+  if (!props.getProperty('ACTIVE_VERSION')) props.setProperty('ACTIVE_VERSION', LEGACY_VERSION);
 }
 
 function sheet_(book, name, headers) {
   const sheet = book.getSheetByName(name) || book.insertSheet(name);
   if (!sheet.getLastRow()) sheet.appendRow(headers);
+  else if (sheet.getLastColumn() < headers.length) sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   return sheet;
 }
 function rows_(sheet) {
@@ -41,7 +48,15 @@ function doPost(e) {
     const players = sheet_(book, 'Players', PLAYERS);
     const records = sheet_(book, 'Records', RECORDS);
     const accounts = rows_(players);
-    if (input.action === 'ranking') return json_(publicRanking_(accounts, rows_(records)));
+    const props = PropertiesService.getScriptProperties();
+    if (props.getProperty('TRANSITION_VERSION')) return json_(fail_('busy'));
+    const active = props.getProperty('ACTIVE_VERSION') || LEGACY_VERSION;
+    if (input.action === 'ranking') {
+      const version = input.competitive_version || LEGACY_VERSION;
+      const result = version === active ? publicRanking_(accounts, rows_(records).filter(row => (row[10] || LEGACY_VERSION) === active)) : archiveRanking_(book, version);
+      return json_({...result, competitive_version: version, active_version: active, seasons: rows_(sheet_(book, 'Seasons', SEASONS)).map(row => row[0]).sort(compareVersions_).reverse()});
+    }
+    if (input.action === 'legends') return json_(archiveRanking_(book, input.competitive_version));
     if (typeof input.token !== 'string' || !/^[a-f0-9]{64}$/.test(input.token)) return json_(fail_('unauthorized'));
     const digest = hash_(input.token);
     const accountIndex = accounts.findIndex(row => row[3] === digest);
@@ -65,10 +80,12 @@ function doPost(e) {
     const validation = validateRecord_(input.record);
     if (validation) return json_(validation);
     const result = input.record;
+    const version = result.competitive_version || LEGACY_VERSION;
+    if (version !== active) return json_(fail_('version_closed', 'Esta versão competitiva não aceita mais recordes.'));
     const existing = rows_(records);
-    const index = existing.findIndex(row => row[0] === input.player_id && row[1] === result.mode);
+    const index = existing.findIndex(row => row[0] === input.player_id && row[1] === result.mode && (row[10] || LEGACY_VERSION) === active);
     if (index >= 0 && !better_(result, {seconds: existing[index][2], kills: existing[index][3]})) return json_({ok: true, updated: false});
-    const row = [input.player_id, result.mode, result.seconds, result.kills, result.level, result.character, result.reason, RULESET, result.run_id, new Date().toISOString()];
+    const row = [input.player_id, result.mode, result.seconds, result.kills, result.level, result.character, result.reason, RULESET, result.run_id, new Date().toISOString(), active];
     if (index < 0) records.appendRow(row);
     else records.getRange(index + 2, 1, 1, row.length).setValues([row]);
     SpreadsheetApp.flush();
@@ -129,11 +146,69 @@ function publicRanking_(accounts, records) {
   const rankings = {endless: [], bosses: []};
   records.forEach(row => {
     if (!names.has(row[0]) || !rankings[row[1]] || row[7] !== RULESET) return;
-    rankings[row[1]].push({nickname: names.get(row[0]), seconds: row[2], kills: row[3], level: row[4]});
+    rankings[row[1]].push({player_id: row[0], nickname: names.get(row[0]), seconds: row[2], kills: row[3], level: row[4]});
   });
   Object.keys(rankings).forEach(mode => {
     rankings[mode].sort((a, b) => (mode === 'bosses' ? a.seconds - b.seconds : b.seconds - a.seconds) || b.kills - a.kills || a.nickname.localeCompare(b.nickname));
     rankings[mode] = rankings[mode].slice(0, 100);
   });
   return {ok: true, rankings};
+}
+
+function validVersion_(value) { return typeof value === 'string' && /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(value); }
+function compareVersions_(a, b) {
+  const left = a.split('.').map(Number), right = b.split('.').map(Number);
+  return left[0] - right[0] || left[1] - right[1];
+}
+function archiveName_(version) { return 'Lendas_' + version.replace('.', '_'); }
+function archiveRanking_(book, version) {
+  if (!validVersion_(version)) return fail_('invalid_request');
+  if (!rows_(sheet_(book, 'Seasons', SEASONS)).some(row => row[0] === version)) return fail_('unknown_version');
+  const sheet = book.getSheetByName(archiveName_(version));
+  if (!sheet) return fail_('service_error');
+  const rankings = {endless: [], bosses: []};
+  rows_(sheet).forEach(row => {
+    if (rankings[row[0]]) rankings[row[0]].push({position: row[1], nickname: row[2], seconds: row[3], kills: row[4], level: row[5], player_id: row[6] || ''});
+  });
+  Object.keys(rankings).forEach(mode => rankings[mode].sort((a, b) => a.position - b.position));
+  return {ok: true, competitive_version: version, rankings};
+}
+// Altere o destino para X.Y da nova publicação e execute pelo editor.
+function iniciarNovaVersaoCompetitiva() { activateCompetitiveVersion_('0.4'); }
+function activateCompetitiveVersion_(next) {
+  if (!validVersion_(next)) throw new Error('Use X.Y, sem patch.');
+  const props = PropertiesService.getScriptProperties();
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) throw new Error('Ranking ocupado. Tente novamente.');
+  try {
+    const current = props.getProperty('ACTIVE_VERSION') || LEGACY_VERSION;
+    const transition = props.getProperty('TRANSITION_VERSION');
+    if (transition && transition !== next) throw new Error('Conclua primeiro a transição pendente.');
+    if (!transition && current === next) return;
+    // A retry can arrive after ACTIVE_VERSION was saved but before the marker was removed.
+    if (transition && current === next) { props.deleteProperty('TRANSITION_VERSION'); return; }
+    if (compareVersions_(next, current) <= 0) throw new Error('A nova versão deve ser posterior à ativa.');
+    const book = SpreadsheetApp.openById(props.getProperty('SPREADSHEET_ID'));
+    const seasons = sheet_(book, 'Seasons', SEASONS);
+    const records = sheet_(book, 'Records', RECORDS);
+    // Blocks submissions after a partial failure until this operation is retried.
+    props.setProperty('TRANSITION_VERSION', next);
+    if (!rows_(seasons).some(row => row[0] === current)) {
+      const ranking = publicRanking_(rows_(sheet_(book, 'Players', PLAYERS)), rows_(records).filter(row => (row[10] || LEGACY_VERSION) === current)).rankings;
+      const archive = sheet_(book, archiveName_(current), ARCHIVE);
+      archive.clearContents();
+      archive.appendRow(ARCHIVE);
+      const snapshot = [];
+      Object.keys(ranking).forEach(mode => ranking[mode].forEach((entry, index) => snapshot.push([mode, index + 1, entry.nickname, entry.seconds, entry.kills, entry.level, entry.player_id])));
+      if (snapshot.length) archive.getRange(2, 1, snapshot.length, ARCHIVE.length).setValues(snapshot);
+      SpreadsheetApp.flush();
+      seasons.appendRow([current, new Date().toISOString()]);
+      SpreadsheetApp.flush();
+    }
+    records.clearContents();
+    records.appendRow(RECORDS);
+    SpreadsheetApp.flush();
+    props.setProperty('ACTIVE_VERSION', next);
+    props.deleteProperty('TRANSITION_VERSION');
+  } finally { lock.releaseLock(); }
 }

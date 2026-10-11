@@ -1,6 +1,6 @@
 # Pesca Mortal
 
-Termos do combate e dos personagens do jogo.
+Termos do combate, dos personagens e dos recordes do jogo.
 
 ## Personagens
 
@@ -22,3 +22,14 @@ Período em que o Minhocão está à superfície e pode receber dano.
 **Carta**:
 Consumível que aparece no chão após um abate e é ativado automaticamente ao ser coletado. Concede um benefício imediato ou temporário durante a partida.
 _Evitar_: Power-up como nome do recurso na interface.
+
+## Recordes
+
+**Versão competitiva**:
+Conjunto de versões do jogo com os mesmos números X e Y em vX.Y.Z, cujos recordes pertencem à mesma classificação.
+
+**Lendas**:
+Histórico das classificações globais e pessoais de versões competitivas anteriores do jogo.
+
+**Campeão**:
+Jogador que terminou em primeiro lugar na classificação global de uma versão competitiva encerrada.

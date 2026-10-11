@@ -37,15 +37,15 @@ func run() -> void:
  var record := {"mode": "endless", "seconds": 60.0, "kills": 10, "level": 1, "character": "Pescador", "reason": "death"}
  client.queue_record(record)
  client.queue_record({"mode": "endless", "seconds": 50.0, "kills": 10, "level": 1, "character": "Pescador", "reason": "death"})
- assert(client.pending.endless.seconds == 60.0, "A worse record must not replace the outbox")
+ assert(client.pending["0.3:endless"].seconds == 60.0, "A worse record must not replace the outbox")
  var reloaded := ONLINE.new()
  reloaded.storage_path = client.storage_path
  reloaded.load_state()
- assert(reloaded.profile.player_id == player_id and reloaded.pending.endless.seconds == 60.0, "Account and outbox survive restart")
+ assert(reloaded.profile.player_id == player_id and reloaded.pending["0.3:endless"].seconds == 60.0, "Account and outbox survive restart")
  reloaded.free()
  client.endpoint = "http://127.0.0.1:18745/exec"
  client.synchronize()
- assert(not client.busy and client.pending.has("endless"), "Explicit offline sessions must preserve records without HTTP")
+ assert(not client.busy and client.pending.has("0.3:endless"), "Explicit offline sessions must preserve records without HTTP")
  client.network_disabled = false
  client.synchronize()
  # A newer personal best while the old request is in flight must survive its ACK.
@@ -69,7 +69,7 @@ func run() -> void:
  record.kills = 10
  client.queue_record(record)
  await settle()
- assert(client.pending.has("endless"), "Connection failure must preserve the outbox")
+ assert(client.pending.has("0.3:endless"), "Connection failure must preserve the outbox")
  # Exercise the actual game integration: only new personal bests queue submissions.
  var game: Node = load("res://main.tscn").instantiate()
  root.add_child(game)
@@ -86,7 +86,7 @@ func run() -> void:
   game.elapsed = seconds
   game.kills = 10
   game.record_run("death")
-  assert(game.online.pending.endless.seconds == (70.0 if seconds == 70.0 else 60.0))
+  assert(game.online.pending["0.3:endless"].seconds == (70.0 if seconds == 70.0 else 60.0))
  game.show_nickname()
  await process_frame
  assert(game.nickname_edit != null)
@@ -96,6 +96,28 @@ func run() -> void:
  assert(not game.records_personal.endless and not game.records_personal.bosses)
  game.select_records_tab("endless", true)
  assert(game.records_personal.endless and not game.records_personal.bosses)
+ # Rotate only the local mock backend; verify the client handles retirement over real HTTP.
+ var admin := HTTPRequest.new()
+ root.add_child(admin)
+ admin.request("http://127.0.0.1:18745/exec", ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify({"action": "__test_activate"}))
+ await admin.request_completed
+ admin.queue_free()
+ client.endpoint = "http://127.0.0.1:18745/exec"
+ client.request.timeout = 5.0
+ client.synchronize()
+ await settle()
+ assert(client.pending.is_empty(), "Retired outbox entries must stop retrying")
+ assert(client.active_version == "0.4" and "0.3" in client.seasons)
+ assert(client.legends["0.3"].endless[0].seconds == 70.0, "Archived ranking must be fetched through redirects")
+ client.competitive_version = "0.4"
+ record.seconds = 30.0
+ record.competitive_version = "0.4"
+ client.queue_record(record)
+ await settle()
+ client.synchronize()
+ await settle()
+ assert(own_score().seconds == 30.0, "The new ranking must accept a lower first score")
+ assert(client.legends["0.3"].endless[0].seconds == 70.0)
  game.online.disabled = true
  DirAccess.remove_absolute(ProjectSettings.globalize_path(game.online.storage_path))
  DirAccess.remove_absolute(ProjectSettings.globalize_path(game.history_path))

@@ -98,6 +98,8 @@ var bosses_defeated := 0
 var next_boss_time := ENDLESS_FIRST_BOSS_TIME
 var endless_wave := 0
 var run_history: Array = []
+var legends_version := ""
+var legends_mode := "endless"
 var player_totals := {"seconds": 0.0, "kills": 0, "levels": 0}
 var history_path := "user://endless_runs.json"
 var upgrade_levels: Dictionary = {}
@@ -475,6 +477,9 @@ func setup_menu_navigation() -> void:
  menu_controls.clear()
  if not overlay.visible or state in ["playing", "upgrade"]: return
  collect_menu_controls(panel)
+ if state == "menu":
+  if records_panel: collect_menu_controls(records_panel)
+  if boss_records_panel: collect_menu_controls(boss_records_panel)
  if state == "patch_notes": collect_menu_controls(notes_actions)
  if state in ["menu", "nickname"] and version_badge:
   collect_menu_controls(version_badge)
@@ -795,6 +800,8 @@ func online_changed() -> void:
    nickname_save_button.disabled = online.busy
    nickname_save_button.text = ("Salvando..." if online.action in ["register", "rename"] else "Carregando...") if online.busy else "Salvar nome"
   if nickname_attempted and not online.nickname().is_empty() and online.status == "Nome salvo.": show_menu()
+ elif state == "legends":
+  render_legends()
  elif state == "menu":
   show_records_panel()
   show_boss_records_panel()
@@ -827,10 +834,18 @@ func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
  var column := VBoxContainer.new()
  column.add_theme_constant_override("separation", 14)
  margin.add_child(column)
+ var heading_row := HBoxContainer.new()
+ column.add_child(heading_row)
  var heading := Label.new()
+ heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
  heading.text = heading_text
- heading.add_theme_font_size_override("font_size", 24)
- column.add_child(heading)
+ heading.add_theme_font_size_override("font_size", 20)
+ heading_row.add_child(heading)
+ var legends_button := Button.new()
+ legends_button.text = "Lendas"
+ legends_button.add_theme_font_size_override("font_size", 16)
+ legends_button.pressed.connect(show_legends.bind(mode))
+ heading_row.add_child(legends_button)
  var tabs := HBoxContainer.new()
  column.add_child(tabs)
  for personal in [false, true]:
@@ -842,20 +857,31 @@ func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
   tab.pressed.connect(select_records_tab.bind(mode, personal))
   tabs.add_child(tab)
  var personal: bool = records_personal[mode]
- var records: Array = (RUN_HISTORY.ranked(run_history) if mode == "endless" else RUN_HISTORY.boss_ranked(run_history)) if personal else online.rankings.get(mode, [])
+ var records: Array = (RUN_HISTORY.ranked(RUN_HISTORY.for_version(run_history, online.competitive_version)) if mode == "endless" else RUN_HISTORY.boss_ranked(RUN_HISTORY.for_version(run_history, online.competitive_version))) if personal else online.rankings.get(mode, [])
  var grid := GridContainer.new()
- grid.columns = 4
+ grid.columns = 5
  grid.add_theme_constant_override("h_separation", 16)
  grid.add_theme_constant_override("v_separation", 12)
  column.add_child(grid)
- for column_name in ["Jogador", "Level", "Tempo", "Eliminações"]: history_cell(grid, column_name)
+ for column_name in ["#", "Jogador", "Level", "Tempo", "Eliminações"]: history_cell(grid, column_name)
  var ranked: Array = records
  for index in mini(10, ranked.size()):
   var record: Dictionary = ranked[index]
+  history_cell(grid, str(int(record.get("position", index + 1))))
   history_cell(grid, online.nickname() if personal else str(record.get("nickname", "")))
   history_cell(grid, str(int(record.get("level", 0))))
   history_cell(grid, RUN_HISTORY.time_text(record.seconds))
   history_cell(grid, str(int(record.kills)))
+  if index < 3:
+   var podium_color: Color = [Color("ffd36b"), Color("c7d5e5"), Color("bfa58c")][index]
+   for cell_index in range(grid.get_child_count() - 5, grid.get_child_count()):
+    var cell := grid.get_child(cell_index) as Label
+    cell.add_theme_color_override("font_color", podium_color)
+    if index == 0:
+     var bold := FontVariation.new()
+     bold.base_font = cell.get_theme_font("font")
+     bold.variation_embolden = 0.75
+     cell.add_theme_font_override("font", bold)
  if ranked.is_empty():
   var empty := Label.new()
   empty.text = "Nenhuma partida registrada." if personal else "Nenhum recorde global recebido."
@@ -912,9 +938,9 @@ func record_run(reason: String) -> void:
  if not run_active or run_recorded or test_run: return
  run_recorded = true
  if elapsed <= 0: return
- var previous_rank: Array = RUN_HISTORY.ranked(run_history) if run_mode == "endless" else RUN_HISTORY.boss_ranked(run_history)
+ var previous_rank: Array = RUN_HISTORY.ranked(RUN_HISTORY.for_version(run_history, online.competitive_version)) if run_mode == "endless" else RUN_HISTORY.boss_ranked(RUN_HISTORY.for_version(run_history, online.competitive_version))
  var previous: Dictionary = previous_rank[0] if not previous_rank.is_empty() else {}
- var record := {"seconds": elapsed, "kills": kills, "date": Time.get_datetime_string_from_system(), "reason": reason, "character": "Pescador", "level": level, "mode": run_mode}
+ var record := {"seconds": elapsed, "kills": kills, "date": Time.get_datetime_string_from_system(), "reason": reason, "character": "Pescador", "level": level, "mode": run_mode, "competitive_version": online.competitive_version}
  run_history.append(record)
  run_history = RUN_HISTORY.chronological(run_history)
  player_totals = RUN_HISTORY.totals(run_history)
@@ -1043,6 +1069,7 @@ func show_settings() -> void:
   panel.remove_child(item)
   item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
   actions.add_child(item)
+ setup_menu_navigation()
 
 func save_settings_from_ui() -> void:
  graphics_quality = quality_picker.selected
@@ -1179,7 +1206,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
    resume()
   elif state == "settings":
    leave_settings()
-  elif state == "patch_notes":
+  elif state in ["patch_notes", "legends", "history"]:
    show_menu()
  if state == "upgrade" and not event.ctrl_pressed:
   var index := -1
@@ -1244,7 +1271,7 @@ func _process(delta: float) -> void:
   var remaining := maxi(0, ceili(next_boss_time - elapsed))
   hud.text += "\nINFINITO · PRÓXIMOS CHEFÕES EM %02d:%02d" % [floori(remaining / 60.0), remaining % 60]
  if not profile_panel: setup_profile_panel()
- profile_panel.visible = not run_active and state not in ["nickname", "lost", "patch_notes"]
+ profile_panel.visible = not run_active and state not in ["nickname", "lost", "patch_notes", "legends"]
  hud.visible = run_active
  if not run_active:
   hud.text = "ELIMINAÇÕES TOTAIS %d\nTEMPO TOTAL %s\nNÍVEIS CONQUISTADOS %d" % [player_totals.kills, RUN_HISTORY.time_text(player_totals.seconds), player_totals.levels]
@@ -2117,3 +2144,154 @@ func _draw() -> void:
  if run_active: cards.draw_player_effects(self, viewport / 2)
  if state == "lost":
   draw_arc(viewport / 2, 44, 0, TAU, 48, Color(1, 0.45, 0.35), 2, true)
+
+func legends_versions() -> Array:
+ var versions: Array = online.seasons.duplicate()
+ if online.competitive_version not in versions: versions.append(online.competitive_version)
+ for record in RUN_HISTORY.normalized(run_history):
+  var version: String = record.competitive_version
+  if version != online.competitive_version and version not in versions: versions.append(version)
+ versions.sort_custom(func(a: String, b: String) -> bool:
+  var left := a.split(".")
+  var right := b.split(".")
+  if int(left[0]) != int(right[0]): return int(left[0]) > int(right[0])
+  return int(left[1]) > int(right[1])
+ )
+ return versions
+
+func show_legends(mode: String = "endless") -> void:
+ state = "legends"
+ legends_mode = mode
+ legends_version = online.competitive_version
+ render_legends()
+ reload_legends()
+
+func reload_legends() -> void:
+ online.synchronize()
+ if legends_version != online.competitive_version and legends_version in online.seasons: online.fetch_legends(legends_version)
+ for version in online.seasons.slice(0, 3):
+  if version != legends_version: online.fetch_legends(str(version))
+
+func choose_legends_version(index: int, versions: Array) -> void:
+ legends_version = str(versions[index])
+ render_legends()
+ if legends_version in online.seasons and not online.legends.has(legends_version): online.fetch_legends(legends_version)
+
+func choose_legends_mode(index: int) -> void:
+ legends_mode = "endless" if index == 0 else "bosses"
+ render_legends()
+
+func render_legends() -> void:
+ clear_panel()
+ panel.add_theme_constant_override("separation", 5)
+ if profile_panel: profile_panel.hide()
+ overlay.custom_minimum_size.x = 820
+ title("LENDAS")
+ var versions := legends_versions()
+ if legends_version not in versions:
+  legends_version = str(versions[0]) if not versions.is_empty() else ""
+ var choices_row := HBoxContainer.new()
+ panel.add_child(choices_row)
+ var version_picker := OptionButton.new()
+ version_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ for version in versions: version_picker.add_item("v" + str(version))
+ if not versions.is_empty(): version_picker.select(versions.find(legends_version))
+ version_picker.item_selected.connect(choose_legends_version.bind(versions))
+ choices_row.add_child(version_picker)
+ var mode_picker := OptionButton.new()
+ mode_picker.add_item("Infinito")
+ mode_picker.add_item("Chefões")
+ mode_picker.select(0 if legends_mode == "endless" else 1)
+ mode_picker.item_selected.connect(choose_legends_mode)
+ choices_row.add_child(mode_picker)
+ var records: Array = online.rankings.get(legends_mode, []) if legends_version == online.competitive_version else online.legends.get(legends_version, {}).get(legends_mode, [])
+ panel.add_child(make_legend_row(["#", "Nickname", "Level", "Tempo", "Eliminações"]))
+ var podium := VBoxContainer.new()
+ podium.name = "Podium"
+ podium.add_theme_constant_override("separation", 5)
+ panel.add_child(podium)
+ for index in mini(3, records.size()):
+  podium.add_child(make_legend_card(records[index], index + 1))
+ var scroll := ScrollContainer.new()
+ scroll.custom_minimum_size.y = 180
+ scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+ panel.add_child(scroll)
+ var list := VBoxContainer.new()
+ list.name = "LegendList"
+ list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ list.add_theme_constant_override("separation", 5)
+ scroll.add_child(list)
+ for index in range(3, records.size()):
+  list.add_child(make_legend_row(legend_values(records[index], str(int(records[index].get("position", index + 1))))))
+ if records.is_empty(): title("Nenhum recorde disponível nesta versão.", 16)
+ var personal_records := RUN_HISTORY.for_version(run_history, legends_version)
+ var personal_rank: Array = RUN_HISTORY.ranked(personal_records) if legends_mode == "endless" else RUN_HISTORY.boss_ranked(personal_records)
+ var own: Dictionary = personal_rank[0] if not personal_rank.is_empty() else {}
+ var own_position := "-"
+ for index in mini(100, records.size()):
+  var entry: Dictionary = records[index]
+  var same_player := not str(online.profile.get("player_id", "")).is_empty() and str(entry.get("player_id", "")) == str(online.profile.player_id)
+  if same_player or (str(entry.get("player_id", "")).is_empty() and str(entry.get("nickname", "")) == online.nickname() and not online.nickname().is_empty()):
+   own = entry
+   own_position = str(int(entry.get("position", index + 1)))
+   break
+ var own_values: Array = [own_position, online.nickname(), "-", "-", "-"]
+ if not own.is_empty(): own_values = legend_values(own, own_position)
+ var personal_card := make_legend_row(own_values, Color("182737"))
+ personal_card.name = "PersonalBest"
+ panel.add_child(personal_card)
+ var actions := HBoxContainer.new()
+ panel.add_child(actions)
+ var refresh := Button.new()
+ refresh.text = "Carregando…" if online.busy else "Recarregar"
+ refresh.disabled = online.busy or online.network_disabled
+ refresh.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ refresh.pressed.connect(reload_legends)
+ actions.add_child(refresh)
+ var back := Button.new()
+ back.text = "Voltar"
+ back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ back.pressed.connect(show_menu)
+ actions.add_child(back)
+ layout_modals()
+
+func legend_values(record: Dictionary, position: String) -> Array:
+ return [position, str(record.get("nickname", online.nickname())), str(int(record.get("level", 0))), RUN_HISTORY.time_text(record.seconds), str(int(record.kills))]
+
+func make_legend_row(values: Array, background: Color = Color.TRANSPARENT, color: Color = Color.WHITE, font_size: int = 16, border_width: int = 0) -> PanelContainer:
+ var card := PanelContainer.new()
+ card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ var style := StyleBoxFlat.new()
+ style.bg_color = background
+ style.border_color = color
+ style.set_border_width_all(border_width)
+ style.set_corner_radius_all(6)
+ style.content_margin_left = 14
+ style.content_margin_right = 14
+ style.content_margin_top = 14.5 if background.a > 0 else 4.5
+ style.content_margin_bottom = 14.5 if background.a > 0 else 4.5
+ card.add_theme_stylebox_override("panel", style)
+ var row := HBoxContainer.new()
+ row.add_theme_constant_override("separation", 14)
+ card.add_child(row)
+ var widths := [72, 240, 64, 128, 144]
+ for index in values.size():
+  var cell := Label.new()
+  cell.text = str(values[index])
+  cell.custom_minimum_size.x = widths[index]
+  cell.size_flags_horizontal = Control.SIZE_FILL
+  cell.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+  cell.add_theme_color_override("font_color", color)
+  cell.add_theme_font_size_override("font_size", font_size)
+  row.add_child(cell)
+ return card
+
+func make_legend_card(record: Dictionary, position: int) -> PanelContainer:
+ var color: Color = [Color("ffd36b"), Color("c7d5e5"), Color("bfa58c")][position - 1]
+ var background: Color = [Color("2b261a"), Color("1c2530"), Color("1b2028")][position - 1]
+ var card := make_legend_row(legend_values(record, str(position)), background, color, 20 if position == 1 else 16, 2 if position == 1 else 1)
+ var style := card.get_theme_stylebox("panel") as StyleBoxFlat
+ style.content_margin_top = 6.5 if position == 1 else 4.5
+ style.content_margin_bottom = 6.5 if position == 1 else 4.5
+ card.name = "Place%d" % position
+ return card

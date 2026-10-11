@@ -62,10 +62,17 @@ func run() -> void:
  game.online.rankings = {"endless": [], "bosses": []}
  for index in 10:
   game.online.rankings.endless.append({"nickname": "Pescador_123456789012", "seconds": 600.0 - index, "kills": 100, "level": 25})
+ game.online.seasons = ["0.2", "0.1", "0.0"]
+ var legend_records: Array = []
+ for index in 100:
+  legend_records.append({"nickname": "Pescador_123456789012", "seconds": 600.0 - index, "kills": 100, "level": 25})
+ for version in game.online.seasons:
+  game.online.legends[version] = {"endless": legend_records, "bosses": []}
  for resolution in [Vector2i(640, 400), Vector2i(800, 600), Vector2i(1152, 720), Vector2i(1920, 1080), Vector2i(2560, 1440), Vector2i(3840, 2160), Vector2i(900, 1000)]:
   root.size = resolution
-  for screen in ["menu", "settings", "paused", "upgrade", "won", "lost", "history", "nickname", "personal_ranking"]:
+  for screen in ["menu", "settings", "paused", "upgrade", "won", "lost", "history", "nickname", "personal_ranking", "legends"]:
    match screen:
+    "legends": game.show_legends()
     "menu": game.show_menu()
     "settings": game.show_settings()
     "paused": game.show_pause()
@@ -83,7 +90,7 @@ func run() -> void:
     push_error("Falha em %s / %s" % [resolution, screen])
     quit(1)
     return
-  print("LAYOUT PASS: %s, nove telas" % resolution)
+  print("LAYOUT PASS: %s, dez telas" % resolution)
  game.show_menu()
  for frame in 5: await process_frame
  var started := false

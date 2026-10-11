@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
 const http = require('node:http');
 class Sheet {
   constructor() { this.data = []; }
+  clearContents() { this.data = []; }
   getLastRow() { return this.data.length; }
   getLastColumn() { return this.data[0]?.length || 0; }
   appendRow(row) { this.data.push([...row]); }
@@ -23,14 +24,14 @@ function backend() {
   const properties = new Map();
   const context = vm.createContext({
     SpreadsheetApp: {getActiveSpreadsheet: () => book, openById: () => book, flush() {}},
-    PropertiesService: {getScriptProperties: () => ({getProperty: key => properties.get(key), setProperty: (key, value) => properties.set(key, value)})},
+    PropertiesService: {getScriptProperties: () => ({getProperty: key => properties.get(key), setProperty: (key, value) => properties.set(key, value), deleteProperty: key => properties.delete(key)})},
     LockService: {getScriptLock: () => ({tryLock: () => { if (locked) return false; locked = true; return true; }, hasLock: () => locked, releaseLock: () => { locked = false; }})},
     Utilities: {getUuid: () => crypto.randomUUID(), DigestAlgorithm: {SHA_256: 'sha256'}, Charset: {UTF_8: 'utf8'}, computeDigest: (_, text) => [...crypto.createHash('sha256').update(text).digest()]},
     ContentService: {MimeType: {JSON: 'application/json'}, createTextOutput: text => ({text, setMimeType() { return this; }})}
   });
   vm.runInContext(fs.readFileSync(__dirname + '/Code.gs', 'utf8'), context);
   context.setupRanking();
-  return {context, sheets, call: input => JSON.parse(context.doPost({postData: {contents: JSON.stringify(input)}}).text)};
+  return {context, sheets, properties, call: input => JSON.parse(context.doPost({postData: {contents: JSON.stringify(input)}}).text)};
 }
 function tests() {
   const api = backend();
@@ -78,6 +79,47 @@ function tests() {
       assert(spawned + waves * (waves + 1) / 2 <= api.context.maximumKills_(t, 'endless'));
     }
   }
+  // Preserve only the best 100 per mode, snapshot names and retire legacy clients.
+  const sheet = api.sheets.get('Records');
+  for (let i = 0; i < 105; i++) {
+    const id = 'seed-' + i;
+    api.sheets.get('Players').appendRow([id, 'Seed_' + i, 'seed_' + i, 'hidden']);
+    sheet.appendRow([id, 'endless', 1000 + i, 10, 1, 'Pescador', 'death', 'pesca-1', 'seed', '', '0.3']);
+    sheet.appendRow([id, 'bosses', 500 + i, 10, 1, 'Pescador', 'won', 'pesca-1', 'seed', '', '0.3']);
+  }
+  api.context.activateCompetitiveVersion_('0.4');
+  const old = api.call({action: 'legends', competitive_version: '0.3'});
+  assert.equal(old.rankings.endless.length, 100);
+  assert.equal(old.rankings.bosses.length, 100);
+  assert.equal(old.rankings.endless[0].nickname, 'Seed_104');
+  assert.equal(old.rankings.bosses[0].nickname, 'NovoNome');
+  assert.equal(old.rankings.bosses[0].position, 1);
+  assert.equal(sheet.getLastRow(), 1, 'Active Records must not retain archived results beyond top 100');
+  assert.equal(send(record).error, 'version_closed', 'A legacy client cannot enter the new ranking');
+  assert.equal(send({...record, competitive_version: '0.3'}).error, 'version_closed');
+  assert.equal(send({...record, competitive_version: '0.4', seconds: 30}).updated, true, 'A fresh version accepts a lower personal best');
+  assert.equal(api.call({action: 'ranking', competitive_version: '0.4'}).rankings.endless[0].seconds, 30);
+  api.call({action: 'rename', player_id: account.player_id, token, nickname: 'Depois'});
+  assert.equal(api.call({action: 'legends', competitive_version: '0.3'}).rankings.bosses[0].nickname, 'NovoNome');
+  api.context.activateCompetitiveVersion_('0.4');
+  assert.equal(sheet.getLastRow(), 2, 'Retry of a completed activation must preserve new scores');
+  assert.throws(() => api.context.activateCompetitiveVersion_('0.3'));
+  assert.throws(() => api.context.activateCompetitiveVersion_('0.4.1'));
+  assert.equal(api.call({action: 'legends', competitive_version: '9.9'}).error, 'unknown_version');
+  assert.deepEqual(api.call({action: 'ranking', competitive_version: '0.4'}).seasons, ['0.3']);
+  // Simulate failure after archive persistence, before clearing the active sheet.
+  const clear = sheet.clearContents;
+  sheet.clearContents = () => { throw new Error('Interrupted'); };
+  assert.throws(() => api.context.activateCompetitiveVersion_('1.0'));
+  assert.equal(api.call({action: 'ranking', competitive_version: '0.4'}).error, 'busy');
+  sheet.clearContents = clear;
+  api.context.activateCompetitiveVersion_('1.0');
+  assert.equal(api.call({action: 'legends', competitive_version: '0.4'}).rankings.endless[0].nickname, 'Depois');
+  assert.equal(api.sheets.get('Seasons').getLastRow(), 3, 'Interrupted retries do not duplicate archives');
+  assert.equal(api.call({action: 'ranking', competitive_version: '1.0'}).rankings.endless.length, 0);
+  api.properties.set('TRANSITION_VERSION', '1.0');
+  api.context.activateCompetitiveVersion_('1.0');
+  assert.equal(api.properties.has('TRANSITION_VERSION'), false);
   console.log('BACKEND PASS: unique names, rename, credential ownership, record ordering, replayed requests, field/rules/XP validation, spawn bounds, public data');
 }
 if (process.argv.includes('--serve')) {
@@ -97,7 +139,8 @@ if (process.argv.includes('--serve')) {
         const input = JSON.parse(body);
         if (input.action === 'submit') submissions++;
         const location = '/response/' + crypto.randomUUID();
-        responses.set(location, JSON.stringify(api.call(input)));
+        if (input.action === '__test_activate') api.context.activateCompetitiveVersion_('0.4');
+        responses.set(location, JSON.stringify(input.action === '__test_activate' ? {ok: true} : api.call(input)));
         res.writeHead(302, {Location: location}); res.end();
       } catch { res.writeHead(400); res.end(); }
     });

@@ -1,6 +1,16 @@
 extends RefCounted
 ## Histórico geral por data; ranking exclusivo do infinito por tempo e eliminações.
 
+const LEGACY_VERSION := "0.3"
+
+static func competitive_version(value: String = "") -> String:
+ if value.is_empty(): value = str(ProjectSettings.get_setting("application/config/version", "0.3.0"))
+ var parts := value.trim_prefix("v").split(".")
+ return parts[0] + "." + parts[1] if parts.size() >= 2 else LEGACY_VERSION
+
+static func for_version(records: Array, version: String) -> Array:
+ return normalized(records).filter(func(record: Dictionary) -> bool: return record.competitive_version == version)
+
 static func normalized(records: Array) -> Array:
  var result: Array = []
  for record in records:
@@ -8,7 +18,7 @@ static func normalized(records: Array) -> Array:
   var seconds: float = float(record.get("seconds", -1))
   var kills: int = int(record.get("kills", -1))
   if not is_finite(seconds) or seconds < 0 or kills < 0: continue
-  result.append({"seconds": seconds, "kills": kills, "date": str(record.get("date", "")), "reason": str(record.get("reason", "death")), "character": str(record.get("character", "Pescador")), "level": maxi(0, int(record.get("level", 0))), "mode": str(record.get("mode", "endless"))})
+  result.append({"seconds": seconds, "kills": kills, "date": str(record.get("date", "")), "reason": str(record.get("reason", "death")), "character": str(record.get("character", "Pescador")), "level": maxi(0, int(record.get("level", 0))), "mode": str(record.get("mode", "endless")), "competitive_version": str(record.get("competitive_version", LEGACY_VERSION))})
  return result
 
 static func ranked(records: Array) -> Array:
@@ -33,7 +43,7 @@ static func load_records(path: String = "user://endless_runs.json") -> Array:
 static func save_records(records: Array, path: String = "user://endless_runs.json") -> Error:
  var file := FileAccess.open(path, FileAccess.WRITE)
  if file == null: return FileAccess.get_open_error()
- file.store_string(JSON.stringify({"version": 2, "runs": chronological(records)}, "\t"))
+ file.store_string(JSON.stringify({"version": 3, "runs": chronological(records)}, "\t"))
  return OK
 
 static func time_text(seconds: float) -> String:

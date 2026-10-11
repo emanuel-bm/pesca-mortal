@@ -250,6 +250,8 @@ testar em outra máquina e preparar vídeo, identidade visual e documentação.
 
 Godot é distribuído sob licença MIT. Consulte `GODOT-LICENSE.txt`.
 
+Recordes globais e pessoais são separados por versão competitiva X.Y; patches Z mantêm a classificação. O botão **Lendas** abre os campeões e os rankings anteriores, com até 100 jogadores por modo no arquivo global. Veja [a configuração e publicação de Lendas](docs/lendas.md) para atualizar o Apps Script da planilha existente e encerrar uma versão ao publicar outro X.Y.
+
 A arena aquática possui reflexos procedurais em movimento, inspirados no vídeo
 fornecido como referência, mantendo o tom escuro da água. Duas camadas de
 reflexos se deformam, e a canoa deixa ondulações; a pausa congela a superfície.
