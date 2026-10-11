@@ -300,15 +300,12 @@ func act(action: String) -> void:
  if game.run_mode != "training" or game.state not in ["playing", "paused"]: return
  match action:
   "dourado", "pacu":
-   var start_angle: float = game.rng.randf_range(0, TAU)
    for index in mini(10, maxi(0, game.MAX_ENEMIES - game.enemies.size())):
     game.spawn_enemy(false, action)
-    game.enemies.back().pos = (game.player + Vector2.from_angle(start_angle + index * TAU / 10.0) * 300).clamp(Vector2(50, 50), game.ARENA - Vector2(50, 50))
   "piranha", "pintado", "boss":
    for index in mini(1 if action == "boss" else 100, maxi(0, game.MAX_ENEMIES - game.enemies.size())):
     game.spawn_enemy(action == "boss", "" if action == "boss" else action)
     var enemy: Dictionary = game.enemies.back()
-    enemy.pos = (game.player + Vector2.from_angle(game.rng.randf_range(0, TAU)) * 300).clamp(Vector2(50, 50), game.ARENA - Vector2(50, 50))
     if action != "boss":
      enemy.tank = action == "pintado"
      enemy.radius = 44.0 if enemy.tank else 13.0

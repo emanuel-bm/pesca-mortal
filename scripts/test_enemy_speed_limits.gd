@@ -14,8 +14,8 @@ func run() -> void:
  game.elapsed = 10000
  game.bosses_defeated = 100
  for index in 40: game.spawn_enemy(false)
- var multiplier := pow(1.05, 100) * pow(1.1, floori(game.elapsed / 60.0))
  for fish in game.enemies:
+  var multiplier: float = game.fish_stat_multiplier(fish.get("species", ""))
   var base_speed: float = 80.0 if fish.tank else 125.0
   if fish.get("species", "") == "dourado": base_speed = 100.0
   if fish.get("species", "") == "pacu": base_speed = 80.0

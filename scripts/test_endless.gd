@@ -56,7 +56,7 @@ func run() -> void:
  var base_hp: float = 200.0 if fresh.tank else 21.0
  if fresh.get("species", "") == "dourado": base_hp = game.DOURADO.BASE_HEALTH
  if fresh.get("species", "") == "pacu": base_hp = 80.0
- assert(is_equal_approx(fresh.max_hp, base_hp * game.fish_stat_multiplier()), "New enemies inherit buffs")
+ assert(is_equal_approx(fresh.max_hp, base_hp * game.fish_stat_multiplier(fresh.get("species", ""))), "New enemies inherit buffs")
  surviving_boss.hp = 0
  game.update_game(0)
  assert(game.bosses_defeated == 2 and is_equal_approx(fish.max_hp, 200 * pow(1.05, 2)))

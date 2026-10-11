@@ -6,6 +6,7 @@ const ENDLESS_BOSS_INTERVAL := 120.0
 const ARENA := Vector2(2400, 1800)
 const ENEMY_SEPARATION_SCALE := 0.3
 const MAX_ENEMIES := 1000
+const ENEMY_SPAWN_DISTANCE := 680.0
 const MAX_HEALTH := 100.0
 const XP_GROWTH_PER_LEVEL := 1.06
 const XP_COLOR := Color(0.25, 0.65, 1.0)
@@ -1501,8 +1502,11 @@ func buff_endless_enemies() -> void:
   enemy.contact *= 1.05
   enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * 1.05
 
-func fish_stat_multiplier() -> float:
- return pow(1.1, floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
+func fish_minute_multiplier(species: String = "") -> float:
+ return 1.05 if species == "dourado" else 1.1
+
+func fish_stat_multiplier(species: String = "") -> float:
+ return pow(fish_minute_multiplier(species), floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
 
 func update_minute_buffs() -> void:
  var minute := floori(elapsed / 60.0)
@@ -1510,7 +1514,7 @@ func update_minute_buffs() -> void:
   if enemy.boss or enemy.hp <= 0: continue
   var previous := int(enemy.get("buff_minute", minute))
   if minute <= previous: continue
-  var multiplier := pow(1.1, minute - previous)
+  var multiplier := pow(fish_minute_multiplier(enemy.get("species", "")), minute - previous)
   for stat in ["hp", "max_hp", "speed", "contact"]: enemy[stat] *= multiplier
   enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * multiplier
   enemy.buff_minute = minute
@@ -1852,9 +1856,19 @@ func roll_fish_species() -> String:
   if roll < cumulative: return species[index]
  return "dourado"
 
+func enemy_spawn_position() -> Vector2:
+ var bounds := Rect2(Vector2(30, 30), ARENA - Vector2(60, 60))
+ for attempt in 24:
+  var candidate := player + Vector2.from_angle(rng.randf_range(0, TAU)) * ENEMY_SPAWN_DISTANCE
+  if bounds.has_point(candidate): return candidate
+ # A bounded fallback keeps spawning safe even when the player hugs a corner.
+ var farthest := bounds.position
+ for corner in [Vector2(bounds.end.x, bounds.position.y), Vector2(bounds.position.x, bounds.end.y), bounds.end]:
+  if player.distance_squared_to(corner) > player.distance_squared_to(farthest): farthest = corner
+ return player.move_toward(farthest, ENEMY_SPAWN_DISTANCE)
+
 func spawn_enemy(boss: bool, species: String = "") -> void:
- var angle := rng.randf_range(0, TAU)
- var position := (player + Vector2.from_angle(angle) * 680).clamp(Vector2(30, 30), ARENA - Vector2(30, 30))
+ var position := enemy_spawn_position()
  if not boss and species.is_empty(): species = roll_fish_species()
  var tank := not boss and species == "pintado"
  var is_dourado := not boss and species == "dourado"
@@ -1881,7 +1895,7 @@ func spawn_enemy(boss: bool, species: String = "") -> void:
   enemy.contact = 30.0
  var multiplier := pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0
  if not boss:
-  multiplier = fish_stat_multiplier()
+  multiplier = fish_stat_multiplier(species)
   enemy.buff_minute = floori(elapsed / 60.0)
  enemy["stat_multiplier"] = multiplier
  for stat in ["hp", "max_hp", "speed", "contact"]: enemy[stat] *= multiplier
