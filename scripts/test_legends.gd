@@ -108,6 +108,17 @@ func run() -> void:
  assert(not game.records_panel.visible and not game.boss_records_panel.visible)
  assert(game.legends_version == "0.4", "Lendas must open on the current competitive version")
  assert("0.4" in game.legends_versions() and "0.3" in game.legends_versions())
+ game.online.disabled = false
+ game.online.network_disabled = false
+ game.online.busy = true
+ game.online.action = "ranking"
+ game.show_menu()
+ assert(game.records_panel.find_child("RankingLoading", true, false) != null, "Global records must show a centered loading indicator")
+ game.show_legends()
+ assert(game.panel.find_child("RankingLoading", true, false) != null, "Lendas must show loading in place of its ranking")
+ game.online.busy = false
+ game.online_changed()
+ assert(game.panel.find_child("RankingLoading", true, false) == null, "Loading must disappear when the request completes")
  game.run_active = false
  game._process(0.0)
  assert(not game.profile_panel.visible, "The profile card must stay hidden in Lendas")

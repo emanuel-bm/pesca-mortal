@@ -467,7 +467,8 @@ func collect_menu_controls(parent: Node) -> void:
   if child is BaseButton or child is Slider or child is LineEdit:
    child.focus_mode = Control.FOCUS_ALL
    menu_controls.append(child)
-   if child is Button: style_menu_button(child)
+   if child is Button:
+    if not child.get_meta("keep_default_button_style", false): style_menu_button(child)
    elif child is Slider or child is LineEdit:
     var highlight := StyleBoxFlat.new()
     highlight.bg_color = Color.TRANSPARENT
@@ -867,6 +868,7 @@ func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
  heading.add_theme_font_size_override("font_size", 20)
  heading_row.add_child(heading)
  var legends_button := Button.new()
+ legends_button.set_meta("keep_default_button_style", true)
  legends_button.text = "Lendas"
  legends_button.add_theme_font_size_override("font_size", 16)
  legends_button.pressed.connect(show_legends.bind(mode))
@@ -875,6 +877,7 @@ func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
  column.add_child(tabs)
  for personal in [false, true]:
   var tab := Button.new()
+  tab.set_meta("keep_default_button_style", true)
   tab.text = "Pessoal" if personal else "Global"
   tab.toggle_mode = true
   tab.button_pressed = records_personal[mode] == personal
@@ -890,6 +893,10 @@ func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
  column.add_child(grid)
  for column_name in ["#", "Jogador", "Level", "Tempo", "Eliminações"]: history_cell(grid, column_name)
  var ranked: Array = records
+ var loading := not personal and ranking_loading(online.competitive_version)
+ if loading:
+  column.add_child(make_ranking_loading(100))
+  ranked = []
  for index in mini(10, ranked.size()):
   var record: Dictionary = ranked[index]
   history_cell(grid, str(int(record.get("position", index + 1))))
@@ -907,20 +914,38 @@ func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
      bold.base_font = cell.get_theme_font("font")
      bold.variation_embolden = 0.75
      cell.add_theme_font_override("font", bold)
- if ranked.is_empty():
+ if ranked.is_empty() and not loading:
   var empty := Label.new()
   empty.text = "Nenhuma partida registrada." if personal else (online.status if not online.busy and not online.status.is_empty() and online.status != "Ranking atualizado." else "Nenhum recorde global recebido.")
   empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
   empty.add_theme_font_size_override("font_size", 16)
   column.add_child(empty)
- if not personal:
-  var reload_button := Button.new()
-  reload_button.text = "Carregando..." if online.busy else "Recarregar"
-  reload_button.disabled = online.busy
-  reload_button.pressed.connect(online.synchronize)
-  column.add_child(reload_button)
-
  return target
+
+func ranking_loading(version: String) -> bool:
+ if online.network_disabled or online.disabled: return false
+ if version == online.competitive_version:
+  return online.refresh_requested or (online.busy and online.action != "legends")
+ return version in online.legends_requested or (online.busy and online.action == "legends" and online.requested_version == version)
+
+func make_ranking_loading(height: float) -> CenterContainer:
+ var center := CenterContainer.new()
+ center.name = "RankingLoading"
+ center.custom_minimum_size.y = height
+ center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+ var content := VBoxContainer.new()
+ content.add_theme_constant_override("separation", 12)
+ center.add_child(content)
+ var spinner_center := CenterContainer.new()
+ content.add_child(spinner_center)
+ spinner_center.add_child(preload("res://scripts/loading_spinner.gd").new())
+ var label := Label.new()
+ label.text = "Carregando recordes…"
+ label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+ label.add_theme_font_size_override("font_size", 16)
+ content.add_child(label)
+ return center
 
 func history_cell(grid: GridContainer, text: String) -> void:
  var cell := Label.new()
@@ -2376,6 +2401,7 @@ func render_legends() -> void:
  mode_picker.item_selected.connect(choose_legends_mode)
  choices_row.add_child(mode_picker)
  var records: Array = online.rankings.get(legends_mode, []) if legends_version == online.competitive_version else online.legends.get(legends_version, {}).get(legends_mode, [])
+ var loading := ranking_loading(legends_version)
  panel.add_child(make_legend_row(["#", "Nickname", "Level", "Tempo", "Eliminações"]))
  var podium := VBoxContainer.new()
  podium.name = "Podium"
@@ -2387,6 +2413,10 @@ func render_legends() -> void:
  scroll.custom_minimum_size.y = 180
  scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
  panel.add_child(scroll)
+ if loading:
+  podium.hide()
+  scroll.hide()
+  panel.add_child(make_ranking_loading(220))
  var list := VBoxContainer.new()
  list.name = "LegendList"
  list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2394,7 +2424,7 @@ func render_legends() -> void:
  scroll.add_child(list)
  for index in range(3, records.size()):
   list.add_child(make_legend_row(legend_values(records[index], str(int(records[index].get("position", index + 1))))))
- if records.is_empty():
+ if records.is_empty() and not loading:
   var empty := Label.new()
   empty.text = online.status if not online.busy and not online.status.is_empty() and online.status != "Ranking atualizado." else "Nenhum recorde disponível nesta versão."
   empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -2419,12 +2449,6 @@ func render_legends() -> void:
  panel.add_child(personal_card)
  var actions := HBoxContainer.new()
  panel.add_child(actions)
- var refresh := Button.new()
- refresh.text = "Carregando…" if online.busy else "Recarregar"
- refresh.disabled = online.busy or online.network_disabled
- refresh.size_flags_horizontal = Control.SIZE_EXPAND_FILL
- refresh.pressed.connect(reload_legends)
- actions.add_child(refresh)
  var back := Button.new()
  back.text = "Voltar"
  back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
