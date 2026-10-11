@@ -1379,6 +1379,9 @@ func update_game(dt: float) -> void:
    cards.drop(enemy)
    kills += 1
    enemies.remove_at(i)
+   if enemy.boss and run_mode == "bosses":
+    finish(true)
+    return
  if run_mode == "endless": spawn_endless_bosses()
  for i in range(gems.size() - 1, -1, -1):
   var distance: float = gems[i].pos.distance_to(player)

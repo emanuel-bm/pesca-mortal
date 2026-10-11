@@ -5,8 +5,8 @@ incluídos no projeto. Ferramentas locais, caches e builds exportadas ficam
 fora do Git; pacotes para jogar são distribuídos pelas Releases.
 
 O menu oferece **Modo infinito** e **Modo por chefões**. O modo por chefões
-mantém o confronto aos cinco minutos e continua após vencer o Minhocão,
-liberando pacus e dourados. O próximo chefão ainda não foi implementado.
+mantém o confronto aos cinco minutos e termina com vitória ao vencer o Minhocão.
+O próximo chefão ainda não foi implementado.
 No infinito, o primeiro chefão aparece aos três minutos. Depois, novas ondas
 aparecem a cada dois minutos, com dois chefões na segunda, três na terceira
 e assim por diante, sem remover chefões ainda vivos. Cada chefão abatido
@@ -15,7 +15,7 @@ atingindo os atuais e os próximos. Tamanho e XP dos peixes não mudam com o buf
 O contador de eliminações inclui chefões no modo infinito.
 Cada chefão deixa uma ventrecha gigante de 112 pixels (8 vezes a comum),
 com 100 XP base, sujeitos ao bônus de experiência. No modo por chefões,
-o drop pode ser coletado, pois a partida continua após derrotar o chefe.
+a partida termina ao derrotar o chefe, sem coleta do drop final.
 As ventrechas usam contorno marrom com espessura de 1,5 pixel.
 
 O histórico do infinito é local, em `user://endless_runs.json`. O ranking ordena
@@ -140,7 +140,7 @@ Distribuição por surgimento automático (um único sorteio):
 | Antes de 1 minuto | 100% | 0% | 0% | 0% |
 | A partir de 1 minuto | 80% | 20% | 0% | 0% |
 | Primeiro chefão apareceu | 70% | 30% | 0% | 0% |
-| Segunda horda no infinito ou primeiro chefe morto no modo por chefões | 50% | 15% | 25% | 10% |
+| Segunda horda no infinito | 50% | 15% | 25% | 10% |
 
 A última distribuição permanece até o fim da partida. Invocações manuais no
 treino continuam gerando somente o tipo solicitado.
@@ -164,7 +164,7 @@ Tela cheia utiliza a resolução do monitor; em janela, tamanhos maiores que a �
 
 A chegada do Minhocão mostra um aviso roxo e um breve tremor da arena.
 Sobreviva por cinco minutos. O Minhocão aparece e as hordas continuam surgindo
-durante a luta. Derrotar o chefe libera pacus e dourados e a partida continua.
+durante a luta. Derrotar o chefe encerra a partida com vitória.
 
 ## Escopo
 
