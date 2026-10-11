@@ -87,7 +87,7 @@ func drop_chance(enemy: Dictionary) -> float:
  var base := lerpf(0.05, 0.01, progress) if enemy.tank else lerpf(0.01, 0.0025, progress)
  if species == "pacu": base = lerpf(0.05, 0.02, progress)
  if species == "dourado": base = lerpf(0.10, 0.05, progress)
- return base
+ return minf(1.0, base * (1.0 + game.luck / 100.0))
 
 func drop(enemy: Dictionary) -> void:
  if game.rng.randf() < drop_chance(enemy):
@@ -112,7 +112,7 @@ func activate(id: String) -> void:
   magnet_visual_seconds = 1.0
   for gem in game.gems: gem["magnetized"] = true
  else:
-  effects[id] = EFFECT_SECONDS
+  effects[id] = EFFECT_SECONDS * (1.0 + game.persistence / 100.0)
   if id == "furia": game.attack_timer = minf(game.attack_timer, game.effective_attack_delay())
  refresh()
 

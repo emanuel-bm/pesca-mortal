@@ -49,7 +49,7 @@ Pause com ESC e ative **Habilitar cartas** na guia Treino para habilitar drops:
 peixes usam as mesmas chances da partida e chefões deixam uma carta garantida.
 Pintado tem chance de carta de 5% no início, pacu de 5% e dourado de 10%.
 As chances diminuem linearmente até 1%, 2% e 5%, respectivamente, aos quatro
-minutos e permanecem nesses valores depois.
+minutos e permanecem nesses valores depois. Sorte multiplica essas chances.
 A opção começa desligada e volta a ficar desligada ao reiniciar o treino.
 
 Protótipo 2D em Godot 4.7.2. O título é provisório.
@@ -133,7 +133,7 @@ atual da arrancada; esse limite cresce junto com os buffs. Descansa
 por 0,75 segundo. Ao terminar cada arrancada, sorteia um cooldown de 1 a 3
 segundos antes de poder preparar outra; o descanso conta dentro desse tempo.
 Depois do descanso, volta a nadar enquanto aguarda. Tem 200 de vida base, 15 de dano e dá
-8 XP; recebe os mesmos buffs acumulativos dos demais.
+8 XP; recebe buffs acumulativos de 5% por minuto e de 5% por chefão no infinito.
 Na sala de treino, **F10** invoca 10 dourados ao redor da canoa.
 
 Distribuição por surgimento automático (um único sorteio):
@@ -186,9 +186,10 @@ na área anunciada; contato mantém a invulnerabilidade de 0,8 s do jogador.
 Velocidade inicial do jogador: 190; melhorias de 10%, sem teto.
 Peixes usam sua própria velocidade, sem limite baseado na velocidade do jogador.
 Piranhas se movem a 125 pixels/s, pintados e pacus a 80 pixels/s e dourados
-a 100 pixels/s. A cada minuto completo de jogo, todos os peixes vivos recebem
-+10% de vida atual, vida máxima, dano e velocidade, de forma multiplicativa.
-Novos peixes herdam todos os minutos completos: atributos base × 1,1 elevado
+a 100 pixels/s. A cada minuto completo de jogo, os peixes vivos recebem
++10% de vida atual, vida máxima, dano e velocidade, exceto os dourados, que
+recebem +5%, de forma multiplicativa.
+Novos peixes herdam todos os minutos completos: atributos base × 1,1 (1,05 para dourados) elevado
 ao número de minutos. Isso substitui o antigo crescimento linear da vida.
 No infinito, os +5% por chefão morto se multiplicam com esse bônus. Chefões
 não recebem o bônus por minuto. XP, tamanho e tempos de aviso não aumentam;
@@ -196,6 +197,8 @@ a velocidade da arrancada do dourado recebe o multiplicador dos atributos.
 Velocidades do jogador, dos peixes e dos chefões crescem sem teto de progressão. Movimentos na superfície e investidas do Minhocão recebem o multiplicador completo dos buffs; os tempos dos avisos continuam iguais.
 Melhorias de vida máxima e dano de ataque aumentam o valor atual em 20% por escolha.
 Valores exibidos são arredondados para inteiros; cálculos mantêm a precisão.
+O alcance de coleta de XP é fixo em 180, sem melhoria e oculto nos atributos do pescador.
+Aprendizado aumenta o bônus de ganho de XP em 20 pontos percentuais por escolha, sem limite máximo.
 Experiência base: piranha 1 XP, pintado 5 XP, pacu 4 XP, dourado 8 XP e chefão 100 XP.
 Cristais de maior valor aparecem maiores e concedem todo o XP ao serem coletados.
 Projéteis são lanças orientadas pelo disparo. Personagem, canoa, Minhocão,

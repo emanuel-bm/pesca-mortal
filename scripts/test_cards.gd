@@ -133,6 +133,9 @@ func run() -> void:
    var progress: float = clampf(sample[0] / 240.0, 0.0, 1.0)
    var expected: float = lerpf(0.05, 0.02, progress) if species == "pacu" else lerpf(0.10, 0.05, progress)
    assert(is_equal_approx(game.cards.drop_chance(enemy), expected), "Pacu and Dourado drops must decrease to 2% and 5% at four minutes")
+   game.luck = 100.0
+   assert(is_equal_approx(game.cards.drop_chance(enemy), expected * 2.0), "Luck must multiply species drop rates")
+   game.luck = 0.0
  fresh()
  assert(game.cards.drop_chance({"boss": true}) == 0.0)
  fresh("endless")

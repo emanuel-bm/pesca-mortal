@@ -22,8 +22,10 @@ const STATS := {
  "rate": ["Ataques / segundo", 0.2, 0.2, 20.0],
  "shot_count": ["Projéteis", 1.0, 1.0, 100.0],
  "speed": ["Velocidade", 10.0, 10.0, 1000.0],
- "magnet": ["Alcance de coleta", 20.0, 0.0, 2400.0],
  "xp_bonus": ["Bônus de XP (%)", 10.0, 0.0, 1000.0],
+ "luck": ["Drop de cartas (%)", 20.0, 0.0, 1000.0],
+ "persistence": ["Duração das cartas (%)", 5.0, 0.0, 1000.0],
+ "crit_chance": ["Chance de crítico (%)", 5.0, 0.0, 100.0],
  "level": ["Nível", 1.0, 1.0, 100.0]
 }
 const ACTIONS := {
@@ -267,7 +269,7 @@ func set_stat(requested: float, id: String) -> void:
  var data: Array = STATS[id]
  var value := clampf(requested, float(data[2]), float(data[3]))
  if id == "rate": game.attack_delay = 1.0 / value
- elif id in ["level", "shot_count", "xp_bonus"]: game.set(id, roundi(value))
+ elif id in ["level", "shot_count", "xp_bonus", "luck", "persistence", "crit_chance"]: game.set(id, roundi(value))
  else: game.set(id, value)
  game.health = minf(game.health, game.max_health)
  if id == "level": game.xp = 0

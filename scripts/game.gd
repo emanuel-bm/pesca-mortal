@@ -10,6 +10,7 @@ const ENEMY_SPAWN_DISTANCE := 680.0
 const MAX_HEALTH := 100.0
 const XP_GROWTH_PER_LEVEL := 1.06
 const XP_COLOR := Color(0.25, 0.65, 1.0)
+const CRITICAL_COLOR := Color(1.0, 0.88, 0.2)
 const XP_ATTRACTION_SPEED := 630.0
 const KNOCKBACK_SPEED := 420.0
 const KNOCKBACK_DECELERATION := 1800.0
@@ -20,18 +21,19 @@ const MINHOCAO = preload("res://scripts/minhocao.gd")
 const DOURADO = preload("res://scripts/dourado.gd")
 const FISH_VISUALS = preload("res://scripts/fish_visuals.gd")
 const RUN_HISTORY = preload("res://scripts/run_history.gd")
-const MAX_COLLECTION_RANGE := 500.0
+const BASE_COLLECTION_RANGE := 180.0
 const HEALTH_CAP := 500.0
-const XP_BONUS_CAP := 100
-const UPGRADES := ["damage", "rate", "shots", "speed", "magnet", "max_health", "xp_bonus"]
+const UPGRADES := ["damage", "rate", "shots", "speed", "max_health", "xp_bonus", "luck", "persistence", "crit_chance"]
 const LABELS := {
  "damage": ["Impacto", "+20% de dano"],
  "rate": ["Ritmo", "+20% de frequência de ataque"],
  "shots": ["Rajada", "+1 projétil por disparo"],
- "speed": ["Passo leve", "+10% de velocidade"],
- "magnet": ["Atração", "+40% de alcance de coleta"],
+ "speed": ["Velocidade", "+10% de velocidade"],
  "max_health": ["Vitalidade", "+20% de vida máxima"],
- "xp_bonus": ["Aprendizado", "+10% de ganho de XP"]
+ "xp_bonus": ["Aprendizado", "+20% de ganho de XP"],
+ "luck": ["Sorte", "+20% de drop de cartas"],
+ "persistence": ["Persistência", "+5% de duração das cartas"],
+ "crit_chance": ["Crítico", "+5% de chance de crítico"]
 }
 
 var rng := RandomNumberGenerator.new()
@@ -62,6 +64,9 @@ const CROWD_CELL_SIZE := 32.0
 var gems: Array[Dictionary] = []
 var max_health := MAX_HEALTH
 var xp_bonus := 0
+var luck := 0
+var persistence := 0
+var crit_chance := 0
 var xp_remainder := 0
 var health := MAX_HEALTH
 var knockback_velocity := Vector2.ZERO
@@ -76,7 +81,7 @@ var fatal_hit_panel: PanelContainer
 var attack_delay := 0.65
 var shot_count := 1
 var speed := BASE_PLAYER_SPEED
-var magnet := 85.0
+var magnet := BASE_COLLECTION_RANGE
 var invulnerability := 0.0
 var damage_flash: ColorRect
 var damage_flash_tween: Tween
@@ -545,7 +550,7 @@ func setup_stats_panel() -> void:
  stats_heading.text = "ATRIBUTOS DO PESCADOR (lv%d)" % level
  stats_heading.add_theme_font_size_override("font_size", 24)
  column.add_child(stats_heading)
- var names := {"max_health": "Vida máxima", "damage": "Dano", "rate": "Ataques por segundo", "shots": "Projéteis por ataque", "speed": "Velocidade", "magnet": "Alcance de coleta", "xp_bonus": "Bônus de XP"}
+ var names := {"max_health": "Vida máxima", "damage": "Dano", "rate": "Ataques por segundo", "shots": "Projéteis por ataque", "speed": "Velocidade", "xp_bonus": "Bônus de XP", "luck": "Drop de cartas", "persistence": "Duração das cartas", "crit_chance": "Chance de crítico"}
  for id in names:
   var row := HBoxContainer.new()
   column.add_child(row)
@@ -624,21 +629,24 @@ func layout_modals() -> void:
  else: version_badge.scale = Vector2.ONE
 
 func projected_stats(id: String = "") -> Dictionary:
- var values := {"damage": damage, "rate": 1.0 / attack_delay, "shots": shot_count, "speed": speed, "magnet": magnet, "max_health": max_health, "xp_bonus": xp_bonus}
+ var values := {"damage": damage, "rate": 1.0 / attack_delay, "shots": shot_count, "speed": speed, "max_health": max_health, "xp_bonus": xp_bonus, "luck": luck, "persistence": persistence, "crit_chance": crit_chance}
  match id:
   "damage": values.damage = damage * 1.20
   "rate": values.rate = 1.2 / attack_delay
   "shots": values.shots = shot_count + 1
   "speed": values.speed = speed * 1.10
-  "magnet": values.magnet = minf(MAX_COLLECTION_RANGE, magnet * 1.4)
   "max_health": values.max_health = maxf(max_health, minf(HEALTH_CAP, max_health * 1.20))
-  "xp_bonus": values.xp_bonus = mini(XP_BONUS_CAP, xp_bonus + 10)
+  "xp_bonus": values.xp_bonus = xp_bonus + 20
+  "luck": values.luck = luck + 20
+  "persistence": values.persistence = persistence + 5
+  "crit_chance": values.crit_chance = mini(100, crit_chance + 5)
  return values
 
 func format_stat(id: String, value: float) -> String:
  if id == "rate": return ("%.2f" % value).replace(".", ",")
- var text := ("+%d%%" % roundi(value)) if id == "xp_bonus" else str(roundi(value))
- if (id == "magnet" and value >= MAX_COLLECTION_RANGE) or (id == "max_health" and value >= HEALTH_CAP) or (id == "xp_bonus" and value >= XP_BONUS_CAP): text += " (MAX)"
+ if id == "crit_chance": return "%d%%" % roundi(value) + (" (MAX)" if value >= 100 else "")
+ var text := ("+%d%%" % roundi(value)) if id in ["xp_bonus", "luck", "persistence"] else str(roundi(value))
+ if id == "max_health" and value >= HEALTH_CAP: text += " (MAX)"
  return text
 
 func update_stats_preview(id: String = "") -> void:
@@ -1154,6 +1162,9 @@ func start_run(mode: String = "bosses") -> void:
  max_health = MAX_HEALTH
  health = max_health
  xp_bonus = 0
+ luck = 0
+ persistence = 0
+ crit_chance = 0
  xp_remainder = 0
  prevent_player_death = false
  knockback_velocity = Vector2.ZERO
@@ -1166,7 +1177,7 @@ func start_run(mode: String = "bosses") -> void:
  attack_delay = 0.65
  shot_count = 1
  speed = BASE_PLAYER_SPEED
- magnet = 85.0
+ magnet = BASE_COLLECTION_RANGE
  invulnerability = 0.0
  spawn_timer = 0.0
  spawn_remainder = 0.0
@@ -1467,9 +1478,12 @@ func effective_damage() -> float:
  return damage * (1.5 if cards.active("furia") else 1.0)
 
 func hit_with_spear(enemy: Dictionary, amount: float = -1.0) -> void:
+ if enemy.hp <= 0 or (enemy.boss and not MINHOCAO.vulnerable(enemy)): return
  if amount < 0.0: amount = effective_damage()
+ var critical := crit_chance > 0 and rng.randf() < crit_chance / 100.0
+ if critical: amount *= 2.0
  enemy.hp -= amount
- add_damage_number(enemy.pos - Vector2(0, enemy.radius + 8), amount)
+ add_damage_number(enemy.pos - Vector2(0, enemy.radius + 8), amount, CRITICAL_COLOR if critical else Color(1, 0.88, 0.45), 0.9 if critical else 0.7, 30 if critical else 24)
  enemy.flash = 0.12
 
 func show_pending_level_up() -> void:
@@ -1964,9 +1978,8 @@ func show_upgrades() -> void:
  upgrade_buttons.clear()
  var available: Array[String] = []
  for id in UPGRADES:
-  if id == "magnet" and magnet >= MAX_COLLECTION_RANGE: continue
   if id == "max_health" and max_health >= HEALTH_CAP: continue
-  if id == "xp_bonus" and xp_bonus >= XP_BONUS_CAP: continue
+  if id == "crit_chance" and crit_chance >= 100: continue
   available.append(id)
  while choices.size() < 3 and not available.is_empty():
   var index := rng.randi_range(0, available.size() - 1)
@@ -1983,7 +1996,7 @@ func show_upgrades() -> void:
  for i in choices.size():
   var id := choices[i]
   var option := Button.new()
-  option.custom_minimum_size = Vector2(228, 260)
+  option.custom_minimum_size = Vector2(260, 360)
   option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
   var frame := StyleBoxFlat.new()
   frame.bg_color = Color(0.12, 0.19, 0.26)
@@ -2006,24 +2019,50 @@ func show_upgrades() -> void:
   content.mouse_filter = Control.MOUSE_FILTER_IGNORE
   inset.add_child(content)
   var next := projected_stats(id)
-  var lines := [str(i + 1) + " · MELHORIA", LABELS[id][0], LABELS[id][1], "ATUAL → PRÓXIMO", format_stat(id, current[id]) + " → " + format_stat(id, next[id])]
-  for line_index in lines.size():
-   var label := Label.new()
-   label.text = lines[line_index]
-   label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-   label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-   label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-   label.add_theme_font_size_override("font_size", 24 if line_index == 1 else (20 if line_index == 4 else 16))
-   if line_index in [0, 3]: label.add_theme_color_override("font_color", Color(0.8, 0.72, 0.52))
-   if line_index == 4: label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.65))
-   if line_index == 2:
-    label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-   content.add_child(label)
+  build_upgrade_card(content, id, current, next)
   upgrade_buttons.append(option)
   option.mouse_entered.connect(select_upgrade.bind(i))
   option.focus_entered.connect(update_stats_preview.bind(id))
  select_upgrade(0)
+
+func build_upgrade_card(content: VBoxContainer, id: String, current: Dictionary, next: Dictionary) -> void:
+ content.add_theme_constant_override("separation", 4)
+ var heading := Label.new()
+ heading.text = "%s (lv%d)" % [LABELS[id][0], int(upgrade_levels.get(id, 0)) + 1]
+ heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+ heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+ heading.add_theme_font_size_override("font_size", 20)
+ heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
+ content.add_child(heading)
+ var art := TextureRect.new()
+ var art_id: String = {"max_health": "vitalidade"}.get(id, id)
+ art.texture = load("res://assets/upgrades/%s.png" % art_id)
+ art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+ art.custom_minimum_size = Vector2(0, 250)
+ art.size_flags_vertical = Control.SIZE_EXPAND_FILL
+ art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+ art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+ art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+ content.add_child(art)
+ var footer := VBoxContainer.new()
+ footer.add_theme_constant_override("separation", 0)
+ footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+ content.add_child(footer)
+ var description := Label.new()
+ description.text = LABELS[id][1]
+ description.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+ description.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+ description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+ description.add_theme_font_size_override("font_size", 14)
+ description.mouse_filter = Control.MOUSE_FILTER_IGNORE
+ footer.add_child(description)
+ var value := Label.new()
+ value.text = format_stat(id, current[id]) + " → " + format_stat(id, next[id])
+ value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+ value.add_theme_font_size_override("font_size", 16)
+ value.add_theme_color_override("font_color", Color(0.4, 1.0, 0.65))
+ value.mouse_filter = Control.MOUSE_FILTER_IGNORE
+ footer.add_child(value)
 
 func select_upgrade(index: int) -> void:
  if state != "upgrade" or upgrade_buttons.is_empty(): return
@@ -2032,16 +2071,19 @@ func select_upgrade(index: int) -> void:
  update_stats_preview(choices[index])
 
 func choose_upgrade(id: String) -> void:
+ if not id in UPGRADES: return
  upgrade_levels[id] = int(upgrade_levels.get(id, 0)) + 1
  var next := projected_stats(id)
  damage = next.damage
  attack_delay = 1.0 / next.rate
  shot_count = next.shots
  speed = next.speed
- magnet = next.magnet
  health = minf(next.max_health, health + next.max_health - max_health)
  max_health = next.max_health
  xp_bonus = int(next.xp_bonus)
+ luck = int(next.luck)
+ persistence = int(next.persistence)
+ crit_chance = int(next.crit_chance)
  health_bar.max_value = max_health
  resume()
  show_pending_level_up()
