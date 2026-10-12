@@ -18,6 +18,10 @@ func run() -> void:
  game.enemies.clear()
  game.enemies.append(fish)
  game.cards.activate("furia")
+ game.cards.activate("perfurante")
+ game.gems.append({"pos": game.player + Vector2(500, 0), "xp": 1, "magnetized": false})
+ game.cards.activate("ima")
+ game.cards.attack_feedback()
  fish.pos = game.player
  game.update_game(0)
  assert(game.cards.blocked_seconds == 5)
@@ -27,7 +31,11 @@ func run() -> void:
  assert(game.cards.indicators.furia.icon.material.get_shader_parameter("blocked"))
  game.cards.activate("perfurante")
  assert(not game.cards.active("perfurante"))
- assert(game.cards.active("furia"), "Existing effects continue")
+ for id in game.cards.effects:
+  assert(not game.cards.active(id), "Pacu removes every active timed card")
+  assert(not game.cards.indicators[id].item.visible, "Removed effects hide their indicators")
+ assert(game.cards.magnet_visual_seconds == 0 and game.cards.fury_burst_seconds == 0 and game.cards.shield_impact_seconds == 0)
+ assert(not game.gems[0].magnetized, "Pacu cancels magnet attraction")
  game.cards.update_pickups(0)
  assert(game.cards.pickups.size() == 1, "Blocked pickup must remain on the floor")
  game.state = "paused"
@@ -49,8 +57,10 @@ func run() -> void:
  fish.pos = game.player
  game.update_game(0)
  assert(game.cards.blocked_seconds == 0, "Protected hits must not block")
+ assert(game.cards.active("intangivel") and game.cards.active("perfurante"), "Protected hits preserve active cards")
  game.cards.block_activation()
+ assert(not game.cards.active("intangivel"), "Blocking clears Intangible too")
  game.cards.reset()
  assert(game.cards.blocked_seconds == 0)
- print("PACU BLOCK PASS: slow spawn, damage, card lock, grayscale, preserved pickup, pause, renewal, immunity and reset")
+ print("PACU BLOCK PASS: spawn, damage, card removal, magnet cancellation, card lock, grayscale, preserved pickup, pause, renewal, immunity and reset")
  quit()

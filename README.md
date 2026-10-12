@@ -134,7 +134,8 @@ sem arrancada. Compartilha a liberação do dourado. **F11** invoca 10 pacus no 
 Um dano de pacu bloqueia novas ativações de cartas por cinco segundos de jogo;
 outro dano renova o tempo. Cartas no chão e ícones dos efeitos ficam cinza durante
 o bloqueio. Cartas não são consumidas ao tocar nelas enquanto bloqueadas, mas
-continuam expirando normalmente. Efeitos já ativos continuam; invulnerabilidade
+continuam expirando normalmente. O golpe remove todos os efeitos de cartas ativos,
+incluindo a atração do Ímã; as cartas bloqueadas ficam em cinza escuro, sem brilho. Invulnerabilidade
 e Intangível impedem o bloqueio quando impedem o dano. Pausas congelam o tempo.
 
 O dourado usa o sprite `assets/dourado-v1.png`, com 46 pixels de comprimento e

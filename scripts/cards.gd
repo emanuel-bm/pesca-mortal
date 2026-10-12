@@ -153,6 +153,11 @@ func draw_player_effects(canvas: Node2D, center: Vector2) -> void:
 
 func block_activation() -> void:
  blocked_seconds = 5.0
+ for id in effects: effects[id] = 0.0
+ magnet_visual_seconds = 0.0
+ fury_burst_seconds = 0.0
+ shield_impact_seconds = 0.0
+ for gem in game.gems: gem["magnetized"] = false
  refresh()
 
 func update_pickups(dt: float) -> void:
