@@ -91,7 +91,10 @@ func drop_chance(enemy: Dictionary) -> float:
 
 func drop(enemy: Dictionary) -> void:
  if game.rng.randf() < drop_chance(enemy):
-  spawn(IDS[game.rng.randi_range(0, IDS.size() - 1)], enemy.pos)
+  var count := 2 if enemy.get("species", "") == "pai_do_mato" else 1
+  for index in count:
+   var offset := Vector2((index - 0.5) * 36.0, 0) if count == 2 else Vector2.ZERO
+   spawn(IDS[game.rng.randi_range(0, IDS.size() - 1)], enemy.pos + offset)
 
 func spawn(id: String, world_position: Vector2) -> void:
  var sprite := Sprite2D.new()

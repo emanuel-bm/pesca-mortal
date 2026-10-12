@@ -39,6 +39,8 @@ func run() -> void:
  game.enemies.back().hp = 0
  game.update_game(0)
  assert(game.gems.size() == 1 and game.gems[0].xp == 5000 and game.gems[0].kind == "forest_gem")
+ assert(game.cards.pickups.size() == 2, "Pai do Mato must drop two cards in endless mode")
+ assert(game.cards.pickups[0].pos != game.cards.pickups[1].pos, "Cards must appear separately")
  var first_cost: int = game.xp_needed()
  game.gems[0].pos = game.player
  game.update_game(0)
