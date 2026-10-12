@@ -40,7 +40,9 @@ var player := ARENA / 2
 var enemies: Array[Dictionary] = []
 var bullets: Array[Dictionary] = []
 const COLLISION_CELL_SIZE := 128.0
+const PIERCING_DAMAGE_MULTIPLIERS := [1.0, 0.7, 0.5, 0.2]
 var enemy_grid: Dictionary = {}
+var next_projectile_enemy_id := 0
 var minimap_renderer: Node2D
 var minimap_timer := 0.0
 var minimap_view_size := Vector2.ZERO
@@ -1464,17 +1466,17 @@ func update_game(dt: float) -> void:
   var hit := false
   if bool(projectile.get("piercing", false)):
    if not projectile.has("base_damage"): projectile.base_damage = effective_damage()
-   var steps := maxi(1, ceili(previous_position.distance_to(projectile.pos) / 8.0))
-   for step in range(steps + 1):
-    var point := previous_position.lerp(projectile.pos, float(step) / steps)
-    var target := projectile_target(point, projectile.hit_enemies)
-    while target >= 0:
-     var enemy := enemies[target]
-     var multipliers := [1.0, 0.7, 0.5, 0.2]
-     var multiplier: float = multipliers[mini(projectile.hit_enemies.size(), 3)]
-     hit_with_spear(enemy, projectile.base_damage * multiplier)
-     projectile.hit_enemies.append(enemy)
-     target = projectile_target(point, projectile.hit_enemies)
+   if not projectile.has("hit_ids"):
+    projectile.hit_ids = {}
+    for enemy: Dictionary in projectile.hit_enemies:
+     projectile.hit_ids[projectile_enemy_id(enemy)] = true
+   for target: int in piercing_sweep_targets(previous_position, projectile.pos, projectile.hit_ids):
+    var enemy := enemies[target]
+    if enemy.hp <= 0 or not enemy_vulnerable(enemy): continue
+    var multiplier: float = PIERCING_DAMAGE_MULTIPLIERS[mini(projectile.hit_enemies.size(), 3)]
+    hit_with_spear(enemy, projectile.base_damage * multiplier)
+    projectile.hit_enemies.append(enemy)
+    projectile.hit_ids[projectile_enemy_id(enemy)] = true
   else:
    var target := projectile_target(projectile.pos)
    if target >= 0:
@@ -1511,6 +1513,11 @@ func update_game(dt: float) -> void:
    gems.remove_at(i)
  cards.update_pickups(dt)
  show_pending_level_up()
+
+func enemy_vulnerable(enemy: Dictionary) -> bool:
+ if enemy.get("obstacle", false): return bool(enemy.get("landed", false))
+ if enemy.get("species", "") == "pai_do_mato": return true
+ return not enemy.boss or MINHOCAO.vulnerable(enemy)
 
 func effective_speed() -> float:
  return speed * (1.2 if cards.active("furia") else 1.0)
@@ -1762,6 +1769,71 @@ func projectile_target(point: Vector2, excluded: Array = []) -> int:
     if enemy.hp <= 0 or (enemy.boss and not MINHOCAO.vulnerable(enemy)): continue
     if enemy_overlaps(enemy, point, 5): best = index
  return best if best < enemies.size() else -1
+
+func projectile_enemy_id(enemy: Dictionary) -> int:
+ # Array indices change after kills; keep a stable identity for in-flight spears.
+ if not enemy.has("projectile_id"):
+  enemy.projectile_id = next_projectile_enemy_id
+  next_projectile_enemy_id += 1
+ return enemy.projectile_id
+
+func piercing_targets(point: Vector2, hit_ids: Dictionary) -> Array[int]:
+ var targets: Array[int] = []
+ for index: int in piercing_candidates(point, point, hit_ids):
+  if enemy_overlaps(enemies[index], point, 5): targets.append(index)
+ return targets
+
+func piercing_sweep_targets(start: Vector2, end: Vector2, hit_ids: Dictionary) -> Array[int]:
+ if start == end: return piercing_targets(start, hit_ids)
+ var distance := start.distance_to(end)
+ var steps := maxi(1, ceili(distance / 8.0))
+ var direction := (end - start).normalized()
+ var stride := enemies.size() + 1
+ var events := PackedInt64Array()
+ for index: int in piercing_candidates(start, end, hit_ids):
+  var enemy := enemies[index]
+  var first := 0
+  var last := steps
+  if distance > 0.0001 and not enemy.get("obstacle", false):
+   var offset: Vector2 = enemy.pos - start
+   var projection := offset.dot(direction)
+   var perpendicular := offset - direction * projection
+   var reach: float = enemy.radius * (1.0 if enemy.boss else 1.42) + 5.0
+   var half_span := sqrt(maxf(0.0, reach * reach - perpendicular.length_squared()))
+   # Expand by one sample to guard against rounding at circle boundaries.
+   first = maxi(0, floori((projection - half_span) * steps / distance) - 1)
+   last = mini(steps, ceili((projection + half_span) * steps / distance) + 1)
+  for step in range(first, last + 1):
+   if enemy_overlaps(enemy, start.lerp(end, float(step) / steps), 5):
+    events.append(step * stride + index)
+    break
+ # Earliest sample first, then enemy order: identical damage and critical ordering.
+ events.sort()
+ var targets: Array[int] = []
+ for event in events: targets.append(event % stride)
+ return targets
+
+func piercing_candidates(start: Vector2, end: Vector2, hit_ids: Dictionary) -> Array[int]:
+ var first := Vector2i((start.min(end) / COLLISION_CELL_SIZE).floor()) - Vector2i.ONE
+ var last := Vector2i((start.max(end) / COLLISION_CELL_SIZE).floor()) + Vector2i.ONE
+ var targets: Array[int] = []
+ # Query the entire sweep once. Exact hits still use the original 8px samples.
+ for y in range(first.y, last.y + 1):
+  for x in range(first.x, last.x + 1):
+   for index: int in enemy_grid.get(Vector2i(x, y), []):
+    var enemy := enemies[index]
+    if hit_ids.has(projectile_enemy_id(enemy)): continue
+    if enemy.hp <= 0 or not enemy_vulnerable(enemy): continue
+    # Conservative circle rejects fish far from the trajectory before polygon work.
+    # Obstacles keep the grid bounds because their rotated silhouette is separate.
+    if not enemy.get("obstacle", false):
+     var reach: float = enemy.radius * (1.0 if enemy.boss else 1.42) + 5.0
+     var closest := Geometry2D.get_closest_point_to_segment(enemy.pos, start, end)
+     if Vector2(enemy.pos).distance_squared_to(closest) > reach * reach: continue
+    targets.append(index)
+ # Preserve the existing hit order and therefore damage tiers and critical rolls.
+ targets.sort()
+ return targets
 
 func enemy_overlaps(enemy: Dictionary, point: Vector2, padding: float) -> bool:
  if enemy.boss:
