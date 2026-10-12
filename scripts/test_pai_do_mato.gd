@@ -17,6 +17,12 @@ func run() -> void:
    game.spawn_endless_bosses()
    assert(game.endless_wave == wave)
    assert(game.enemies.size() == (wave if wave <= 5 else wave - 5))
+   var expected_arrival: String
+   if wave >= 6:
+    expected_arrival = "O PAI DO MATO DESPERTOU!" if wave == 6 else "OS PAIS DO MATO DESPERTARAM!"
+   else:
+    expected_arrival = "O MINHOCÃO DESPERTOU!" if wave == 1 else "OS MINHOCÕES DESPERTARAM!"
+   assert(game.boss_arrival_label.text == expected_arrival)
    for boss in game.enemies:
     assert(boss.get("species", "") == ("pai_do_mato" if wave >= 6 else ""))
     assert(boss.max_hp == (640000 if wave >= 6 else 32000))

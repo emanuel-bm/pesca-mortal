@@ -1707,7 +1707,7 @@ func spawn_endless_bosses() -> void:
  while elapsed >= next_boss_time:
   endless_wave += 1
   var count := endless_wave if endless_wave < 6 else endless_wave - 5
-  for index in count: spawn_enemy(true, "pai_do_mato" if endless_wave >= 6 else "")
+  for index in count: spawn_enemy(true, "pai_do_mato" if endless_wave >= 6 else "", count)
   boss_spawned = true
   next_boss_time += ENDLESS_BOSS_INTERVAL
 
@@ -2157,7 +2157,7 @@ func enemy_spawn_position() -> Vector2:
   if player.distance_squared_to(corner) > player.distance_squared_to(farthest): farthest = corner
  return player.move_toward(farthest, ENEMY_SPAWN_DISTANCE)
 
-func spawn_enemy(boss: bool, species: String = "") -> void:
+func spawn_enemy(boss: bool, species: String = "", arrival_count: int = 1) -> void:
  var position := enemy_spawn_position()
  if not boss and species.is_empty(): species = roll_fish_species()
  var tank := not boss and species == "pintado"
@@ -2205,10 +2205,13 @@ func spawn_enemy(boss: bool, species: String = "") -> void:
  enemies.append(enemy)
  if boss:
   sounds.announce_boss("pai_do_mato" if enemy.get("species", "") == "pai_do_mato" else "boss")
-  announce_boss_arrival(enemy)
+  announce_boss_arrival(enemy, arrival_count)
 
-func announce_boss_arrival(enemy: Dictionary) -> void:
- boss_arrival_label.text = "O PAI DO MATO DESPERTOU!" if enemy.get("species", "") == "pai_do_mato" else "O MINHOCAO DESPERTOU!"
+func announce_boss_arrival(enemy: Dictionary, count: int = 1) -> void:
+ if enemy.get("species", "") == "pai_do_mato":
+  boss_arrival_label.text = "OS PAIS DO MATO DESPERTARAM!" if count > 1 else "O PAI DO MATO DESPERTOU!"
+ else:
+  boss_arrival_label.text = "OS MINHOCÕES DESPERTARAM!" if count > 1 else "O MINHOCÃO DESPERTOU!"
  boss_arrival_timer = BOSS_ARRIVAL_DURATION
  boss_shake_timer = BOSS_SHAKE_DURATION
  update_boss_arrival(0.0)
