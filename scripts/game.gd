@@ -1550,6 +1550,10 @@ func update_game(dt: float) -> void:
    continue
   if enemy.get("species", "") == "pai_do_mato":
    var attack: String = PAI_DO_MATO.update(enemy, dt, player, ARENA, Rect2(camera_offset(), get_viewport_rect().size))
+   var forest_destination: Vector2 = enemy.pos + boss_separation_offset(enemy_index, dt)
+   enemy.pos = old_position
+   move_enemy_if_free(enemy_index, forest_destination)
+   if enemy.phase in ["hand_warning", "hand_impact"]: enemy.target = enemy.pos + enemy.hand_offset
    execute_forest_attack(enemy, attack)
    if state != "playing": return
    if enemy_overlaps(enemy, player, 14): receive_hit(enemy.contact, enemy.pos, enemy, "Contato")
@@ -1578,7 +1582,7 @@ func update_game(dt: float) -> void:
   enemy.pos = old_position
   if enemy.boss:
    if special_boss_movement: enemy.pos = desired_position
-   else: move_enemy_if_free(enemy_index, desired_position)
+   else: move_enemy_if_free(enemy_index, desired_position + boss_separation_offset(enemy_index, dt))
   else: pursue_player(enemy_index, dt)
   if invulnerability <= 0 and enemy_overlaps(enemy, player, 14):
    var health_before := health
@@ -1667,7 +1671,7 @@ func execute_forest_attack(enemy: Dictionary, attack: String) -> void:
    if PAI_DO_MATO.hand_hits(enemy, player): receive_hit(PAI_DO_MATO.HAND_DAMAGE * float(enemy.get("stat_multiplier", 1.0)), enemy.target, enemy, "Mãozona")
   "log":
    sounds.play_effect("pai_log_throw", 1.0, 1.0)
-   var hp: float = enemy.max_hp * 0.5
+   var hp: float = PAI_DO_MATO.LOG_HEALTH
    enemies.append({"pos": enemy.pos, "start": enemy.pos, "target": enemy.target, "angle": (Vector2(enemy.target) - Vector2(enemy.pos)).angle(), "shapes": PAI_DO_MATO.log_shapes(log_art), "flight": 0.0, "landed": false, "hp": hp, "max_hp": hp, "radius": PAI_DO_MATO.LOG_SIZE.length() / 2, "speed": 0.0, "contact": 0.0, "flight_damage": PAI_DO_MATO.LOG_DAMAGE * float(enemy.get("stat_multiplier", 1.0)), "attacker": enemy, "flight_hit": false, "boss": false, "tank": false, "species": "tronco", "obstacle": true, "flash": 0.0, "display_name": "Tronco"})
 
 func update_log(log: Dictionary, dt: float) -> void:
@@ -1823,8 +1827,15 @@ func update_minute_buffs() -> void:
   enemy.buff_minute = minute
 
 func separation_radius(enemy: Dictionary) -> float:
- # Boss sprite is 140 px wide; fish sprites use radius * 2.
+ # Forest boss sprite is 220 px wide; worm is 140 px; fish use radius * 2.
+ if enemy.get("species", "") == "pai_do_mato": return 110.0 * ENEMY_SEPARATION_SCALE
  return (70.0 if enemy.boss else float(enemy.radius)) * ENEMY_SEPARATION_SCALE
+
+func boss_separation_offset(index: int, dt: float) -> Vector2:
+ var enemy: Dictionary = enemies[index]
+ var direction: Vector2 = (player - enemy.pos).normalized()
+ var multiplier := 2.0 if enemy.get("species", "") == "pai_do_mato" else 1.0
+ return crowd_separation(index, direction) * enemy.speed * 1.4 * multiplier * dt
 
 func update_crowd_snapshot(dt: float) -> void:
  crowd_refresh_timer -= dt
@@ -2697,6 +2708,13 @@ func _draw() -> void:
    draw_set_transform(position, float(enemy.get("angle", 0.0)), Vector2(-1, 1))
    if not log_art.is_empty(): draw_texture_rect_region(log_art.texture, Rect2(-PAI_DO_MATO.LOG_SIZE / 2, PAI_DO_MATO.LOG_SIZE), Rect2(log_art.region), Color.WHITE if enemy.flash <= 0 else Color(1.7, 1.7, 1.7))
    draw_set_transform(Vector2.ZERO)
+   if enemy.get("landed", false) and enemy.hp > 0:
+    var angle: float = enemy.get("angle", 0.0)
+    var bottom := (absf(sin(angle)) * PAI_DO_MATO.LOG_HITBOX_SIZE.x + absf(cos(angle)) * PAI_DO_MATO.LOG_HITBOX_SIZE.y) / 2.0
+    var bar_position := (position + Vector2(-24, bottom + 2)).round()
+    draw_rect(Rect2(bar_position - Vector2.ONE, Vector2(50, 6)), Color(0.05, 0.04, 0.08))
+    draw_rect(Rect2(bar_position, Vector2(48, 4)), Color(0.2, 0.1, 0.25))
+    draw_rect(Rect2(bar_position, Vector2(48 * clampf(enemy.hp / enemy.max_hp, 0, 1), 4)), Color(0.3, 0.8, 0.25))
    continue
   if enemy.get("species", "") == "pai_do_mato":
    PAI_DO_MATO.draw(self, enemy, offset, pai_do_mato_art)

@@ -43,5 +43,29 @@ func run() -> void:
  assert(game.crowd_separation(1, Vector2.RIGHT) != Vector2.ZERO, "Bosses still repel bosses")
  assert(game.crowd_neighbors(1, Vector2(501, 500)).size() == 1)
  assert(not game.move_enemy_if_free(1, Vector2(501, 500)), "Boss must block boss")
- print("BOSS SEPARATION PASS: mixed groups ignored; same-group forces and boss blocking preserved")
+ game.enemies.clear()
+ game.training.act("pai_do_mato")
+ var forest_boss: Dictionary = game.enemies[0]
+ game.enemies.append(forest_boss.duplicate(true))
+ game.player = Vector2(1400, 900)
+ for boss: Dictionary in game.enemies:
+  boss.pos = Vector2(900, 900)
+  boss.phase = "approach"
+  boss.timer = 10.0
+ game.rebuild_crowd_grid()
+ var forest_force: Vector2 = game.boss_separation_offset(0, 0.1)
+ forest_boss.species = ""
+ var worm_force: Vector2 = game.boss_separation_offset(0, 0.1)
+ forest_boss.species = "pai_do_mato"
+ assert(forest_force.is_equal_approx(worm_force * 2.0), "Forest repulsion must be twice the worm baseline at equal speed and pressure")
+ game.update_game(0.1)
+ assert(game.enemies[0].pos.distance_to(game.enemies[1].pos) > 1.0, "Overlapping forest bosses must actively separate")
+ for boss: Dictionary in game.enemies:
+  boss.pos = Vector2(900, 900)
+  boss.phase = "log_warning"
+  boss.timer = 10.0
+ game.rebuild_crowd_grid()
+ game.update_game(0.1)
+ assert(game.enemies[0].pos.distance_to(game.enemies[1].pos) > 1.0, "Log preparation must still allow repulsion")
+ print("BOSS SEPARATION PASS: mixed groups ignored; same-group forces and boss blocking preserved; forest bosses separate")
  quit()

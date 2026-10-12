@@ -112,7 +112,7 @@ func run() -> void:
  boss.target = Vector2(1200, 900)
  game.execute_forest_attack(boss, "log")
  var log: Dictionary = game.enemies.back()
- assert(log.hp == 400000 and log.contact == 0 and not log.landed)
+ assert(log.hp == 200000 and log.contact == 0 and not log.landed)
  hp = game.health
  game.update_log(log, 0.65)
  assert(log.landed and game.health == hp)
@@ -129,14 +129,14 @@ func run() -> void:
  game.elapsed = 120
  game.update_minute_buffs()
  game.buff_endless_enemies()
- assert(log.hp == 400000 and log.max_hp == 400000, "Log health remains fixed at throw time")
+ assert(log.hp == 200000 and log.max_hp == 200000, "Log health stays at 200000 regardless of boss health and buffs")
  boss.hp = 0
  game.spawn_timer = 10000
  game.attack_timer = 10000
  game.update_game(0)
  assert(game.enemies.has(log), "Log must outlive its parent boss")
  var reward_count: int = game.gems.size()
- game.hit_with_spear(log, 400000)
+ game.hit_with_spear(log, 200000)
  game.spawn_timer = 10000
  game.attack_timer = 10000
  game.enemies.erase(boss)
