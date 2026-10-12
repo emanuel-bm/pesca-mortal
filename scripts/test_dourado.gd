@@ -60,8 +60,6 @@ func run() -> void:
  assert(fish.phase == "dash")
  game.DOURADO.update(fish, game.DOURADO.DASH_BASE_DISTANCE / game.DOURADO.DASH_SPEED + 0.001, game.player + Vector2(0, 200), game.ARENA)
  assert(fish.phase == "recovery" and is_equal_approx(fish.pos.y, start.y))
- assert(fish.cooldown >= 1.0 and fish.cooldown <= 3.0)
- fish.cooldown = 3.0
  assert(is_equal_approx(fish.pos.x - start.x, game.DOURADO.DASH_BASE_DISTANCE))
  assert(is_equal_approx(fish.pos.x - start.x, 159.705), "Dash distance is reduced by 35 percent without changing speed")
  start = fish.pos
@@ -70,10 +68,8 @@ func run() -> void:
  game.DOURADO.update(fish, 0.25, game.player, game.ARENA)
  assert(fish.phase == "approach")
  fish.pos = game.player - Vector2(100, 0)
- game.DOURADO.update(fish, 1.0, game.player, game.ARENA)
- assert(fish.phase == "approach", "Cannot prepare another dash before cooldown ends")
- game.DOURADO.update(fish, 1.25, game.player, game.ARENA)
- assert(fish.phase == "warning", "Can attack when cooldown ends")
+ game.DOURADO.update(fish, 0.0, game.player, game.ARENA)
+ assert(fish.phase == "warning", "Can prepare another dash immediately after recovery")
  game.DOURADO.initialize(fish)
  fish.stat_multiplier = 2.0
  fish.pos = game.player - Vector2(100, 0)

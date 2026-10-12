@@ -7,13 +7,10 @@ const RECOVERY_TIME := 0.75
 const DASH_SPEED := 1400.0
 const PREDICTION_TIME := 0.5
 const BASE_HEALTH := 200.0
-const COOLDOWN_MIN := 1.0
-const COOLDOWN_MAX := 3.0
 
 static func initialize(enemy: Dictionary) -> void:
  enemy.phase = "approach"
  enemy.timer = 0.0
- enemy.cooldown = 0.0
  enemy.dash_direction = Vector2.RIGHT
  enemy.erase("dash_distance")
  enemy.erase("dash_remaining")
@@ -26,12 +23,11 @@ static func dash_range(enemy: Dictionary) -> float:
 
 static func update(enemy: Dictionary, dt: float, player: Vector2, arena: Vector2, player_velocity: Vector2 = Vector2.ZERO) -> void:
  var direction: Vector2 = player - enemy.pos
- enemy.cooldown = maxf(0.0, float(enemy.get("cooldown", 0.0)) - dt)
  match enemy.phase:
   "approach":
    enemy.pos = enemy.pos.move_toward(player, enemy.speed * dt)
    enemy.facing_left = direction.x < 0
-   if enemy.pos.distance_to(player) <= dash_range(enemy) * TRIGGER_RANGE_RATIO and enemy.cooldown <= 0:
+   if enemy.pos.distance_to(player) <= dash_range(enemy) * TRIGGER_RANGE_RATIO:
     enemy.phase = "warning"
     enemy.dash_distance = dash_range(enemy)
     enemy.timer = WARNING_TIME
@@ -51,7 +47,6 @@ static func update(enemy: Dictionary, dt: float, player: Vector2, arena: Vector2
    if enemy.dash_remaining <= 0:
     enemy.phase = "recovery"
     enemy.timer = RECOVERY_TIME
-    enemy.cooldown = randf_range(COOLDOWN_MIN, COOLDOWN_MAX)
   "recovery":
    enemy.timer -= dt
    if enemy.timer <= 0: enemy.phase = "approach"

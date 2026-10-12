@@ -1901,7 +1901,7 @@ func buff_endless_enemies() -> void:
   enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * 1.05
 
 func fish_minute_multiplier(species: String = "") -> float:
- return 1.05 if species == "dourado" else 1.08
+ return 1.08
 
 func fish_stat_multiplier(species: String = "") -> float:
  return pow(1.08, floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
@@ -2389,8 +2389,6 @@ func spawn_enemy(boss: bool, species: String = "", arrival_count: int = 1) -> vo
   multiplier = fish_stat_multiplier(species)
   enemy.buff_minute = floori(elapsed / 60.0)
  enemy["stat_multiplier"] = multiplier
- if is_dourado:
-  enemy.stat_multiplier = pow(1.05, floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
  var health_multiplier: float = pow(MINHOCAO.ENDLESS_HEALTH_GROWTH, bosses_defeated) if boss and species != "pai_do_mato" and run_mode == "endless" else multiplier
  for stat in ["hp", "max_hp"]: enemy[stat] *= health_multiplier
  enemy.speed *= multiplier if boss else fish_speed_multiplier()

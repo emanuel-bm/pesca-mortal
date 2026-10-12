@@ -148,10 +148,9 @@ no início do aviso e limitada à arena. Avança a 1.400 pixels/s por 159,705 pi
 antes dos buffs por minuto e por chefão. Emite partículas de água durante o preparo
 e ao longo de todo o percurso. Inicia o preparo a até 70% do alcance
 atual da arrancada; esse limite cresce junto com os buffs. Descansa
-por 0,75 segundo. Ao terminar cada arrancada, sorteia um cooldown de 1 a 3
-segundos antes de poder preparar outra; o descanso conta dentro desse tempo.
-Depois do descanso, volta a nadar enquanto aguarda. Tem 200 de vida base, 15 de dano e dá
-8 XP; recebe +8% de vida e velocidade, +4% de dano e +5% de velocidade da arrancada por minuto, além de +5% por chefão no infinito.
+por 0,75 segundo. Depois do descanso, pode preparar outra arrancada assim que
+estiver dentro do alcance de preparo, sem cooldown adicional. Tem 200 de vida base, 15 de dano e dá
+8 XP; recebe +8% de vida, velocidade de nado e alcance da arrancada por minuto, +4% de dano, além de +5% por chefão no infinito. A velocidade da arrancada permanece fixa.
 Na sala de treino, **F10** invoca 10 dourados ao redor da canoa.
 
 Distribuição por surgimento automático (um único sorteio):
@@ -211,7 +210,7 @@ a 100 pixels/s. A cada minuto completo de jogo, os peixes vivos recebem
 +8% de vida atual, vida máxima e velocidade, e +4% de dano, de forma multiplicativa.
 Novos peixes herdam todos os minutos completos: vida e velocidade base × 1,08 elevado
 ao número de minutos; dano base × 1,04 elevado ao número de minutos.
-A arrancada do dourado mantém 1.400 pixels/s; seu alcance cresce +5% por minuto,
+A arrancada do dourado mantém 1.400 pixels/s; seu alcance cresce +8% por minuto,
 sem teto. A investida avança a cada frame até esgotar a distância restante,
 sem calcular duração; dobrar o alcance naturalmente dobra o tempo do percurso.
 No infinito, os +5% por chefão morto se multiplicam com esses bônus. Chefões
