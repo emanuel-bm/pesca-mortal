@@ -258,14 +258,15 @@ A faixa eletrônica permanece até o fim da partida,
 inclusive após derrotar chefes, durante pausas e escolhas de melhorias.
 Novos chefes não reiniciam a música. Voltar ao menu ou reiniciar a partida restaura
 a faixa calma. Ambas têm 30 segundos em loop contínuo.
-O controle **Música** nas configurações
-ajusta seu volume independentemente dos efeitos; **Geral** também afeta a trilha.
-**Rugido do Minhocão** tem volume próprio e botão Ouvir nas configurações.
+As configurações de áudio têm cinco controles: **Geral**, **Música**, **Chefões**,
+**Inimigos** e **Personagem**. Geral afeta todos os sons; Música controla as
+trilhas; Chefões controla os sons do Minhocão e do Pai do Mato. Inimigos controla
+somente peixes mergulhando. Personagem controla lança, dano recebido, cartas e
+subida de nível.
 O primeiro ataque de cada Minhocão sempre segue a sequência de marcação,
 aviso e emergência do solo; após a primeira exposição, os ataques voltam a
 ser escolhidos aleatoriamente. Cada emergência toca um impacto de terra/água,
-e cada investida em linha toca um som grave de deslocamento de ar. Esses efeitos
-têm controles próprios de volume e prévia nas configurações.
+e cada investida em linha toca um som grave de deslocamento de ar.
 Cada nova onda de chefes anuncia o surgimento com um rugido, sem sobrepor
 sons de chefes que aparecem juntos nem reiniciar a música de batalha.
 Composições reproduzíveis em `assets/audio/compose_theme.py` e

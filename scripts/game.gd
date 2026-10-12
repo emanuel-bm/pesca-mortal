@@ -1308,11 +1308,6 @@ func show_settings() -> void:
    sounds.set_volume(id, value / 100.0)
    amount.text = "%d%%" % value
   )
-  if id not in ["master", "music"]:
-   var preview := Button.new()
-   preview.text = "Ouvir"
-   preview.pressed.connect(sounds.play_effect.bind(id, 1.0, 1.0))
-   row.add_child(preview)
   panel.add_child(row)
  var actions := HBoxContainer.new()
  actions.add_theme_constant_override("separation", 14)

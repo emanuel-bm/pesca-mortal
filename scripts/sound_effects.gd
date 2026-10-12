@@ -22,11 +22,12 @@ var music_gain := 1.0
 var outgoing_music_gain := 0.0
 var music_clock := 0.0
 var focus_paused := false
-const VOLUME_NAMES := {"master": "Geral", "music": "Música", "boss": "Sons do Minhocão", "pai_do_mato": "Sons do Pai do Mato", "shot": "Lança", "death": "Peixes mergulhando", "hurt": "Dano recebido", "level": "Subida de nível", "cards": "Cartas"}
+const VOLUME_NAMES := {"master": "Geral", "music": "Música", "bosses": "Chefões", "enemies": "Inimigos", "character": "Personagem"}
 const MAX_EFFECT_VOLUME := {"boss": 0.65, "pai_do_mato": 0.65, "pai_log_throw": 0.45, "pai_log_splash": 0.5, "pai_hand": 0.65, "boss_death": 0.65, "emerge": 0.5, "dash": 0.45, "shot": 0.5, "death": 0.2, "hurt": 1.0, "level": 0.55, "card_ima": 0.4, "card_furia": 0.4, "card_intangivel": 0.4, "card_perfurante": 0.4}
-const VOLUME_VERSION := 2
+const VOLUME_VERSION := 3
+const LEGACY_VOLUME_VERSION := 2
 const FOREST_AUDIO := {"pai_do_mato": "pai_roar_v1", "pai_log_throw": "pai_log_throw_v1", "pai_log_splash": "pai_log_splash_v1", "pai_hand": "pai_hand_slap_v3"}
-var volumes := {"master": 1.0, "music": 0.7, "boss": 0.8, "pai_do_mato": 0.8, "shot": 1.0, "death": 1.0, "hurt": 1.0, "level": 1.0, "cards": 1.0}
+var volumes := {"master": 1.0, "music": 0.7, "bosses": 0.8, "enemies": 1.0, "character": 1.0}
 
 func _ready() -> void:
  random.randomize()
@@ -65,8 +66,28 @@ func _ready() -> void:
 
 func load_volumes() -> void:
  var config := ConfigFile.new()
- if config.load("user://audio.cfg") == OK and int(config.get_value("audio", "version", 1)) == VOLUME_VERSION:
-  for id in volumes: volumes[id] = clampf(float(config.get_value("audio", id, volumes[id])), 0.0, 1.0)
+ if config.load("user://audio.cfg") == OK:
+  var version := int(config.get_value("audio", "version", 1))
+  if version == VOLUME_VERSION:
+   for id in volumes: volumes[id] = clampf(float(config.get_value("audio", id, volumes[id])), 0.0, 1.0)
+  elif version == LEGACY_VOLUME_VERSION:
+   volumes.master = clampf(float(config.get_value("audio", "master", volumes.master)), 0.0, 1.0)
+   volumes.music = clampf(float(config.get_value("audio", "music", volumes.music)), 0.0, 1.0)
+   volumes.bosses = minf(
+    clampf(float(config.get_value("audio", "boss", 0.8)), 0.0, 1.0),
+    clampf(float(config.get_value("audio", "pai_do_mato", 0.8)), 0.0, 1.0)
+   )
+   volumes.enemies = clampf(float(config.get_value("audio", "death", 1.0)), 0.0, 1.0)
+   volumes.character = minf(
+    minf(
+     clampf(float(config.get_value("audio", "shot", 1.0)), 0.0, 1.0),
+     clampf(float(config.get_value("audio", "hurt", 1.0)), 0.0, 1.0)
+    ),
+    minf(
+     clampf(float(config.get_value("audio", "level", 1.0)), 0.0, 1.0),
+     clampf(float(config.get_value("audio", "cards", 1.0)), 0.0, 1.0)
+    )
+   )
  apply_volumes()
  save_volumes()
 
@@ -165,9 +186,10 @@ func update_music(delta: float) -> void:
  apply_music_volume()
 
 func volume_group(id: String) -> String:
- if FOREST_AUDIO.has(id): return "pai_do_mato"
- if id.begins_with("card_"): return "cards"
- return "boss" if id in ["boss", "boss_death", "emerge", "dash"] else id
+ if id == "music": return "music"
+ if id in ["boss", "boss_death", "emerge", "dash"] or FOREST_AUDIO.has(id): return "bosses"
+ if id == "death": return "enemies"
+ return "character"
 
 func effect_enabled(id: String) -> bool:
  return volumes.master > 0.0 and volumes[volume_group(id)] > 0.0

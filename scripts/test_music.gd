@@ -15,6 +15,9 @@ func run() -> void:
   assert(stream.loop_mode == AudioStreamWAV.LOOP_FORWARD)
   assert(stream.loop_begin == 0 and stream.loop_end == 1323000)
  sounds.volumes.master = 1.0
+ sounds.volumes.character = 1.0
+ sounds.volumes.enemies = 1.0
+ sounds.volumes.bosses = 1.0
  sounds.volumes.music = 0.7
  sounds.apply_volumes()
  assert(is_equal_approx(music.volume_linear, 0.315))
@@ -93,7 +96,7 @@ func run() -> void:
  # Two-second roar, synchronized music trigger, independent simultaneous-boss roars.
  assert(is_equal_approx(sounds.players.boss.stream.get_length(), 2.0))
  sounds.volumes.master = 1.0
- sounds.volumes.boss = 1.0
+ sounds.volumes.bosses = 1.0
  sounds.announce_boss()
  assert(sounds.music_track == "battle" and sounds.transition_remaining == 4.0)
  var announcement_time: int = sounds.last_boss_ms
@@ -101,12 +104,12 @@ func run() -> void:
  assert(sounds.pending_roars.size() == 1 and sounds.roar_voices.size() == 1)
  announcement_time = sounds.last_boss_ms
  sounds.players.boss.play()
- sounds.volumes.boss = 0.0
+ sounds.volumes.bosses = 0.0
  sounds.apply_volumes()
  assert(not sounds.players.boss.playing)
  sounds.announce_boss()
  assert(sounds.last_boss_ms == announcement_time)
- sounds.volumes.boss = 1.0
+ sounds.volumes.bosses = 1.0
  sounds.volumes.master = 0.0
  sounds.players.boss.play()
  sounds.apply_volumes()
@@ -170,6 +173,12 @@ func check_game_music() -> void:
    sounds.set_volume("music", original)
    found = true
  assert(found, "Settings must expose a music volume slider")
+ var expected_audio_controls := ["Geral", "Música", "Chefões", "Inimigos", "Personagem"]
+ var visible_audio_controls: Array[String] = []
+ for child in game.panel.get_children():
+  if child is HBoxContainer and child.get_child_count() > 1 and child.get_child(0) is Label and child.get_child(1) is HSlider and child.get_child(0).text != "Limite de FPS":
+   visible_audio_controls.append(child.get_child(0).text)
+ assert(visible_audio_controls == expected_audio_controls, "Settings must expose only the five audio controls")
  game.show_menu()
  assert(sounds.music_track == "calm" and not sounds.battle_requested)
  game.start_run("endless")
