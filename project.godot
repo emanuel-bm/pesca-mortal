@@ -14,11 +14,13 @@ config/name="Pesca Mortal — Protótipo"
 config/version="0.4.1"
 run/main_scene="res://startup.tscn"
 config/features=PackedStringArray("4.7")
+run/max_fps=360
 config/icon="res://assets/pesca-mortal-icon.png"
 config/windows_native_icon="res://assets/pesca-mortal-icon.ico"
 
 [display]
 
+window/vsync/vsync_mode=0
 window/size/viewport_height=720
 window/size/window_width_override=1152
 window/size/window_height_override=720

@@ -63,6 +63,10 @@ func run() -> void:
  await key(KEY_DOWN)
  check(root.gui_get_focus_owner() == game.quality_picker, "Seta deve avançar entre seletores")
  await key(KEY_DOWN)
+ check(root.gui_get_focus_owner() == game.fps_limit_slider, "Seta deve alcançar limite de FPS")
+ await key(KEY_DOWN)
+ check(root.gui_get_focus_owner() == game.fps_limit_input.get_line_edit(), "Seta deve alcançar campo de FPS")
+ await key(KEY_DOWN)
  check(root.gui_get_focus_owner() == game.fullscreen_toggle, "Seta deve selecionar interruptores")
  var toggled: bool = game.fullscreen_toggle.button_pressed
  await key(KEY_ENTER)

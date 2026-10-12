@@ -147,6 +147,11 @@ var settings_return := "menu"
 var resolution_picker: OptionButton
 var fullscreen_toggle: CheckButton
 var show_fps := false
+const FPS_MIN := 60
+const FPS_MAX := 360
+var fps_limit := FPS_MAX
+var fps_limit_slider: HSlider
+var fps_limit_input: SpinBox
 var quality_picker: OptionButton
 var character_quality = preload("res://scripts/character_quality.gd").new()
 var graphics_quality := 2
@@ -530,7 +535,10 @@ func style_menu_button(item: Button) -> void:
  item.add_theme_stylebox_override("pressed", normal if item.toggle_mode else highlight)
 
 func collect_menu_controls(parent: Node) -> void:
- for child in parent.get_children():
+ var children := parent.get_children()
+ if parent is SpinBox:
+  children = [parent.get_line_edit()]
+ for child in children:
   if child is BaseButton or child is Slider or child is LineEdit:
    child.focus_mode = Control.FOCUS_ALL
    menu_controls.append(child)
@@ -1139,13 +1147,18 @@ func load_display_settings() -> void:
   if saved in RESOLUTIONS: selected_resolution = saved
   fullscreen = bool(config.get_value("display", "fullscreen", false))
   show_fps = bool(config.get_value("display", "show_fps", false))
+  var saved_fps := int(config.get_value("display", "fps_limit", FPS_MAX))
+  fps_limit = FPS_MAX if saved_fps <= 0 else clampi(saved_fps, FPS_MIN, FPS_MAX)
   graphics_quality = clampi(int(config.get_value("display", "quality", 2)), 0, 2)
  apply_graphics_quality()
  apply_display_settings(false)
 
 func apply_display_settings(save: bool = true) -> void:
  var window := get_window()
+ fps_limit = clampi(fps_limit, FPS_MIN, FPS_MAX)
+ Engine.max_fps = fps_limit
  window.mode = Window.MODE_FULLSCREEN if fullscreen else Window.MODE_WINDOWED
+ DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED, window.get_window_id())
  if not fullscreen:
   var usable := DisplayServer.screen_get_usable_rect(window.current_screen)
   var target := selected_resolution
@@ -1158,6 +1171,7 @@ func apply_display_settings(save: bool = true) -> void:
   config.set_value("display", "resolution", selected_resolution)
   config.set_value("display", "fullscreen", fullscreen)
   config.set_value("display", "show_fps", show_fps)
+  config.set_value("display", "fps_limit", fps_limit)
   config.set_value("display", "quality", graphics_quality)
   config.save("user://display.cfg")
 
@@ -1194,6 +1208,30 @@ func show_settings() -> void:
   quality_picker.add_item(quality_name)
  quality_picker.select(graphics_quality)
  panel.add_child(quality_picker)
+ var fps_row := HBoxContainer.new()
+ var fps_title := Label.new()
+ fps_title.text = "Limite de FPS"
+ fps_title.custom_minimum_size.x = 208
+ fps_title.add_theme_font_size_override("font_size", 24)
+ fps_row.add_child(fps_title)
+ fps_limit_slider = HSlider.new()
+ fps_limit_slider.min_value = FPS_MIN
+ fps_limit_slider.max_value = FPS_MAX
+ fps_limit_slider.step = 1
+ fps_limit_slider.value = fps_limit
+ fps_limit_slider.custom_minimum_size = Vector2(140, 24)
+ fps_limit_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ fps_row.add_child(fps_limit_slider)
+ fps_limit_input = SpinBox.new()
+ fps_limit_input.min_value = FPS_MIN
+ fps_limit_input.max_value = FPS_MAX
+ fps_limit_input.step = 1
+ fps_limit_input.value = fps_limit
+ fps_limit_input.custom_minimum_size.x = 100
+ fps_row.add_child(fps_limit_input)
+ fps_limit_slider.value_changed.connect(func(value: float): fps_limit_input.set_value_no_signal(value))
+ fps_limit_input.value_changed.connect(func(value: float): fps_limit_slider.set_value_no_signal(value))
+ panel.add_child(fps_row)
  fullscreen_toggle = CheckButton.new()
  fullscreen_toggle.text = "Tela cheia (resolução do monitor)"
  fullscreen_toggle.button_pressed = fullscreen
@@ -1249,6 +1287,8 @@ func save_settings_from_ui() -> void:
  selected_resolution = RESOLUTIONS[resolution_picker.selected]
  fullscreen = fullscreen_toggle.button_pressed
  show_fps = fps_toggle.button_pressed
+ fps_limit_input.apply()
+ fps_limit = int(fps_limit_input.value)
  apply_display_settings()
  leave_settings()
 

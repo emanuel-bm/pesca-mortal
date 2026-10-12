@@ -183,6 +183,9 @@ As preferências ficam em `user://display.cfg`; a janela inicial é limitada à
 área útil do monitor. A interface centraliza e escala ao redimensionar a janela.
 Resoluções disponíveis até QHD (2560 × 1440) e 4K (3840 × 2160).
 O contador de FPS pode ser ativado nas configurações e aparece no canto superior direito.
+O FPS é limitado a 360 por padrão, com VSync desativado para não acompanhar a frequência
+do monitor. O slider de FPS e o campo numérico à direita permitem salvar qualquer limite
+inteiro entre 60 e 360 FPS.
 Tela cheia utiliza a resolução do monitor; em janela, tamanhos maiores que a área útil são limitados.
 
 A chegada do Minhocão mostra um aviso roxo e um breve tremor da arena.
