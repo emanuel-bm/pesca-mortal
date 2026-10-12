@@ -23,10 +23,10 @@ var outgoing_music_gain := 0.0
 var music_clock := 0.0
 var focus_paused := false
 const VOLUME_NAMES := {"master": "Geral", "music": "Música", "bosses": "Chefões", "enemies": "Inimigos", "character": "Personagem"}
-const MAX_EFFECT_VOLUME := {"boss": 0.65, "pai_do_mato": 0.65, "pai_log_throw": 0.45, "pai_log_splash": 0.5, "pai_hand": 0.65, "boss_death": 0.65, "emerge": 0.5, "dash": 0.45, "shot": 0.5, "death": 0.2, "hurt": 1.0, "level": 0.55, "card_ima": 0.4, "card_furia": 0.4, "card_intangivel": 0.4, "card_perfurante": 0.4}
+const MAX_EFFECT_VOLUME := {"boss": 0.65, "pai_do_mato": 0.65, "pai_log_throw": 0.45, "pai_log_splash": 0.5, "pai_hand": 0.65, "boss_death": 0.65, "pai_death": 0.65, "pai_log_break": 0.5, "emerge": 0.5, "dash": 0.45, "shot": 0.5, "death": 0.2, "hurt": 1.0, "level": 0.55, "card_ima": 0.4, "card_furia": 0.4, "card_intangivel": 0.4, "card_perfurante": 0.4}
 const VOLUME_VERSION := 3
 const LEGACY_VOLUME_VERSION := 2
-const FOREST_AUDIO := {"pai_do_mato": "pai_roar_v1", "pai_log_throw": "pai_log_throw_v1", "pai_log_splash": "pai_log_splash_v1", "pai_hand": "pai_hand_slap_v3"}
+const FOREST_AUDIO := {"pai_do_mato": "pai_roar_v1", "pai_death": "pai_death_v1", "pai_log_break": "pai_log_break_v1", "pai_log_throw": "pai_log_throw_v1", "pai_log_splash": "pai_log_splash_v1", "pai_hand": "pai_hand_slap_v3"}
 var volumes := {"master": 1.0, "music": 0.7, "bosses": 0.8, "enemies": 1.0, "character": 1.0}
 
 func _ready() -> void:
@@ -225,8 +225,8 @@ func play_boss_emergence() -> void:
 func play_boss_dash() -> void:
  play_effect("dash", 0.98, 1.02)
 
-func play_boss_death() -> void:
- play_effect("boss_death", 1.0, 1.0)
+func play_boss_death(species: String = "") -> void:
+ play_effect("pai_death" if species == "pai_do_mato" else "boss_death", 1.0, 1.0)
 
 func announce_boss(id: String = "boss") -> void:
  request_battle_music()

@@ -1721,11 +1721,12 @@ func update_game(dt: float) -> void:
   enemy.flash = maxf(0, enemy.flash - dt)
   if enemy.hp <= 0:
    if enemy.get("obstacle", false):
+    sounds.play_effect("pai_log_break", 0.96, 1.04)
     enemies.remove_at(i)
     continue
-   if enemy.boss: sounds.play_boss_death()
+   if enemy.boss: sounds.play_boss_death(enemy.get("species", ""))
    else: sounds.play_death()
-   gems.append({"pos": enemy.pos, "xp": enemy_xp_reward(enemy), "giant": enemy.boss})
+   gems.append({"pos": enemy.pos, "xp": enemy_xp_reward(enemy), "giant": enemy.boss, "kind": "forest_gem" if enemy.get("species", "") == "pai_do_mato" else "ventrecha"})
    if enemy.boss:
     if run_mode == "bosses":
      bosses_defeated += 1
@@ -2216,7 +2217,7 @@ func collect_xp(base_amount: int) -> int:
  return gained
 
 func enemy_xp_reward(enemy: Dictionary) -> int:
- if enemy.get("boss", false): return 100
+ if enemy.get("boss", false): return 5000 if enemy.get("species", "") == "pai_do_mato" else 250
  if enemy.get("species", "") == "pacu": return 4
  if enemy.get("species", "") == "dourado": return 8
  if enemy.get("tank", false): return 5

@@ -18,7 +18,8 @@ func run() -> void:
   game.enemies.back().pos = game.player + Vector2(200, 0)
   game.enemies.back().hp = 0
   game.update_game(0)
-  assert(game.gems.size() == 1 and game.gems[0].xp == 100 and game.gems[0].giant)
+  assert(game.gems.size() == 1 and game.gems[0].xp == 250 and game.gems[0].giant)
+  assert(game.gems[0].kind == "ventrecha")
   assert(game.state == "playing")
   assert(game.cards.pickups.size() == (1 if mode == "endless" else 0))
   if mode == "endless":
@@ -28,13 +29,28 @@ func run() -> void:
    game.update_game(0)
    assert(game.gems.is_empty())
    var earned: float = game.current_xp() + first_cost
-   assert(is_equal_approx(earned, 200), "Boss pickup must preserve XP bonuses and level progression")
- print("BOSS XP PASS: giant 100 XP drops in both modes, guaranteed endless card, XP bonus")
+   assert(is_equal_approx(earned, 500), "Boss pickup must preserve XP bonuses and level progression")
+ game.start_run("endless")
+ game.test_run = true
+ game.spawn_timer = 10000
+ game.attack_timer = 10000
+ game.spawn_enemy(true, "pai_do_mato")
+ game.enemies.back().pos = game.player + Vector2(200, 0)
+ game.enemies.back().hp = 0
+ game.update_game(0)
+ assert(game.gems.size() == 1 and game.gems[0].xp == 5000 and game.gems[0].kind == "forest_gem")
+ var first_cost: int = game.xp_needed()
+ game.gems[0].pos = game.player
+ game.update_game(0)
+ assert(game.gems.is_empty() and is_equal_approx(game.current_xp() + first_cost, 5000))
+ print("BOSS XP PASS: Minhocao 250 XP, Pai do Mato green gem 5000 XP, pickup and XP bonus")
  if "--capture" in OS.get_cmdline_user_args():
   game.start_run("endless")
   game.test_run = true
+  game.graphics_quality = 2
   game.gems.append({"pos": game.player + Vector2(-60, 90), "xp": 1})
-  game.gems.append({"pos": game.player + Vector2(110, 90), "xp": 100, "giant": true})
+  game.gems.append({"pos": game.player + Vector2(40, 90), "xp": 250, "giant": true})
+  game.gems.append({"pos": game.player + Vector2(150, 90), "xp": 5000, "giant": true, "kind": "forest_gem"})
   game.queue_redraw()
   game.xp_renderer.queue_redraw()
   for frame in 5: await process_frame

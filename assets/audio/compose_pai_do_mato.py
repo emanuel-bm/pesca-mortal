@@ -70,8 +70,45 @@ def roar():
         signal[shift:] += signal[:-shift].copy()*gain
     save("pai_roar_v1.wav", signal, .78)
 
+def death():
+    # Same breathy O formants as the arrival roar, falling into a final exhale.
+    rng = np.random.default_rng(4102027)
+    t = np.arange(round(RATE * 3.2)) / RATE
+    pitch = np.interp(t, [0, .25, 1.4, 2.5, 3.2], [118, 132, 78, 42, 34])
+    pitch += 3 * np.sin(2*np.pi*4.7*t) * np.exp(-t/2)
+    phase = 2*np.pi*np.cumsum(pitch)/RATE
+    voiced = .25*np.sin(phase) + .11*np.sin(phase/2)
+    for harmonic in range(1, 40):
+        freq = harmonic*pitch
+        weight = .4*np.exp(-((freq-430)/145)**2) + .34*np.exp(-((freq-800)/200)**2) + .07*np.exp(-((freq-2450)/450)**2)
+        voiced += np.sin(harmonic*phase) * weight / harmonic**.6
+    breath = base_noise(rng, len(t), 180, 4200)
+    envelope = np.clip(t/.06, 0, 1) * np.clip((3.2-t)/1.4, 0, 1)
+    voiced *= (.72 + .22*np.sin(phase/3)) * np.exp(-t/.95)
+    signal = np.tanh((voiced + .10*breath*(1-np.exp(-t/.7))*np.exp(-t/1.3))*1.6)*envelope
+    dry = signal.copy()
+    for delay, gain in [(.067, .10), (.131, .06), (.24, .04)]:
+        shift = round(delay*RATE)
+        signal[shift:] += dry[:-shift]*gain
+    save("pai_death_v1.wav", signal, .78)
+
+def log_break():
+    rng = np.random.default_rng(4102028)
+    t = np.arange(round(RATE * .85)) / RATE
+    cracks = base_noise(rng, len(t), 700, 8500)
+    body = base_noise(rng, len(t), 65, 900)
+    signal = .35*body*np.exp(-t/.075)
+    for delay, gain in [(0, 1), (.028, .6), (.071, .4), (.13, .25)]:
+        age = np.maximum(t-delay, 0)
+        signal += gain*cracks*np.exp(-age/.012)*(t >= delay)
+        signal += .17*gain*np.sin(2*np.pi*155*age)*np.exp(-age/.06)*(t >= delay)
+    signal += .08*cracks*np.exp(-t/.19)
+    save("pai_log_break_v1.wav", signal, .72)
+
 if __name__ == "__main__":
     throw()
     impact()
     impact(True)
     roar()
+    death()
+    log_break()

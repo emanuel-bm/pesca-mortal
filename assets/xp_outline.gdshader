@@ -1,9 +1,14 @@
 shader_type canvas_item;
 render_mode unshaded;
 uniform vec4 outline_color : source_color = vec4(0.30, 0.14, 0.05, 1.0);
+varying vec4 pickup_color;
+
+void vertex() {
+ pickup_color = COLOR;
+}
 
 void fragment() {
- vec4 original = texture(TEXTURE, UV);
+ vec4 original = texture(TEXTURE, UV) * pickup_color;
  vec2 dx = dFdx(UV) * 1.5;
  vec2 dy = dFdy(UV) * 1.5;
  float adjacent = max(max(texture(TEXTURE, UV + dx).a, texture(TEXTURE, UV - dx).a), max(texture(TEXTURE, UV + dy).a, texture(TEXTURE, UV - dy).a));

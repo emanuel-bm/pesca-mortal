@@ -20,12 +20,11 @@ func run() -> void:
  game.sounds = sounds
  sounds.set_process(false)
  sounds.volumes.master = 1
- sounds.volumes.boss = 1
- sounds.volumes.pai_do_mato = 1
+ sounds.volumes.bosses = 1
  sounds.apply_volumes()
- for pair in [["pai_log_throw", .325], ["pai_log_splash", 1.05], ["pai_hand", 1.15], ["pai_do_mato", 2.4]]:
-  assert(absf(sounds.players[pair[0]].stream.get_length() - pair[1]) < 1.0 / 44100.0)
-  assert(sounds.volume_group(pair[0]) == "pai_do_mato")
+ for pair in [["pai_log_throw", .325], ["pai_log_splash", 1.05], ["pai_hand", 1.15], ["pai_do_mato", 2.4], ["pai_death", 3.2], ["pai_log_break", .85]]:
+  assert(absf(sounds.players[pair[0]].stream.get_length() - pair[1]) < 1.0 / 44100.0, "Audio duration must match within one sample at the imported rate")
+  assert(sounds.volume_group(pair[0]) == "bosses")
  game.start_run("training")
  game.training.act("pai_do_mato")
  assert(sounds.roar_voices.size() == 1 and sounds.roar_voices[0].stream == sounds.players.pai_do_mato.stream)
@@ -34,13 +33,10 @@ func run() -> void:
  assert(sounds.pending_roar_ids == ["boss", "pai_do_mato"])
  sounds.update_roars(1)
  assert(sounds.roar_voices.size() == 3)
- sounds.volumes.boss = 0
- sounds.apply_volumes()
- assert(sounds.roar_voices.size() == 2 and sounds.roar_voices.all(func(voice): return voice.get_meta("effect_id") == "pai_do_mato"))
- sounds.volumes.pai_do_mato = 0
+ sounds.volumes.bosses = 0
  sounds.apply_volumes()
  assert(sounds.roar_voices.is_empty())
- sounds.volumes.pai_do_mato = 1
+ sounds.volumes.bosses = 1
  sounds.apply_volumes()
  var boss: Dictionary = game.enemies[0]
  boss.pos = Vector2(800, 900)
@@ -84,6 +80,21 @@ func run() -> void:
  var hand_splashes: Array = game.water_ripples.filter(func(effect: Dictionary): return effect.kind == "hand_impact")
  assert(hand_splashes.size() == 1 and hand_splashes[0].pos == boss.target)
  assert(is_equal_approx(hand_splashes[0].angle, boss.hand_angle - PI / 2))
+ game.spawn_timer = 10000
+ game.attack_timer = 10000
+ game.enemies.clear()
+ log.hp = 0
+ game.enemies.append(log)
+ game.update_game(0)
+ assert(sounds.effects.count("pai_log_break") == 1 and game.enemies.is_empty())
+ assert(game.gems.is_empty(), "Destroyed logs must not grant XP")
+ game.spawn_enemy(true, "pai_do_mato")
+ game.enemies.back().pos = game.player + Vector2(200, 0)
+ game.enemies.back().hp = 0
+ game.update_game(0)
+ assert(sounds.effects.count("pai_death") == 1 and not "boss_death" in sounds.effects)
+ game.update_game(0)
+ assert(sounds.effects.count("pai_death") == 1 and sounds.effects.count("pai_log_break") == 1)
  sounds.volumes.master = 0
  sounds.apply_volumes()
  for id in sounds.FOREST_AUDIO: assert(not sounds.effect_enabled(id))
