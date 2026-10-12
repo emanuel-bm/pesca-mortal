@@ -310,10 +310,10 @@ func act(action: String) -> void:
    game.spawn_enemy(true, "pai_do_mato")
    game.boss_spawned = true
   "dourado", "pacu":
-   for index in mini(10, maxi(0, game.MAX_ENEMIES - game.enemies.size())):
+   for index in 10:
     game.spawn_enemy(false, action)
   "piranha", "pintado", "boss":
-   for index in mini(1 if action == "boss" else 100, maxi(0, game.MAX_ENEMIES - game.enemies.size())):
+   for index in (1 if action == "boss" else 100):
     game.spawn_enemy(action == "boss", "" if action == "boss" else action)
     var enemy: Dictionary = game.enemies.back()
     if action != "boss":
@@ -321,7 +321,7 @@ func act(action: String) -> void:
      enemy.radius = 44.0 if enemy.tank else 13.0
      enemy.hp = (200.0 if enemy.tank else 30.0) * game.fish_stat_multiplier()
      enemy.max_hp = enemy.hp
-     enemy.speed = (80.0 if enemy.tank else 125.0) * game.fish_stat_multiplier()
+     enemy.speed = (80.0 if enemy.tank else 125.0) * game.fish_speed_multiplier()
      enemy.contact = (20.0 if enemy.tank else 10.0) * game.fish_stat_multiplier()
     else: game.boss_spawned = true
   "fish_clear", "clear":

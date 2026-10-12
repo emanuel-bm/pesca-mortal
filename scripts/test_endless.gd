@@ -50,7 +50,7 @@ func run() -> void:
  assert(game.state == "playing" and game.bosses_defeated == 1, "Boss death must not end endless run")
  assert(is_equal_approx(fish.hp, 105) and is_equal_approx(fish.max_hp, 210))
  assert(is_equal_approx(fish.speed, 105) and is_equal_approx(fish.contact, 10.5))
- assert(is_equal_approx(surviving_boss.max_hp, 32000 * 1.05))
+ assert(is_equal_approx(surviving_boss.max_hp, 32000 * 1.10))
  game.spawn_enemy(false)
  var fresh: Dictionary = game.enemies.back()
  var base_hp: float = 200.0 if fresh.tank else 21.0
@@ -112,7 +112,7 @@ func run() -> void:
  assert(boss_records[0].level == 25)
  assert(game.RUN_HISTORY.character_text(boss_records[0]) == "Pescador (lv25)")
  assert(game.RUN_HISTORY.character_text({"character": "Pescador"}) == "Pescador")
- assert(game.RUN_HISTORY.ranked(loaded).size() == 1)
+ assert(game.RUN_HISTORY.ranked(loaded).is_empty(), "Debug runs stay in history without records")
  var chronological: Array = game.RUN_HISTORY.chronological([
   {"seconds": 500, "kills": 100, "date": "2026-01-01T10:00:00", "mode": "endless"},
   {"seconds": 10, "kills": 1, "date": "2026-02-01T10:00:00", "mode": "bosses"}

@@ -45,13 +45,11 @@ func run() -> void:
  for index in 100:
   var sample := {"pos": Vector2.ZERO}
   game.MINHOCAO.initialize(sample)
-  assert(sample.timer >= game.MINHOCAO.BURROW_TIME * 0.7 and sample.timer <= game.MINHOCAO.BURROW_TIME * 1.3)
+  assert(sample.timer == 0.5)
   samples.append(sample.timer)
- assert(samples.min() < samples.max(), "Timers must vary independently")
+ assert(samples.min() == samples.max(), "Submerged delay must stay fixed")
  var target := Vector2(1000, 900)
  seed_for_attack(true)
- game.MINHOCAO.update(boss, boss.timer + 0.01, target, game.ARENA)
- assert(boss.phase == "tracking")
  game.MINHOCAO.update(boss, boss.timer + 0.01, target, game.ARENA)
  assert(boss.phase == "emerge_warning")
  var locked: Vector2 = boss.target
@@ -70,9 +68,9 @@ func run() -> void:
  game.MINHOCAO.update(boss, boss.timer + 0.01, target, game.ARENA)
  assert(boss.phase == "dash")
  var before: Vector2 = boss.pos
- game.MINHOCAO.update(boss, boss.timer * 0.5, target, game.ARENA)
+ game.MINHOCAO.update(boss, 0.1, target, game.ARENA)
  assert(boss.pos.distance_to(before) > 100)
- game.MINHOCAO.update(boss, boss.timer + 0.01, target, game.ARENA)
+ game.MINHOCAO.update(boss, 1.0, target, game.ARENA)
  assert(boss.phase == "exposed")
  seed(830)
  var emerge_count := 0
@@ -85,13 +83,13 @@ func run() -> void:
   # Every first attack must emerge, regardless of the random seed.
   sample.timer = 0
   game.MINHOCAO.update(sample, 0, Vector2(1000, 900), game.ARENA)
-  assert(sample.phase == "tracking", "First appearance must always choose emergence")
-  for step in 3:
+  assert(sample.phase == "emerge_warning", "First appearance must always choose emergence")
+  for step in 2:
    game.MINHOCAO.update(sample, sample.timer + 0.01, Vector2(1000, 900), game.ARENA)
   assert(sample.phase == "burrow" and not sample.first_emergence_pending)
   sample.timer = 0
   game.MINHOCAO.update(sample, 0, Vector2(1000, 900), game.ARENA)
-  if sample.phase == "tracking": emerge_count += 1
+  if sample.phase == "emerge_warning": emerge_count += 1
   else:
    var direction: Vector2 = sample.dash_end - sample.dash_start
    angles.append(direction.angle())
@@ -110,8 +108,32 @@ func run() -> void:
  boss.target = game.player + Vector2(60, 0)
  game.attack_timer = 100
  game.update_game(0.02)
- assert(game.health == game.MAX_HEALTH - boss.contact, "Emergence must damage inside warning area")
- print("MINHOCAO PASS: uncapped speed, HP, invulnerability, target lock, emergence damage, vulnerability, dash, cycle")
+ assert(game.health == game.MAX_HEALTH - game.MINHOCAO.EMERGENCE_DAMAGE, "Emergence must damage inside warning area")
+ assert(game.water_ripples.any(func(ripple: Dictionary): return ripple.get("kind", "") == "hand_impact"), "Emergence creates circular impact")
+ game.start_run()
+ game.spawn_enemy(true)
+ boss = game.enemies.back()
+ boss.phase = "dash"
+ boss.dash_start = game.player - Vector2(140, 0)
+ boss.dash_end = game.player
+ boss.pos = boss.dash_start
+ boss.dash_remaining = 140.0
+ game.attack_timer = 100.0
+ game.update_game(0.1)
+ assert(game.health == 20.0, "Final dash frame deals 80 damage")
+ assert(not game.dourado_particles.is_empty(), "Worm dash leaves particles")
+ assert(game.water_ripples.any(func(ripple: Dictionary): return ripple.get("kind", "") == "log_impact"), "Dash ends with impact wave")
+ game.start_run()
+ game.spawn_enemy(true)
+ boss = game.enemies.back()
+ assert(boss.contact == 40.0)
+ boss.phase = "exposed"
+ boss.timer = 3.0
+ boss.pos = game.player
+ game.attack_timer = 100.0
+ game.update_game(0.0)
+ assert(game.health == 60.0, "Contact deals 40 damage")
+ print("MINHOCAO PASS: HP, invulnerability, target lock, emergence damage, vulnerability, dash, cycle")
  if "--capture" in OS.get_cmdline_user_args():
   assert(game.player_texture != null and game.boss_texture != null)
   game.start_run()

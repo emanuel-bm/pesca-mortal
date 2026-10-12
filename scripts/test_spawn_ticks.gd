@@ -18,7 +18,7 @@ func run() -> void:
  var early: float = game.fish_spawn_rate()
  game.elapsed = 180
  assert(game.fish_spawn_rate() > early)
- for pair in [[0, 3], [60, 3], [120, 3], [150, 3], [180, 4], [300, 7], [450, 11], [600, 15], [900, 22], [1200, 30]]:
+ for pair in [[0, 3], [60, 3], [120, 3], [150, 3], [180, 4], [300, 7], [450, 11], [600, 15], [900, 22], [1200, 30], [3600, 90], [7200, 180]]:
   game.elapsed = pair[0]
   assert(is_equal_approx(game.fish_spawn_rate(), pair[1]))
  game.enemies.clear()
@@ -27,6 +27,6 @@ func run() -> void:
  game.next_boss_time = INF # Isolate the common-enemy cap from the timed boss wave.
  game.elapsed = 100
  game.update_game(0)
- assert(game.enemies.size() == 1000)
- print("SPAWN TICKS PASS: 1-second waves, growing count, cap 1000")
+ assert(game.enemies.size() == 1002)
+ print("SPAWN TICKS PASS: 1-second waves, growing count, uncapped population")
  quit()

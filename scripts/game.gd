@@ -6,7 +6,8 @@ const ENDLESS_FIRST_BOSS_TIME := 180.0
 const ENDLESS_BOSS_INTERVAL := 120.0
 const ARENA := Vector2(2400, 1800)
 const ENEMY_SEPARATION_SCALE := 0.3
-const MAX_ENEMIES := 1000
+const ENEMY_SPEED_LIMITS = preload("res://scripts/enemy_speed_limits.gd")
+const FISH_SPEED_CAP_MINUTE := ENEMY_SPEED_LIMITS.CAP_MINUTE
 const ENEMY_SPAWN_DISTANCE := 680.0
 const MAX_HEALTH := 100.0
 const XP_GROWTH_PER_LEVEL := 1.06
@@ -198,6 +199,7 @@ var water_time := 0.0
 var wake_timer := 0.0
 var water_ripples: Array[Dictionary] = []
 var boat_particles: Array[Dictionary] = []
+var dourado_particles: Array[Dictionary] = []
 var boat_particle_timer := 0.0
 var boat_particle_sequence := 0
 var online: Node
@@ -453,6 +455,9 @@ func update_water(dt: float) -> void:
   water_ripples[i].age += dt
   if water_ripples[i].age > float(water_ripples[i].get("life", 1.3)): water_ripples.remove_at(i)
  update_boat_particles(dt)
+ for index in range(dourado_particles.size() - 1, -1, -1):
+  dourado_particles[index].age += dt
+  if dourado_particles[index].age >= 0.45: dourado_particles.remove_at(index)
  if graphics_quality == 0: return
  wake_timer -= dt
  if not movement().is_zero_approx() and wake_timer <= 0:
@@ -502,6 +507,36 @@ func update_boat_particles(dt: float) -> void:
   boat_particle_sequence += 1
   boat_particle_timer += 0.20 / count
   emitted += 1
+
+func emit_dourado_particle(origin: Vector2, direction: Vector2, sequence: int, half_width: float = 6.0) -> void:
+ if dourado_particles.size() >= 512: dourado_particles.pop_front()
+ var lateral_offset := direction.orthogonal() * sin(sequence * 2.39996) * half_width
+ dourado_particles.append({"age": 0.0, "origin": origin - direction * 24.0 + lateral_offset, "velocity": -direction * 45.0})
+
+func update_dourado_particles(enemy: Dictionary, old_position: Vector2, previous_phase: String, dt: float, half_width: float = 6.0) -> void:
+ var direction: Vector2 = enemy.dash_direction
+ var sequence: int = int(enemy.get("particle_sequence", 0))
+ if previous_phase == "dash":
+  var distance := old_position.distance_to(enemy.pos)
+  var spacing: float = [36.0, 24.0, 16.0][graphics_quality]
+  var remaining: float = float(enemy.get("trail_spacing_remaining", 0.0))
+  while remaining <= distance and distance > 0.0:
+   emit_dourado_particle(old_position.lerp(enemy.pos, remaining / distance), direction, sequence, half_width)
+   sequence += 1
+   remaining += spacing
+  enemy.trail_spacing_remaining = remaining - distance
+ elif enemy.phase == "warning":
+  var timer: float = float(enemy.get("particle_timer", 0.0)) - dt
+  var interval: float = [0.12, 0.08, 0.05][graphics_quality]
+  while timer <= 0.0:
+   emit_dourado_particle(enemy.pos, direction, sequence)
+   sequence += 1
+   timer += interval
+  enemy.particle_timer = timer
+ else:
+  enemy.particle_timer = 0.0
+  enemy.trail_spacing_remaining = 0.0
+ enemy.particle_sequence = sequence
 
 func title(text: String, size: int = 28) -> void:
  var label := Label.new()
@@ -1187,6 +1222,7 @@ func apply_graphics_quality() -> void:
  if water_material: water_material.set_shader_parameter("quality", graphics_quality)
  water_ripples.clear()
  boat_particles.clear()
+ dourado_particles.clear()
  boat_particle_timer = 0.0
  boat_particle_sequence = 0
  damage_numbers.clear()
@@ -1359,6 +1395,7 @@ func start_run(mode: String = "bosses") -> void:
  damage_numbers.clear()
  water_ripples.clear()
  boat_particles.clear()
+ dourado_particles.clear()
  boat_particle_timer = 0.0
  boat_particle_sequence = 0
  wake_timer = 0.0
@@ -1587,7 +1624,7 @@ func update_game(dt: float) -> void:
   var amount := fish_spawn_rate() + spawn_remainder
   var count := floori(amount)
   spawn_remainder = amount - count
-  for spawn_index in mini(count, maxi(0, MAX_ENEMIES - enemies.size())): spawn_enemy(false)
+  for spawn_index in count: spawn_enemy(false)
  attack_timer -= dt
  if attack_timer <= 0 and not enemies.is_empty():
   fire()
@@ -1613,20 +1650,32 @@ func update_game(dt: float) -> void:
    if state != "playing": return
    continue
   if enemy.get("species", "") == "dourado":
+   var previous_phase: String = enemy.phase
    DOURADO.update(enemy, dt, player, ARENA, movement() * effective_speed())
+   update_dourado_particles(enemy, old_position, previous_phase, dt)
    if invulnerability <= 0 and enemy_overlaps(enemy, player, 14):
     receive_hit(enemy.contact, enemy.pos, enemy, "Investida" if enemy.phase == "dash" else "Contato")
    if state != "playing": return
    continue
   var special_boss_movement := false
+  var is_worm_dash := false
   if enemy.boss:
    var previous_phase: String = enemy.phase
    var emerged: bool = MINHOCAO.update(enemy, dt, player, ARENA)
-   if emerged: sounds.play_boss_emergence()
+   is_worm_dash = previous_phase == "dash"
+   if emerged:
+    sounds.play_boss_emergence()
+    spawn_water_impact(enemy.pos, 0.0, "hand_impact")
+   if previous_phase == "dash":
+    enemy.dash_direction = (enemy.dash_end - enemy.dash_start).normalized()
+    update_dourado_particles(enemy, old_position, previous_phase, dt, MINHOCAO.DASH_WIDTH / 2.0 - 2.0)
+    if enemy.phase == "exposed": spawn_water_impact(enemy.pos, enemy.dash_direction.angle(), "log_impact")
+   elif enemy.phase == "dash":
+    enemy.trail_spacing_remaining = 0.0
    if enemy.phase == "dash" and previous_phase != "dash": sounds.play_boss_dash()
    special_boss_movement = emerged or previous_phase != "exposed" or enemy.phase != "exposed"
    if emerged and player.distance_to(enemy.pos) < MINHOCAO.EMERGENCE_RADIUS + 14:
-    receive_hit(enemy.contact, enemy.pos, enemy, "Emergência")
+    receive_hit(MINHOCAO.EMERGENCE_DAMAGE * float(enemy.get("stat_multiplier", 1.0)), enemy.pos, enemy, "Emergência")
     if state != "playing": return
    if not MINHOCAO.vulnerable(enemy): continue
   var toward: Vector2 = player - enemy.pos
@@ -1639,7 +1688,8 @@ func update_game(dt: float) -> void:
   else: pursue_player(enemy_index, dt)
   if invulnerability <= 0 and enemy_overlaps(enemy, player, 14):
    var health_before := health
-   receive_hit(enemy.contact, enemy.pos, enemy, "Investida" if enemy.boss and enemy.phase == "dash" else "Contato")
+   var hit_damage: float = MINHOCAO.DASH_DAMAGE * float(enemy.get("stat_multiplier", 1.0)) if is_worm_dash else enemy.contact
+   receive_hit(hit_damage, enemy.pos, enemy, "Investida" if is_worm_dash else "Contato")
    if enemy.get("species", "") == "pacu" and health < health_before:
     cards.block_activation()
   if state != "playing": return
@@ -1852,9 +1902,10 @@ func buff_endless_enemies() -> void:
  bosses_defeated += 1
  for enemy in enemies:
   if enemy.hp <= 0 or enemy.get("obstacle", false): continue
-  enemy.hp *= 1.05
-  enemy.max_hp *= 1.05
-  enemy.speed *= 1.05
+  var health_growth: float = MINHOCAO.ENDLESS_HEALTH_GROWTH if enemy.boss and enemy.get("species", "") != "pai_do_mato" else 1.05
+  enemy.hp *= health_growth
+  enemy.max_hp *= health_growth
+  enemy.speed = minf(enemy.speed * 1.05, fish_speed_cap(enemy))
   enemy.contact *= 1.05
   enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * 1.05
 
@@ -1867,6 +1918,15 @@ func fish_stat_multiplier(species: String = "") -> float:
 func fish_damage_multiplier() -> float:
  return pow(1.04, floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
 
+func fish_speed_cap(enemy: Dictionary) -> float:
+ if enemy.get("species", "") == "pai_do_mato": return PAI_DO_MATO.MOVE_SPEED * ENEMY_SPEED_LIMITS.MAX_MULTIPLIER
+ if enemy.get("boss", false): return MINHOCAO.SURFACE_SPEED * ENEMY_SPEED_LIMITS.MAX_MULTIPLIER
+ var base_speed := 100.0 if enemy.get("species", "") == "dourado" else (80.0 if enemy.get("tank", false) else 125.0)
+ return base_speed * ENEMY_SPEED_LIMITS.MAX_MULTIPLIER
+
+func fish_speed_multiplier() -> float:
+ return minf(fish_stat_multiplier(), ENEMY_SPEED_LIMITS.MAX_MULTIPLIER)
+
 func update_minute_buffs() -> void:
  var minute := floori(elapsed / 60.0)
  for enemy in enemies:
@@ -1874,7 +1934,8 @@ func update_minute_buffs() -> void:
   var previous := int(enemy.get("buff_minute", minute))
   if minute <= previous: continue
   var multiplier := pow(1.08, minute - previous)
-  for stat in ["hp", "max_hp", "speed"]: enemy[stat] *= multiplier
+  for stat in ["hp", "max_hp"]: enemy[stat] *= multiplier
+  enemy.speed = minf(enemy.speed * multiplier, fish_speed_cap(enemy))
   enemy.contact *= pow(1.04, minute - previous)
   enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * pow(fish_minute_multiplier(enemy.get("species", "")), minute - previous)
   enemy.buff_minute = minute
@@ -2339,22 +2400,29 @@ func spawn_enemy(boss: bool, species: String = "", arrival_count: int = 1) -> vo
  enemy["stat_multiplier"] = multiplier
  if is_dourado:
   enemy.stat_multiplier = pow(1.05, floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
- for stat in ["hp", "max_hp", "speed"]: enemy[stat] *= multiplier
+ var health_multiplier: float = pow(MINHOCAO.ENDLESS_HEALTH_GROWTH, bosses_defeated) if boss and species != "pai_do_mato" and run_mode == "endless" else multiplier
+ for stat in ["hp", "max_hp"]: enemy[stat] *= health_multiplier
+ enemy.speed *= multiplier if boss else fish_speed_multiplier()
  enemy.contact *= multiplier if boss else fish_damage_multiplier()
  if boss:
   if species == "pai_do_mato":
    enemy.species = species
    enemy.display_name = "Pai do Mato"
    enemy.radius = 70.0
-   enemy.speed = PAI_DO_MATO.MOVE_SPEED * multiplier
+   enemy.speed = minf(PAI_DO_MATO.MOVE_SPEED * multiplier, fish_speed_cap(enemy))
    PAI_DO_MATO.initialize(enemy)
   else:
    enemy.display_name = "Minhocão"
+   enemy.contact = MINHOCAO.CONTACT_DAMAGE * multiplier
+   enemy.speed = ENEMY_SPEED_LIMITS.capped_speed(MINHOCAO.SURFACE_SPEED, multiplier)
    MINHOCAO.initialize(enemy)
  enemies.append(enemy)
  if boss:
   sounds.announce_boss("pai_do_mato" if enemy.get("species", "") == "pai_do_mato" else "boss")
   announce_boss_arrival(enemy, arrival_count)
+
+func dourado_warning_endpoint(enemy: Dictionary, position: Vector2) -> Vector2:
+ return position + enemy.dash_direction * float(enemy.get("dash_distance", DOURADO.dash_range(enemy)))
 
 func announce_boss_arrival(enemy: Dictionary, count: int = 1) -> void:
  if enemy.get("species", "") == "pai_do_mato":
@@ -2714,6 +2782,10 @@ func draw_boat_wake(ripple: Dictionary, offset: Vector2) -> void:
  draw_arc(center, 12 + age * 30, 0, TAU, 32, Color(0.4, 0.78, 0.82, fade * 0.6), 2)
 
 func draw_boat_particles(offset: Vector2) -> void:
+ for particle in dourado_particles:
+  var age: float = particle.age
+  var point: Vector2 = particle.origin - offset + particle.velocity * age
+  draw_rect(Rect2(point.round(), Vector2(2, 2)), Color(0.75, 0.95, 1, 0.85 * (1 - age / 0.45)))
  for particle in boat_particles:
   var age: float = particle.age
   var point: Vector2 = particle.origin - offset + particle.velocity * age
@@ -2813,7 +2885,7 @@ func _draw() -> void:
      draw_boss_health(enemy, bar_position, 100, Color(0.7, 0.3, 1))
   else:
    if enemy.get("species", "") == "dourado" and enemy.phase == "warning":
-    var end: Vector2 = position + enemy.dash_direction * DOURADO.DASH_SPEED * DOURADO.DASH_TIME * float(enemy.get("stat_multiplier", 1.0))
+    var end: Vector2 = dourado_warning_endpoint(enemy, position)
     draw_line(position, end, Color(1, 0.55, 0.1, 0.25), 18)
     draw_line(position, end, Color(1, 0.75, 0.2, 0.9), 2)
    var art: Dictionary = fish_art(enemy)

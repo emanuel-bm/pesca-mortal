@@ -147,8 +147,9 @@ O dourado usa o sprite `assets/dourado-v1.png`, com 46 pixels de comprimento e
 colisão pelo contorno. Aproxima-se a 100 pixels/s, anuncia por 1,1 segundo uma
 arrancada em direção fixa, mirando a posição prevista da canoa após 0,5 segundo
 com sua velocidade atual (incluindo melhorias). A previsão é calculada uma vez
-no início do aviso e limitada à arena. Avança a 756 pixels/s por 0,21125 segundo (159,705 pixels
-antes dos buffs por minuto e por chefão). Inicia o preparo a até 70% do alcance
+no início do aviso e limitada à arena. Avança a 1.400 pixels/s por 159,705 pixels
+antes dos buffs por minuto e por chefão. Emite partículas de água durante o preparo
+e ao longo de todo o percurso. Inicia o preparo a até 70% do alcance
 atual da arrancada; esse limite cresce junto com os buffs. Descansa
 por 0,75 segundo. Ao terminar cada arrancada, sorteia um cooldown de 1 a 3
 segundos antes de poder preparar outra; o descanso conta dentro desse tempo.
@@ -198,10 +199,10 @@ Uma arena delimitada, quatro tipos de peixes, um chefe perseguidor,
 cinco melhorias (sem limite de escolhas; velocidade sem teto), dano com invulnerabilidade
 temporária e knockback para longe do atacante, pausa, derrota, vitória e reinício.
 Vida máxima inicial de 100; dano base de piranha 10, pintado 20, pacu 30,
-dourado 15 e Minhocão 60.
+dourado 15 e Minhocão 40 (contato), 60 (emergência) e 80 (investida).
 Pintados têm 200 HP base, antes dos buffs por minuto e por chefão derrotado.
 Minhocão com 32.000 de vida; somente o chefe exibe barra de vida.
-Alterna mergulho de 0,6 s, marca que acompanha por 0,375 s e trava por 0,75 s,
+Alterna mergulho de 0,5 s e aviso de emergência de 0,75 s,
 emergência, exposição por 3 s e investida em linha anunciada por 0,9 s.
 A investida atravessa o trajeto em 0,5 s; movimento à superfície de 54.
 Enterrado, não recebe dano nem atrai disparos. Emergência causa 60 de dano
@@ -213,10 +214,22 @@ a 100 pixels/s. A cada minuto completo de jogo, os peixes vivos recebem
 +8% de vida atual, vida máxima e velocidade, e +4% de dano, de forma multiplicativa.
 Novos peixes herdam todos os minutos completos: vida e velocidade base × 1,08 elevado
 ao número de minutos; dano base × 1,04 elevado ao número de minutos.
-A velocidade e o alcance da arrancada do dourado crescem +5% por minuto.
+A arrancada do dourado mantém 1.400 pixels/s; seu alcance cresce +5% por minuto,
+sem teto. A investida avança a cada frame até esgotar a distância restante,
+sem calcular duração; dobrar o alcance naturalmente dobra o tempo do percurso.
 No infinito, os +5% por chefão morto se multiplicam com esses bônus. Chefões
 não recebem o bônus por minuto. XP, tamanho e tempos de aviso não aumentam.
-Velocidades do jogador, dos peixes e dos chefões crescem sem teto de progressão. Movimentos na superfície e investidas do Minhocão recebem o multiplicador completo dos buffs; os tempos dos avisos continuam iguais.
+O deslocamento normal de todos os inimigos tem teto de velocidade base × 1,08^10.
+Minhocão: base de 100 pixels/s na superfície; Pai do Mato: base de 120 pixels/s.
+O jogador continua sem teto. Ataques especiais usam regras próprias: arrancada do
+dourado com velocidade fixa e alcance sem teto, investida do Minhocão a 1.400 pixels/s e
+tronco do Pai do Mato com velocidade fixa. Tempos de aviso não escalam com buffs.
+No infinito, vida atual e máxima do Minhocão crescem 10% por chefão derrotado;
+novos Minhocões herdam 32.000 × 1,10 elevado ao total de chefões derrotados.
+O Minhocão aguarda submerso por 0,5 segundo antes de mostrar o aviso, sem fase
+oculta de rastreamento. Avisos mantêm sua variação de ±30%; a investida percorre
+até 500 pixels, encurtados nas bordas, controlada por distância restante.
+Emergência produz ondas e partículas; investida deixa rastro e onda no ponto final.
 Melhorias de vida máxima e dano de ataque aumentam o valor atual em 20% por escolha, sem teto de evolução.
 Valores exibidos são arredondados para inteiros; cálculos mantêm a precisão.
 O alcance de coleta de XP é fixo em 180, sem melhoria e oculto nos atributos do pescador.

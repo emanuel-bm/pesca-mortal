@@ -58,11 +58,11 @@ func run() -> void:
  assert(fish.phase == "warning" and fish.pos == start and fish.dash_direction == Vector2.RIGHT)
  game.DOURADO.update(fish, 0.55, game.player, game.ARENA)
  assert(fish.phase == "dash")
- game.DOURADO.update(fish, game.DOURADO.DASH_TIME, game.player + Vector2(0, 200), game.ARENA)
+ game.DOURADO.update(fish, game.DOURADO.DASH_BASE_DISTANCE / game.DOURADO.DASH_SPEED + 0.001, game.player + Vector2(0, 200), game.ARENA)
  assert(fish.phase == "recovery" and is_equal_approx(fish.pos.y, start.y))
  assert(fish.cooldown >= 1.0 and fish.cooldown <= 3.0)
  fish.cooldown = 3.0
- assert(is_equal_approx(fish.pos.x - start.x, game.DOURADO.DASH_SPEED * game.DOURADO.DASH_TIME))
+ assert(is_equal_approx(fish.pos.x - start.x, game.DOURADO.DASH_BASE_DISTANCE))
  assert(is_equal_approx(fish.pos.x - start.x, 159.705), "Dash distance is reduced by 35 percent without changing speed")
  start = fish.pos
  game.DOURADO.update(fish, 0.5, game.player, game.ARENA)
@@ -81,7 +81,7 @@ func run() -> void:
  game.DOURADO.update(fish, game.DOURADO.WARNING_TIME, game.player, game.ARENA)
  start = fish.pos
  game.DOURADO.update(fish, 0.1, game.player, game.ARENA)
- assert(is_equal_approx(fish.pos.x - start.x, game.DOURADO.DASH_SPEED * 2 * 0.1))
+ assert(is_equal_approx(fish.pos.x - start.x, game.DOURADO.dash_speed(fish) * 0.1))
  fish.pos = game.player - Vector2(100, 0)
  game.DOURADO.initialize(fish)
  game.DOURADO.update(fish, 0, game.player, game.ARENA, Vector2(0, 190))
