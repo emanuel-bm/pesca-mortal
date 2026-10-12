@@ -7,6 +7,7 @@ public static class GameWindowVisibility {
  [StructLayout(LayoutKind.Sequential)] public struct Rect { public int Left, Top, Right, Bottom; }
  [StructLayout(LayoutKind.Sequential)] public struct Point { public int X, Y; }
  delegate bool EnumProc(IntPtr window, IntPtr data);
+ [DllImport("user32.dll", EntryPoint="GetWindowLongW")] static extern int GetWindowLong(IntPtr window, int index);
  [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc callback, IntPtr data);
  [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr window);
  [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr window);
@@ -32,6 +33,10 @@ public static class GameWindowVisibility {
    if (window == game) return false;
    uint process; GetWindowThreadProcessId(window, out process);
    if (process == gameProcess || !IsWindowVisible(window) || IsIconic(window)) return true;
+   // Driver/HUD utility overlays pass clicks through and cannot take focus.
+   // AMD's fullscreen DVR overlay has these flags even when its UI is hidden.
+   const int passiveOverlay = 0x08000020; // WS_EX_NOACTIVATE | WS_EX_TRANSPARENT
+   if ((GetWindowLong(window, -20) & passiveOverlay) == passiveOverlay) return true;
    int cloaked; if (DwmGetWindowAttribute(window, 14, out cloaked, 4) == 0 && cloaked != 0) return true;
    Rect bounds;
    if (FrameBounds(window, 9, out bounds, 16) != 0 && !GetWindowRect(window, out bounds)) return true;

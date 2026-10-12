@@ -20,8 +20,10 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -ReferencedAssemblies System.Windows.Forms @"
 using System.Windows.Forms;
 public class NoFocusOverlay : Form {
+ public bool ClickThrough;
+ public void RefreshStyles() { RecreateHandle(); }
  protected override bool ShowWithoutActivation { get { return true; } }
- protected override CreateParams CreateParams { get { var p = base.CreateParams; p.ExStyle |= 0x08000000; return p; } }
+ protected override CreateParams CreateParams { get { var p = base.CreateParams; p.ExStyle |= 0x08000000; if (ClickThrough) p.ExStyle |= 0x20; return p; } }
 }
 "@
 $form = New-Object NoFocusOverlay
@@ -36,6 +38,8 @@ try {
   [Windows.Forms.Application]::DoEvents()
   $command = Get-Content (Join-Path $Directory 'command') -ErrorAction SilentlyContinue
   if ($command -eq 'outside') { $form.Location = New-Object Drawing.Point(750, 150) }
+  if ($command -eq 'transparent' -and -not $form.ClickThrough) { $form.ClickThrough = $true; $form.RefreshStyles() }
+  if ($command -eq 'overlap' -and $form.ClickThrough) { $form.ClickThrough = $false; $form.RefreshStyles() }
   if ($command -eq 'hidden') { $form.Hide() }
   if ($command -eq 'behind') {
    $form.Location = New-Object Drawing.Point(150, 150)
@@ -66,6 +70,9 @@ function Await-Command($command) {
   $ready = Get-Content $readyPath -ErrorAction SilentlyContinue
  } until ($ready -eq $command -or [DateTime]::UtcNow -gt $deadline)
  Check ($ready -eq $command) 'Overlay helper did not respond'
+ [VisibilityTestNative]::SetForegroundWindow($game.Handle) | Out-Null
+ [Windows.Forms.Application]::DoEvents()
+ Start-Sleep -Milliseconds 200
 }
 function Await-Status($value) {
  $deadline = [DateTime]::UtcNow.AddSeconds(15)
@@ -88,6 +95,12 @@ try {
  Await-Command 'overlap'
  Check ([VisibilityTestNative]::GetForegroundWindow() -eq $game.Handle) 'Overlay must preserve game focus to reproduce the bug'
  Check ([GameWindowVisibility]::Blocked($game.Handle)) 'External overlay without focus loss must be detected'
+ Await-Status '1'
+ Await-Command 'transparent'
+ Check (-not [GameWindowVisibility]::Blocked($game.Handle)) 'Passive click-through driver overlay must not pause the game'
+ Await-Status '0'
+ Await-Command 'overlap'
+ Check ([GameWindowVisibility]::Blocked($game.Handle)) 'A regular non-activating overlay must still pause the game'
  Await-Status '1'
  Await-Command 'outside'
  Check (-not [GameWindowVisibility]::Blocked($game.Handle)) 'Non-overlapping external window must not pause the game'

@@ -128,6 +128,10 @@ quando a janela sai da frente; use **Continuar** para retomar.
 Validação: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test_window_visibility.ps1`
 exercita uma janela externa sem ativação e o monitor real; o teste Godot
 `res://scripts/test_focus_pause.gd` verifica pausa, áudio e retomada.
+Overlays passivos do driver, que não recebem foco e deixam os cliques passar,
+são ignorados para evitar pausas falsas em tela cheia. O teste
+`res://scripts/test_fullscreen_focus.gd`, executado sem `--headless`, alterna
+os modos de janela e verifica áudio, Voltar e Continuar.
 
 O pacu voltou como inimigo separado do dourado: usa `assets/pacu-v4.png`,
 tem 80 HP base escalados pelo tempo, 30 de dano, 4 XP e velocidade de 80 pixels/s,
