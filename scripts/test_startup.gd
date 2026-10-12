@@ -37,6 +37,18 @@ func run() -> void:
  startup._completed(HTTPRequest.RESULT_SUCCESS, 200, [], JSON.stringify(data).to_utf8_buffer())
  assert(startup.played.is_empty(), "A newer release must offer a choice before loading the game")
  assert(not startup.asset.is_empty())
+ startup.asset.size = 20 * 1048576
+ startup._offer()
+ assert(startup.message.text.contains("Download da atualização: 20.0 MB"))
+ assert(startup._download_message(5 * 1048576) == "Baixando atualização… 5.0 MB de 20.0 MB")
+ startup.using_patch = true
+ startup.asset.size = 2 * 1048576
+ startup._offer()
+ assert(startup.message.text.contains("Download do patch: 2.0 MB"))
+ assert(startup._download_message(1048576) == "Baixando patch… 1.0 MB de 2.0 MB")
+ startup.asset.erase("size")
+ assert(startup._download_message(1048576).contains("total indisponível"))
+ startup.using_patch = false
  var patch_data: Dictionary = data.duplicate(true)
  var full: Dictionary = patch_data.assets[0]
  full.size = 1000000

@@ -206,6 +206,9 @@ func _completed(result: int, code: int, _headers: PackedStringArray, body: Packe
 
 func _offer() -> void:
  _set_message("Nova versão disponível: " + str(release.tag_name) + "\nAtualize agora ou continue com a versão instalada em modo offline.")
+ var total_bytes := int(asset.get("size", 0))
+ if total_bytes > 0:
+  message.text += "\nDownload %s: %.1f MB" % ["do patch" if using_patch else "da atualização", total_bytes / 1048576.0]
  if OS.get_name() == "Windows" and OS.has_feature("template"):
   if asset.is_empty():
    _error("O pacote de atualização ainda não está disponível ou não pôde ser validado. Tente novamente ou jogue offline.")
@@ -223,14 +226,22 @@ func _download() -> void:
  request.download_file = download_path
  request.timeout = 300.0
  request.body_size_limit = 1024 * 1024 * 1024
- _set_message("Baixando atualização…")
+ _set_message(_download_message(0))
  _button("Jogar offline", _play.bind(true))
  if request.request(str(asset.browser_download_url), ["User-Agent: Pesca-Mortal"]) != OK:
   _error("Não foi possível iniciar o download.")
 
 func _process(_delta: float) -> void:
  if phase == "download" and is_instance_valid(request) and not leaving:
-  message.text = "Baixando atualização… %.1f MB" % (request.get_downloaded_bytes() / 1048576.0)
+  message.text = _download_message(request.get_downloaded_bytes())
+
+func _download_message(downloaded_bytes: int) -> String:
+ var total_bytes := int(asset.get("size", 0))
+ if total_bytes <= 0: total_bytes = request.get_body_size()
+ var label := "Baixando patch…" if using_patch else "Baixando atualização…"
+ if total_bytes > 0:
+  return "%s %.1f MB de %.1f MB" % [label, downloaded_bytes / 1048576.0, total_bytes / 1048576.0]
+ return "%s %.1f MB (total indisponível)" % [label, downloaded_bytes / 1048576.0]
 
 func _error(value: String) -> void:
  if using_patch:
