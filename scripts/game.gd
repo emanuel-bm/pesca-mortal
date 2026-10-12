@@ -2521,10 +2521,42 @@ func show_upgrades() -> void:
   inset.add_child(content)
   var next := projected_stats(id)
   build_upgrade_card(content, id, current, next)
+  var keycap := build_upgrade_keycap(i + 1)
+  option.add_child(keycap)
+  keycap.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+  keycap.offset_left = 9
+  keycap.offset_top = -36
+  keycap.offset_right = 35
+  keycap.offset_bottom = -9
   upgrade_buttons.append(option)
   option.mouse_entered.connect(select_upgrade.bind(i))
   option.focus_entered.connect(update_stats_preview.bind(id))
  select_upgrade(0)
+
+func build_upgrade_keycap(number: int) -> PanelContainer:
+ var keycap := PanelContainer.new()
+ keycap.name = "UpgradeKeycap"
+ keycap.custom_minimum_size = Vector2(26, 27)
+ keycap.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+ keycap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+ var face := StyleBoxFlat.new()
+ face.bg_color = Color("e4e1d8")
+ face.border_color = Color("8b8984")
+ face.set_border_width_all(1)
+ face.border_width_bottom = 3
+ face.set_corner_radius_all(4)
+ keycap.add_theme_stylebox_override("panel", face)
+ var digit := Label.new()
+ digit.text = str(number)
+ digit.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+ digit.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+ digit.add_theme_font_size_override("font_size", 19)
+ digit.add_theme_color_override("font_color", Color("202b36"))
+ digit.add_theme_color_override("font_shadow_color", Color.TRANSPARENT)
+ digit.add_theme_constant_override("outline_size", 0)
+ digit.mouse_filter = Control.MOUSE_FILTER_IGNORE
+ keycap.add_child(digit)
+ return keycap
 
 func build_upgrade_card(content: VBoxContainer, id: String, current: Dictionary, next: Dictionary) -> void:
  content.add_theme_constant_override("separation", 4)
