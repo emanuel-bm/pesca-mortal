@@ -15,7 +15,7 @@ func run() -> void:
  game.crit_chance = 100
  game.hit_with_spear(enemy, 70.0)
  assert(enemy.hp == 99760.0)
- assert(game.damage_numbers.back().font_size == 30)
+ assert(game.damage_numbers.back().font_size == 48)
  game.cards.activate("furia")
  var before = enemy.hp
  game.hit_with_spear(enemy)

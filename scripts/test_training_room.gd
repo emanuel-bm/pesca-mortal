@@ -48,7 +48,8 @@ func run() -> void:
  game.training.values.damage.apply()
  assert(game.damage == 75.0, "Valor digitado deve atualizar o personagem")
  game.training.values.damage.value = 20.0
- game.training.values.damage.get_parent().get_child(3).pressed.emit()
+ var damage_field: SpinBox = game.training.values.damage
+ damage_field.get_parent().get_child(damage_field.get_index() + 1).pressed.emit()
  game.training.change_stat("rate", 1)
  game.training.change_stat("level", 1)
  assert(game.damage == 25.0 and game.attack_delay < 0.65 and game.level == 2)
@@ -96,6 +97,18 @@ func run() -> void:
  assert(game.state == "upgrade" and game.level == 2)
  game.choose_upgrade("damage")
  assert(game.state == "playing" and game.damage == 24.0)
+ game.hud.text = "00:26    ELIMINAÇÕES 0\nPEIXES 0\nPEIXES VISÍVEIS 0\nMINHOCÃO x1\nPAI DO MATO x1"
+ game.training.select_tab(1)
+ for frame in 4: await process_frame
+ game.training._process(0.0)
+ var hud_bottom: float = game.hud.position.y + maxf(game.hud.size.y, game.hud.get_combined_minimum_size().y)
+ assert(game.training.frame.position.y >= hud_bottom + 12.0, "Painel de treino deve ficar abaixo de todas as linhas do HUD")
+ var field_x: float = game.training.values.health.position.x
+ for value in game.training.values.values():
+  assert(is_equal_approx(value.position.x, field_x), "Campos de atributos devem compartilhar a mesma coluna")
+ for index in range(2, game.training.stat_buttons.size(), 2):
+  assert(is_equal_approx(game.training.stat_buttons[index].position.x, game.training.stat_buttons[0].position.x), "Botões de diminuir devem ficar alinhados")
+  assert(is_equal_approx(game.training.stat_buttons[index + 1].position.x, game.training.stat_buttons[1].position.x), "Botões de aumentar devem ficar alinhados")
  game.start_run("bosses")
  assert(not game.test_run and not game.prevent_player_death)
  game.run_recorded = true

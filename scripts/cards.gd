@@ -35,7 +35,7 @@ func _ready() -> void:
  effect_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
  effect_layer.add_child(effect_row)
  block_label = Label.new()
- block_label.add_theme_font_size_override("font_size", 14)
+ block_label.add_theme_font_size_override("font_size", 20)
  block_label.add_theme_color_override("font_color", Color(1, 0.65, 0.2))
  block_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
  effect_layer.add_child(block_label)
@@ -55,7 +55,7 @@ func _ready() -> void:
   icon.material = icon_material
   item.add_child(icon)
   var label := Label.new()
-  label.add_theme_font_size_override("font_size", 14)
+  label.add_theme_font_size_override("font_size", 20)
   label.mouse_filter = Control.MOUSE_FILTER_IGNORE
   item.add_child(label)
   effect_row.add_child(item)

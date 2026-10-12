@@ -104,7 +104,7 @@ func _build_ui() -> void:
  var loading_text := Label.new()
  loading_text.text = "Verificando atualizações…"
  loading_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
- loading_text.add_theme_font_size_override("font_size", 20)
+ loading_text.add_theme_font_size_override("font_size", 32)
  loading.add_child(loading_text)
  loading.hide()
  var frame := PanelContainer.new()
@@ -120,7 +120,7 @@ func _build_ui() -> void:
  var title := Label.new()
  title.text = "PESCA MORTAL"
  title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
- title.add_theme_font_size_override("font_size", 30)
+ title.add_theme_font_size_override("font_size", 32)
  column.add_child(title)
  var version := Label.new()
  version.text = "Versão " + str(ProjectSettings.get_setting("application/config/version", "1.0.0"))

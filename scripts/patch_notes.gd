@@ -104,9 +104,9 @@ static func escape_bbcode(value: String) -> String:
 
 static func text(entry: Dictionary) -> String:
  var heading := str(entry.get("name", entry.tag_name))
- var result := "[font_size=24][b]" + escape_bbcode(heading) + "[/b][/font_size]\n\n"
+ var result := "[font_size=32][b]" + escape_bbcode(heading) + "[/b][/font_size]\n\n"
  var body := str(entry.get("body", "")).replace("\r", "")
- if body.strip_edges().is_empty(): return result + "[font_size=16]Esta release não possui notas publicadas.[/font_size]\n"
+ if body.strip_edges().is_empty(): return result + "[font_size=20]Esta release não possui notas publicadas.[/font_size]\n"
  for raw_line in body.split("\n"):
   var line := str(raw_line).strip_edges()
   if line.begins_with("```"): continue
@@ -118,5 +118,5 @@ static func text(entry: Dictionary) -> String:
   if line.begins_with("- ") or line.begins_with("* "): line = "• " + line.substr(2)
   line = line.replace("**", "").replace("`", "")
   var safe := escape_bbcode(line)
-  result += ("[font_size=20][b]" + safe + "[/b][/font_size]" if subheading else "[font_size=16]" + safe + "[/font_size]") + "\n"
+  result += ("[font_size=32][b]" + safe + "[/b][/font_size]" if subheading else "[font_size=20]" + safe + "[/font_size]") + "\n"
  return result

@@ -103,7 +103,7 @@ func _ready() -> void:
  select_tab(0)
  var hint := Label.new()
  hint.text = "Tab: alternar"
- hint.add_theme_font_size_override("font_size", 13)
+ hint.add_theme_font_size_override("font_size", 24)
  hint.add_theme_color_override("font_color", Color(0.6, 0.7, 0.72))
  contents.add_child(hint)
  controls = PanelContainer.new()
@@ -144,13 +144,14 @@ func _ready() -> void:
  var title := Label.new()
  title.text = "ATRIBUTOS"
  rows.add_child(title)
+ var grid := GridContainer.new()
+ grid.columns = 4
+ rows.add_child(grid)
  for id in STATS:
-  var row := HBoxContainer.new()
-  rows.add_child(row)
   var label := Label.new()
   label.text = STATS[id][0]
   label.custom_minimum_size.x = 180
-  row.add_child(label)
+  grid.add_child(label)
   for direction in [-1, 0, 1]:
    if direction == 0:
     var value := SpinBox.new()
@@ -161,14 +162,14 @@ func _ready() -> void:
     value.custom_minimum_size.x = 110
     value.value_changed.connect(set_stat.bind(id))
     values[id] = value
-    row.add_child(value)
+    grid.add_child(value)
    else:
     var button := Button.new()
     button.text = "−" if direction < 0 else "+"
     button.custom_minimum_size.x = 40
     button.pressed.connect(change_stat.bind(id, direction))
     stat_buttons.append(button)
-    row.add_child(button)
+    grid.add_child(button)
  editor.hide()
  controls.hide()
  frame.hide()
@@ -198,12 +199,14 @@ func _process(_dt: float) -> void:
  for button in stat_buttons: button.disabled = not paused
  if editor.visible and not paused: refresh()
  var viewport := get_viewport().get_visible_rect().size
+ var hud_bottom: float = game.hud.position.y + maxf(game.hud.size.y, game.hud.get_combined_minimum_size().y)
+ var panel_top := hud_bottom + 12.0
  # Only the visible tab determines the panel's width.
  frame.size = Vector2.ZERO
  frame.size = frame.get_combined_minimum_size()
- var factor := minf(0.5, minf((viewport.y - 160.0) / frame.size.y, (viewport.x - 32.0) / frame.size.x))
+ var factor := minf(0.5, minf((viewport.y - panel_top - 16.0) / frame.size.y, (viewport.x - 32.0) / frame.size.x))
  frame.scale = Vector2.ONE * factor
- frame.position = Vector2(16, 140)
+ frame.position = Vector2(16, panel_top)
 
 func update_interaction(paused: bool) -> void:
  var focused := get_viewport().gui_get_focus_owner()

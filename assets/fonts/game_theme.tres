@@ -1,7 +1,10 @@
-[gd_resource type="Theme" load_steps=2 format=3]
+[gd_resource type="Theme" load_steps=3 format=3]
 
-[ext_resource type="FontFile" path="res://assets/fonts/Perfect DOS VGA 437 Win.ttf" id="1_font"]
+[ext_resource type="FontFile" path="res://assets/fonts/VT323-Regular.ttf" id="1_font"]
+[ext_resource type="FontVariation" path="res://assets/fonts/vt323_emphasis.tres" id="2_bold"]
 
 [resource]
 default_font = ExtResource("1_font")
-default_font_size = 16
+default_font_size = 24
+RichTextLabel/fonts/normal_font = ExtResource("1_font")
+RichTextLabel/fonts/bold_font = ExtResource("2_bold")

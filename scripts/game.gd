@@ -161,6 +161,7 @@ var stat_base_names: Dictionary = {}
 var preview_upgrade := ""
 var damage_numbers: Array[Dictionary] = []
 var game_font: FontFile
+var game_font_bold: Font
 var piranha_art: Dictionary = {}
 var pintado_art: Dictionary = {}
 var dourado_art: Dictionary = {}
@@ -200,7 +201,8 @@ func _ready() -> void:
  cursor_layer.add_child(menu_cursor)
  get_window().title = "Pesca Mortal " + str(ProjectSettings.get_setting("application/config/version", "1.0.0"))
  rng.randomize()
- game_font = load("res://assets/fonts/Perfect DOS VGA 437 Win.ttf")
+ game_font = load("res://assets/fonts/VT323-Regular.ttf")
+ game_font_bold = load("res://assets/fonts/vt323_emphasis.tres")
  game_font.antialiasing = TextServer.FONT_ANTIALIASING_NONE
  game_font.hinting = TextServer.HINTING_NONE
  game_font.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
@@ -269,10 +271,7 @@ func _ready() -> void:
  boss_arrival_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
  boss_arrival_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
  boss_arrival_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
- var arrival_font := FontVariation.new()
- arrival_font.base_font = game_font
- arrival_font.variation_embolden = 1.2
- boss_arrival_label.add_theme_font_override("font", arrival_font)
+ boss_arrival_label.add_theme_font_override("font", game_font_bold)
  boss_arrival_label.add_theme_color_override("font_color", Color(0.7, 0.3, 1.0))
  boss_arrival_label.add_theme_color_override("font_outline_color", Color(0.05, 0.02, 0.08))
  boss_arrival_label.add_theme_constant_override("outline_size", 8)
@@ -280,7 +279,7 @@ func _ready() -> void:
  arrival_layer.add_child(boss_arrival_label)
  hud = Label.new()
  hud.position = Vector2(22, 46)
- hud.add_theme_font_size_override("font_size", 16)
+ hud.add_theme_font_size_override("font_size", 24)
  layer.add_child(hud)
  xp_bar = ProgressBar.new()
  xp_bar.show_percentage = false
@@ -298,7 +297,7 @@ func _ready() -> void:
  xp_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
  xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
  xp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
- xp_label.add_theme_font_size_override("font_size", 16)
+ xp_label.add_theme_font_size_override("font_size", 20)
  xp_label.custom_minimum_size.y = 20
  xp_label.add_theme_color_override("font_outline_color", Color(0.02, 0.04, 0.08))
  xp_label.add_theme_constant_override("outline_size", 0)
@@ -319,13 +318,13 @@ func _ready() -> void:
  health_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
  health_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
  health_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
- health_label.add_theme_font_size_override("font_size", 16)
+ health_label.add_theme_font_size_override("font_size", 20)
  health_label.add_theme_color_override("font_outline_color", Color(0.02, 0.04, 0.02))
  health_label.add_theme_constant_override("outline_size", 0)
  health_label.add_theme_color_override("font_color", Color.WHITE)
  layer.add_child(health_label)
  fps_label = Label.new()
- fps_label.add_theme_font_size_override("font_size", 16)
+ fps_label.add_theme_font_size_override("font_size", 20)
  fps_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
  fps_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
  layer.add_child(fps_label)
@@ -362,12 +361,12 @@ func _ready() -> void:
  version_badge.add_child(badge_row)
  var version_text := Label.new()
  version_text.text = "v" + str(ProjectSettings.get_setting("application/config/version", ""))
- version_text.add_theme_font_size_override("font_size", 16)
+ version_text.add_theme_font_size_override("font_size", 20)
  badge_row.add_child(version_text)
  var notes_button := Button.new()
  notes_button.text = "?"
  notes_button.tooltip_text = "Ver notas de atualização"
- notes_button.add_theme_font_size_override("font_size", 16)
+ notes_button.add_theme_font_size_override("font_size", 20)
  notes_button.custom_minimum_size = Vector2(24, 24)
  badge_row.add_child(notes_button)
  style_menu_button(notes_button)
@@ -487,7 +486,7 @@ func title(text: String, size: int = 28) -> void:
  label.text = text
  label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
  label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
- label.add_theme_font_size_override("font_size", 32 if size >= 28 else (24 if size >= 22 else 16))
+ label.add_theme_font_size_override("font_size", 40 if size >= 28 else (32 if size >= 22 else 24))
  panel.add_child(label)
 
 func button(text: String, callback: Callable) -> Button:
@@ -632,7 +631,7 @@ func setup_stats_panel() -> void:
   stat_values[id] = value
  var hint := Label.new()
  hint.text = "Passe o mouse em uma melhoria\npara comparar os valores."
- hint.add_theme_font_size_override("font_size", 16)
+ hint.add_theme_font_size_override("font_size", 24)
  column.add_child(hint)
  stats_panel.hide()
 
@@ -725,7 +724,7 @@ func update_stats_preview(id: String = "") -> void:
   if label.text.ends_with(" (MAX)"):
    label.add_theme_color_override("font_color", Color(0.5, 0.85, 1.0))
   if key == id:
-   label.text += " → " + format_stat(key, projected[key])
+   label.text += " > " + format_stat(key, projected[key])
    label.add_theme_color_override("font_color", Color(0.5, 0.85, 1.0) if projected[key] >= current[key] and format_stat(key, projected[key]).ends_with(" (MAX)") else Color(0.4, 1, 0.65))
 
 func clear_stats_preview(id: String) -> void:
@@ -747,7 +746,7 @@ func setup_profile_panel() -> void:
  heading.add_theme_constant_override("separation", 12)
  column.add_child(heading)
  profile_name_label = Label.new()
- profile_name_label.add_theme_font_size_override("font_size", 16)
+ profile_name_label.add_theme_font_size_override("font_size", 24)
  profile_name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
  heading.add_child(profile_name_label)
  var edit := TextureButton.new()
@@ -760,7 +759,7 @@ func setup_profile_panel() -> void:
  edit.pressed.connect(show_nickname)
  heading.add_child(edit)
  profile_label = Label.new()
- profile_label.add_theme_font_size_override("font_size", 16)
+ profile_label.add_theme_font_size_override("font_size", 24)
  profile_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
  column.add_child(profile_label)
 
@@ -829,7 +828,7 @@ func show_patch_notes() -> void:
  var back := button("Voltar", show_menu)
  panel.remove_child(back)
  notes_actions.add_child(back)
- back.add_theme_font_size_override("font_size", 16)
+ back.add_theme_font_size_override("font_size", 24)
  notes_actions.show()
  layout_modals()
  notes_scroll.set_deferred("scroll_vertical", scroll_position)
@@ -923,12 +922,12 @@ func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
  var heading := Label.new()
  heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
  heading.text = heading_text
- heading.add_theme_font_size_override("font_size", 20)
+ heading.add_theme_font_size_override("font_size", 32)
  heading_row.add_child(heading)
  var legends_button := Button.new()
  legends_button.set_meta("keep_default_button_style", true)
  legends_button.text = "Lendas"
- legends_button.add_theme_font_size_override("font_size", 16)
+ legends_button.add_theme_font_size_override("font_size", 24)
  legends_button.pressed.connect(show_legends.bind(mode))
  heading_row.add_child(legends_button)
  var tabs := HBoxContainer.new()
@@ -968,15 +967,12 @@ func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
     var cell := grid.get_child(cell_index) as Label
     cell.add_theme_color_override("font_color", podium_color)
     if index == 0:
-     var bold := FontVariation.new()
-     bold.base_font = cell.get_theme_font("font")
-     bold.variation_embolden = 0.75
-     cell.add_theme_font_override("font", bold)
+     cell.add_theme_font_override("font", game_font_bold)
  if ranked.is_empty() and not loading:
   var empty := Label.new()
   empty.text = "Nenhuma partida registrada." if personal else (online.status if not online.busy and not online.status.is_empty() and online.status != "Ranking atualizado." else "Nenhum recorde global recebido.")
   empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-  empty.add_theme_font_size_override("font_size", 16)
+  empty.add_theme_font_size_override("font_size", 24)
   column.add_child(empty)
  return target
 
@@ -1001,14 +997,14 @@ func make_ranking_loading(height: float) -> CenterContainer:
  var label := Label.new()
  label.text = "Carregando recordes…"
  label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
- label.add_theme_font_size_override("font_size", 16)
+ label.add_theme_font_size_override("font_size", 24)
  content.add_child(label)
  return center
 
 func history_cell(grid: GridContainer, text: String) -> void:
  var cell := Label.new()
  cell.text = text
- cell.add_theme_font_size_override("font_size", 16)
+ cell.add_theme_font_size_override("font_size", 24)
  cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
  grid.add_child(cell)
 
@@ -1167,7 +1163,7 @@ func show_settings() -> void:
   var label := Label.new()
   label.text = sounds.VOLUME_NAMES[id]
   label.custom_minimum_size.x = 208
-  label.add_theme_font_size_override("font_size", 16)
+  label.add_theme_font_size_override("font_size", 24)
   row.add_child(label)
   var slider := HSlider.new()
   slider.min_value = 0
@@ -1179,7 +1175,7 @@ func show_settings() -> void:
   row.add_child(slider)
   var amount := Label.new()
   amount.custom_minimum_size.x = 48
-  amount.add_theme_font_size_override("font_size", 16)
+  amount.add_theme_font_size_override("font_size", 24)
   amount.text = "%d%%" % slider.value
   row.add_child(amount)
   slider.value_changed.connect(func(value: float):
@@ -1692,7 +1688,7 @@ func hit_with_spear(enemy: Dictionary, amount: float = -1.0) -> void:
  var critical := crit_chance > 0 and rng.randf() < crit_chance / 100.0
  if critical: amount *= 2.0
  enemy.hp -= amount
- add_damage_number(enemy.pos - Vector2(0, enemy.radius + 8), amount, CRITICAL_COLOR if critical else Color(1, 0.88, 0.45), 0.9 if critical else 0.7, 30 if critical else 24)
+ add_damage_number(enemy.pos - Vector2(0, enemy.radius + 8), amount, CRITICAL_COLOR if critical else Color(1, 0.88, 0.45), 0.9 if critical else 0.7, 48 if critical else 32)
  enemy.flash = 0.12
 
 func show_pending_level_up() -> void:
@@ -2026,7 +2022,7 @@ func enemy_xp_reward(enemy: Dictionary) -> int:
  if enemy.get("tank", false): return 5
  return maxi(1, roundi(pow(float(enemy.radius) / 13.0, 2)))
 
-func add_damage_number(position: Vector2, amount: float, color: Color = Color(1, 0.88, 0.45), duration: float = 0.7, font_size: int = 24) -> void:
+func add_damage_number(position: Vector2, amount: float, color: Color = Color(1, 0.88, 0.45), duration: float = 0.7, font_size: int = 32) -> void:
  var limit := floating_number_limit()
  if limit == 0: return
  if damage_numbers.size() >= limit: damage_numbers.pop_front()
@@ -2037,7 +2033,7 @@ func add_xp_number(position: Vector2, amount: float) -> void:
  var limit := floating_number_limit()
  if limit == 0: return
  if damage_numbers.size() >= limit: damage_numbers.pop_front()
- damage_numbers.append({"pos": position + Vector2((damage_numbers.size() % 5 - 2) * 8, -24), "text": "+%d XP" % floori(amount), "life": 0.7, "color": XP_COLOR, "font_size": 12})
+ damage_numbers.append({"pos": position + Vector2((damage_numbers.size() % 5 - 2) * 8, -24), "text": "+%d XP" % floori(amount), "life": 0.7, "color": XP_COLOR, "font_size": 20})
 
 func update_damage_numbers(dt: float) -> void:
  for i in range(damage_numbers.size() - 1, -1, -1):
@@ -2122,7 +2118,7 @@ func show_fatal_hit() -> void:
   var label := Label.new()
   label.text = line
   label.autowrap_mode = TextServer.AUTOWRAP_OFF
-  label.add_theme_font_size_override("font_size", 12)
+  label.add_theme_font_size_override("font_size", 24)
   details.add_child(label)
 
 func reset_damage_flash() -> void:
@@ -2229,9 +2225,10 @@ func update_boss_arrival(dt: float) -> void:
  boss_arrival_label.visible = run_active and state == "playing" and boss_arrival_timer > 0.0
  if not boss_arrival_label.visible: return
  var viewport := get_viewport_rect().size
- var font_size := mini(80, roundi(viewport.x * 0.075))
+ var font_size := mini(64, roundi(viewport.x * 0.06))
  var text_width := boss_arrival_label.get_theme_font("font").get_string_size(boss_arrival_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
  font_size = maxi(1, floori(font_size * minf(1.0, (viewport.x - 48.0) / maxf(1.0, text_width))))
+ font_size = maxi(16, floori(font_size / 8.0) * 8)
  boss_arrival_label.add_theme_font_size_override("font_size", font_size)
  boss_arrival_label.size = Vector2(viewport.x, font_size * 2.0)
  boss_arrival_label.position = Vector2(0, viewport.y * 0.35 - boss_arrival_label.size.y / 2.0)
@@ -2285,7 +2282,7 @@ func show_upgrades() -> void:
  for i in choices.size():
   var id := choices[i]
   var option := Button.new()
-  option.custom_minimum_size = Vector2(260, 360)
+  option.custom_minimum_size = Vector2(260, 432)
   option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
   var frame := StyleBoxFlat.new()
   frame.bg_color = Color(0.12, 0.19, 0.26)
@@ -2320,7 +2317,7 @@ func build_upgrade_card(content: VBoxContainer, id: String, current: Dictionary,
  heading.text = "%s (lv%d)" % [LABELS[id][0], int(upgrade_levels.get(id, 0)) + 1]
  heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
  heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
- heading.add_theme_font_size_override("font_size", 20)
+ heading.add_theme_font_size_override("font_size", 32)
  heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
  content.add_child(heading)
  var art := TextureRect.new()
@@ -2342,13 +2339,13 @@ func build_upgrade_card(content: VBoxContainer, id: String, current: Dictionary,
  description.vertical_alignment = VERTICAL_ALIGNMENT_TOP
  description.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
  description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
- description.add_theme_font_size_override("font_size", 14)
+ description.add_theme_font_size_override("font_size", 20)
  description.mouse_filter = Control.MOUSE_FILTER_IGNORE
  footer.add_child(description)
  var value := Label.new()
- value.text = format_stat(id, current[id]) + " → " + format_stat(id, next[id])
+ value.text = format_stat(id, current[id]) + " > " + format_stat(id, next[id])
  value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
- value.add_theme_font_size_override("font_size", 16)
+ value.add_theme_font_size_override("font_size", 24)
  value.add_theme_color_override("font_color", Color(0.4, 1.0, 0.65))
  value.mouse_filter = Control.MOUSE_FILTER_IGNORE
  footer.add_child(value)
@@ -2407,7 +2404,7 @@ func finish(won: bool) -> void:
    panel.remove_child(item)
    actions.add_child(item)
    item.custom_minimum_size.y = 48
-   item.add_theme_font_size_override("font_size", 16)
+   item.add_theme_font_size_override("font_size", 24)
    item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
   if profile_panel: profile_panel.hide()
   layout_modals()
@@ -2503,8 +2500,8 @@ func draw_boss_health(enemy: Dictionary, bar_position: Vector2, width: float, co
  draw_rect(Rect2(bar_position, Vector2(width, 6)), Color(0.2, 0.1, 0.25))
  draw_rect(Rect2(bar_position, Vector2(width * clampf(enemy.hp / enemy.max_hp, 0, 1), 6)), color)
  var hp_text := "%d / %d" % [ceili(maxf(0, enemy.hp)), ceili(enemy.max_hp)]
- var hp_position := bar_position + Vector2(width / 2 - game_font.get_string_size(hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x / 2, 18)
- draw_string(game_font, hp_position.round(), hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
+ var hp_position := bar_position + Vector2(width / 2 - game_font.get_string_size(hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x / 2, 18)
+ draw_string(game_font, hp_position.round(), hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color.WHITE)
 
 func _draw() -> void:
  var offset := camera_offset()
@@ -2609,7 +2606,7 @@ func _draw() -> void:
   var boss_title := "MINHOCÃO"
   if enemies.any(func(enemy: Dictionary): return enemy.get("species", "") == "pai_do_mato"):
    boss_title = "PAI DO MATO" if enemies.all(func(enemy: Dictionary): return not enemy.boss or enemy.get("species", "") == "pai_do_mato") else "MINHOCÃO + PAI DO MATO"
-  var boss_title_size := 24
+  var boss_title_size := 32
   var boss_title_width := game_font.get_string_size(boss_title, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_title_size).x
   var boss_title_position := Vector2((viewport.x - boss_title_width) / 2, viewport.y - 47).round()
   draw_string_outline(game_font, boss_title_position, boss_title, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_title_size, 4, Color(0.05, 0.02, 0.08))
@@ -2621,9 +2618,9 @@ func _draw() -> void:
   if not visible_world.grow(80).has_point(number.pos): continue
   var alpha: float = clampf(number.life / 0.25, 0, 1)
   var text_position: Vector2 = number.pos - offset
-  var font_size: int = number.get("font_size", 24)
+  var font_size: int = number.get("font_size", 32)
   text_position.x -= number_font.get_string_size(number.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x / 2
-  if graphics_quality == 2: draw_string_outline(number_font, text_position, number.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 2 if font_size == 12 else 4, Color(0.03, 0.02, 0.01, alpha))
+  if graphics_quality == 2: draw_string_outline(number_font, text_position, number.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 2 if font_size == 20 else 4, Color(0.03, 0.02, 0.01, alpha))
   var tint: Color = number.get("color", Color(1, 0.88, 0.45))
   tint.a = alpha
   draw_string(number_font, text_position, number.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, tint)
@@ -2735,7 +2732,7 @@ func render_legends() -> void:
   empty.text = online.status if not online.busy and not online.status.is_empty() and online.status != "Ranking atualizado." else "Nenhum recorde disponível nesta versão."
   empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
   empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-  empty.add_theme_font_size_override("font_size", 16)
+  empty.add_theme_font_size_override("font_size", 24)
   panel.add_child(empty)
  var personal_records := RUN_HISTORY.for_version(run_history, legends_version)
  var personal_rank: Array = RUN_HISTORY.ranked(personal_records) if legends_mode == "endless" else RUN_HISTORY.boss_ranked(personal_records)
