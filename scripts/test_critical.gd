@@ -64,7 +64,7 @@ func run() -> void:
  game.hit_with_spear(boss, 100.0)
  assert(boss.hp == before)
  game.crit_chance = 98
- game.choose_upgrade("crit_chance")
+ game._apply_upgrade("crit_chance")
  assert(game.crit_chance == 100)
  for index in 30:
   game.show_upgrades()

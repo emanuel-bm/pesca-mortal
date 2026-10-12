@@ -22,9 +22,9 @@ func run() -> void:
  game.start_run("endless")
  game.test_run = true
  for id in ["damage", "rate", "shots", "speed", "magnet"]:
-  for rank in (5 if id == "speed" else 6): game.choose_upgrade(id)
+  for rank in (5 if id == "speed" else 6): game._apply_upgrade(id)
  for id in ["damage", "rate", "shots", "magnet"]:
-  for rank in (2 if id == "damage" else 1): game.choose_upgrade(id)
+  for rank in (2 if id == "damage" else 1): game._apply_upgrade(id)
  game.level = 35
  game.elapsed = 420.0
  game.kills = 2900

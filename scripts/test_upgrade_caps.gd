@@ -10,11 +10,11 @@ func run() -> void:
  assert(game.magnet == 180.0)
  assert(not game.projected_stats().has("magnet"))
  assert(not game.stat_values.has("magnet"))
- game.choose_upgrade("magnet")
+ game._apply_upgrade("magnet")
  assert(game.magnet == 180.0)
  game.speed = 249.0
  assert(is_equal_approx(game.projected_stats("speed").speed, 249.0 * 1.10))
- game.choose_upgrade("speed")
+ game._apply_upgrade("speed")
  assert(is_equal_approx(game.speed, 249.0 * 1.10))
  game.speed = 1000.0
  assert(not game.format_stat("speed", game.speed).contains("MAX"))
@@ -26,9 +26,9 @@ func run() -> void:
  game.start_run("endless")
  game.test_run = true
  for id in ["damage", "rate", "shots", "speed", "magnet"]:
-  for rank in (5 if id == "speed" else 6): game.choose_upgrade(id)
+  for rank in (5 if id == "speed" else 6): game._apply_upgrade(id)
  for id in ["damage", "rate", "shots", "magnet"]:
-  for rank in (2 if id == "damage" else 1): game.choose_upgrade(id)
+  for rank in (2 if id == "damage" else 1): game._apply_upgrade(id)
  game.level = 35
  game.elapsed = 420.0
  game.kills = 2900

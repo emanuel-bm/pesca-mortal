@@ -168,7 +168,7 @@ func run() -> void:
  game.update_game(5.0)
  game.cards.activate("furia")
  assert(game.cards.effects.furia == 6.0, "Repeat refreshes duration without stacking")
- game.choose_upgrade("speed")
+ game._apply_upgrade("speed")
  assert(is_equal_approx(game.effective_speed(), 190.0 * 1.10 * 1.2))
  game.update_game(1.0)
  assert(not game.cards.active("intangivel") and not game.cards.active("perfurante"))

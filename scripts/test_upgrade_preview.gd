@@ -31,6 +31,7 @@ func run() -> void:
   for frame in 5: await process_frame
  for id in game.UPGRADES:
   game.show_upgrades()
+  while id not in game.choices: game.show_upgrades()
   assert(game.stats_panel.visible)
   var before: Dictionary = game.projected_stats()
   game.update_stats_preview(id)
@@ -85,6 +86,7 @@ func run() -> void:
  assert(game.state == "upgrade" and game.choices.size() == 3)
  assert(is_equal_approx(game.projected_stats("speed").speed, 275.0))
  var prior: float = game.damage
+ while "damage" not in game.choices: game.show_upgrades()
  game.choose_upgrade("damage")
  assert(game.damage > prior and game.upgrade_levels.damage == 51)
  game.xp = 4

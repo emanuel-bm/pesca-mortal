@@ -36,7 +36,7 @@ func run() -> void:
  game.start_run("bosses")
  game.test_run = true
  for id in ["damage", "rate", "shots", "speed", "magnet"]:
-  for rank in (5 if id == "speed" else 6): game.choose_upgrade(id)
+  for rank in (5 if id == "speed" else 6): game._apply_upgrade(id)
  game.level = 30
  game.elapsed = game.RUN_SECONDS
  game.boss_spawned = true

@@ -127,6 +127,8 @@ var history_path := "user://endless_runs.json"
 var upgrade_levels: Dictionary = {}
 var choices: Array[String] = []
 var upgrade_buttons: Array[Button] = []
+var upgrade_generation := 0
+var upgrade_selection_pending := false
 var selected_upgrade := 0
 var menu_controls: Array[Control] = []
 var version_badge: PanelContainer
@@ -251,9 +253,6 @@ func _ready() -> void:
  if ResourceLoader.exists("res://assets/minhocao.png"): boss_texture = load("res://assets/minhocao.png")
  sounds = preload("res://scripts/sound_effects.gd").new()
  add_child(sounds)
- var visibility_monitor := preload("res://scripts/window_visibility.gd").new()
- visibility_monitor.obscured_changed.connect(set_window_obscured)
- add_child(visibility_monitor)
  character_quality.setup(self)
  load_display_settings()
  var automated_test := false
@@ -1157,15 +1156,10 @@ func quit_game() -> void:
  record_run("quit")
  get_tree().quit()
 
-var window_obscured := false
 var window_focus_lost := false
 
-func set_window_obscured(value: bool) -> void:
- window_obscured = value
- update_window_pause()
-
 func update_window_pause() -> void:
- var blocked := window_focus_lost or window_obscured
+ var blocked := window_focus_lost
  if sounds: sounds.set_focus_paused(blocked)
  if blocked and state == "playing": show_pause()
 
@@ -1356,6 +1350,7 @@ func restart_run() -> void:
 
 func start_run(mode: String = "bosses") -> void:
  if mode not in ["endless", "bosses", "training"]: return
+ upgrade_selection_pending = false
  fatal_hit.clear()
  clear_fatal_hit_panel()
  reset_damage_flash()
@@ -1488,7 +1483,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
    choose_upgrade(choices[index])
 
 func resume() -> void:
- if window_obscured or window_focus_lost: return
+ if window_focus_lost: return
  state = "playing"
  update_cursor_visibility()
  if training: training.update_interaction(false)
@@ -1513,7 +1508,7 @@ func update_cursor_visibility() -> void:
  if Input.mouse_mode != desired: Input.mouse_mode = desired
 
 func _process(delta: float) -> void:
- if window_obscured or window_focus_lost:
+ if window_focus_lost:
   update_window_pause()
  if version_badge: version_badge.visible = state in ["menu", "nickname"]
  update_boss_arrival(minf(delta, 0.05))
@@ -2470,6 +2465,8 @@ func fire() -> void:
   bullets.append({"pos": player, "velocity": direction.rotated(angle) * 650, "life": ARENA.length() / 650.0 + 0.1 if piercing else 1.6, "piercing": piercing, "base_damage": effective_damage(), "hit_enemies": []})
 
 func show_upgrades() -> void:
+ upgrade_generation += 1
+ upgrade_selection_pending = true
  state = "upgrade"
  clear_panel()
  overlay.custom_minimum_size.x = 770
@@ -2508,7 +2505,7 @@ func show_upgrades() -> void:
   option.add_theme_stylebox_override("normal", frame)
   style_menu_button(option)
   option.get_theme_stylebox("normal").border_color = frame.border_color
-  option.pressed.connect(choose_upgrade.bind(id))
+  option.pressed.connect(choose_upgrade.bind(id, upgrade_generation))
   hand.add_child(option)
   var inset := MarginContainer.new()
   inset.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -2606,7 +2603,20 @@ func select_upgrade(index: int) -> void:
  upgrade_buttons[index].grab_focus()
  update_stats_preview(choices[index])
 
-func choose_upgrade(id: String) -> void:
+func choose_upgrade(id: String, generation: int = -1) -> void:
+ if state != "upgrade" or not upgrade_selection_pending or id not in choices: return
+ if generation != -1 and generation != upgrade_generation: return
+ # Consume before changing stats or opening another queued level's screen.
+ upgrade_selection_pending = false
+ for option in upgrade_buttons: option.disabled = true
+ _apply_upgrade(id)
+ if window_focus_lost:
+  show_pause()
+  return
+ resume()
+ show_pending_level_up()
+
+func _apply_upgrade(id: String) -> void:
  if not id in UPGRADES: return
  upgrade_levels[id] = int(upgrade_levels.get(id, 0)) + 1
  var next := projected_stats(id)
@@ -2621,8 +2631,6 @@ func choose_upgrade(id: String) -> void:
  persistence = int(next.persistence)
  crit_chance = int(next.crit_chance)
  health_bar.max_value = max_health
- resume()
- show_pending_level_up()
 
 func finish(won: bool) -> void:
  match_won = won

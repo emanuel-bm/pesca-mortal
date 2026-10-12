@@ -56,7 +56,7 @@ func run() -> void:
  assert(is_equal_approx(worm.speed, 100.0 * pow(1.08, 10)))
  game.buff_endless_enemies()
  assert(is_equal_approx(worm.speed, 100.0 * pow(1.08, 10)))
- for index in 30: game.choose_upgrade("speed")
+ for index in 30: game._apply_upgrade("speed")
  assert(is_equal_approx(game.speed, 190.0 * pow(1.10, 30)))
  assert(game.speed > 300.0 and not game.format_stat("speed", game.speed).contains("MAX"))
  game.speed = 1.0

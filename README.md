@@ -1,6 +1,6 @@
 # Pesca Mortal — protótipo
 
-Beta atual: **0.4.2**. Código, arte, áudio, scripts de servidor e testes estão
+Beta atual: **0.4.3**. Código, arte, áudio, scripts de servidor e testes estão
 incluídos no projeto. Ferramentas locais, caches e builds exportadas ficam
 fora do Git; pacotes para jogar são distribuídos pelas Releases.
 
@@ -118,18 +118,15 @@ Os atalhos dependem da engine portátil local; não são um pacote de distribui�
 
 ## Controles
 
-Perder o foco pausa a partida e suspende o áudio. No Windows, uma janela de
-outra aplicação sobre a área do jogo também provoca a pausa, mesmo sem tirar
-o foco do teclado. O monitor consulta as janelas a cada 150 ms, em um processo
-PowerShell oculto encerrado junto com o jogo. Janelas atrás do jogo, ocultas,
-minimizadas ou fora da área jogável são ignoradas. A partida permanece pausada
-quando a janela sai da frente; use **Continuar** para retomar.
+Perder o foco pausa a partida e suspende o áudio. Vídeos em picture-in-picture
+e notificações sobre o jogo não pausam a partida enquanto o jogo mantém o foco.
+Ao retornar o foco, use **Continuar** para retomar.
+Cada tela de melhoria aceita uma única escolha por teclado ou mouse, mesmo
+durante a perda de foco ou quando há vários níveis acumulados.
 
-Validação: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test_window_visibility.ps1`
-exercita uma janela externa sem ativação e o monitor real; o teste Godot
-`res://scripts/test_focus_pause.gd` verifica pausa, áudio e retomada.
-Overlays passivos do driver, que não recebem foco e deixam os cliques passar,
-são ignorados para evitar pausas falsas em tela cheia. O teste
+Validação: `res://scripts/test_focus_pause.gd` verifica pausa, áudio e retomada;
+`res://scripts/test_upgrade_single_selection.gd` verifica escolhas repetidas,
+perda de foco e botões de telas anteriores com níveis acumulados. O teste
 `res://scripts/test_fullscreen_focus.gd`, executado sem `--headless`, alterna
 os modos de janela e verifica áudio, Voltar e Continuar.
 

@@ -21,8 +21,8 @@ func run() -> void:
   for attempt in 30:
    DisplayServer.window_move_to_foreground(root.get_window_id())
    await create_timer(0.1).timeout
-  print("Fullscreen=", full, " focused=", root.has_focus(), " lost=", game.window_focus_lost, " obscured=", game.window_obscured)
-  if game.window_focus_lost or game.window_obscured or game.sounds.focus_paused:
+  print("Fullscreen=", full, " focused=", root.has_focus(), " lost=", game.window_focus_lost)
+  if game.window_focus_lost or game.sounds.focus_paused:
    push_error("Focused fullscreen/windowed game must keep audio and menus active")
    game.free()
    quit(1)

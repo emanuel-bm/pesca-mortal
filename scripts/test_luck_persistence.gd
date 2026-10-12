@@ -10,8 +10,8 @@ func run() -> void:
  game.start_run("endless")
  game.set_process(false)
  for count in 5:
-  game.choose_upgrade("luck")
-  game.choose_upgrade("persistence")
+  game._apply_upgrade("luck")
+  game._apply_upgrade("persistence")
  assert(game.luck == 50 and game.persistence == 25)
  for elapsed in [0.0, 120.0, 240.0, 400.0]:
   game.elapsed = elapsed

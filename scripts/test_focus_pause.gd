@@ -24,31 +24,18 @@ func run() -> void:
  game.notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
  assert_audio_paused(game, false)
  game.start_run("endless")
- var monitor: Node = preload("res://scripts/window_visibility.gd").new()
- monitor.name = "WindowVisibilityTest"
- monitor.obscured_changed.connect(game.set_window_obscured)
- game.add_child(monitor)
- monitor.status_path = ProjectSettings.globalize_path("user://test_window_visibility_%d.status" % OS.get_process_id())
- write_visibility(monitor.status_path, "1")
- monitor.poll_status()
- assert(game.state == "paused", "An overlapping window without focus loss must pause gameplay")
- game.resume()
- assert(game.state == "paused", "Continue must not resume while another window covers the game")
- assert_audio_paused(game, true)
- game.notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
- assert_audio_paused(game, true)
- write_visibility(monitor.status_path, "")
- monitor.poll_status()
- assert_audio_paused(game, true)
- write_visibility(monitor.status_path, "0")
+ for child in game.get_children():
+  if child.get_script():
+   assert(child.get_script().resource_path != "res://scripts/window_visibility.gd", "PiP and notifications must not start an overlap detector")
+ assert(game.state == "playing")
+ assert_audio_paused(game, false)
  game.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
- monitor.poll_status()
+ game.resume()
+ assert(game.state == "paused", "Continue must not resume while another application has focus")
  assert_audio_paused(game, true)
  game.notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
  assert_audio_paused(game, false)
- assert(game.state == "paused", "Removing an overlapping window must require explicit resume")
- monitor.queue_free()
- await process_frame
+ assert(game.state == "paused", "Returning focus must require explicit resume")
  for mode in ["endless", "bosses", "training"]:
   game.start_run(mode)
   game.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
@@ -85,8 +72,3 @@ func assert_audio_paused(game: Node, expected: bool) -> void:
  for child in game.sounds.get_children():
   if child is AudioStreamPlayer and child.has_stream_playback():
    assert(child.stream_paused == expected, "Music and effects must follow window focus")
-
-func write_visibility(path: String, value: String) -> void:
- var file := FileAccess.open(path, FileAccess.WRITE)
- file.store_string(value)
- file.close()

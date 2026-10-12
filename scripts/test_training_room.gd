@@ -95,6 +95,7 @@ func run() -> void:
  assert(game.run_mode == "training" and game.damage == 20.0 and game.level == 1)
  game.training.act("level")
  assert(game.state == "upgrade" and game.level == 2)
+ while "damage" not in game.choices: game.show_upgrades()
  game.choose_upgrade("damage")
  assert(game.state == "playing" and game.damage == 24.0)
  game.hud.text = "00:26    ELIMINAÇÕES 0\nPEIXES 0\nPEIXES VISÍVEIS 0\nMINHOCÃO x1\nPAI DO MATO x1"

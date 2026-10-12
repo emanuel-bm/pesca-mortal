@@ -17,7 +17,7 @@ func run() -> void:
  root.add_child(game)
  await process_frame
  game.start_run()
- for i in 5: game.choose_upgrade("speed")
+ for i in 5: game._apply_upgrade("speed")
  assert(is_equal_approx(game.speed, 190.0 * pow(1.10, 5)))
  game.start_run()
  assert(is_equal_approx(game.speed, 190.0))
@@ -155,7 +155,7 @@ func run() -> void:
  game.start_run("bosses")
  game.test_run = true
  for id in ["damage", "rate", "shots", "speed", "xp_bonus"]:
-  for rank in (5 if id == "speed" else 6): game.choose_upgrade(id)
+  for rank in (5 if id == "speed" else 6): game._apply_upgrade(id)
  game.level = 30
  game.elapsed = game.RUN_SECONDS
  game.boss_spawned = true
