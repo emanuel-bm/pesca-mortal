@@ -82,6 +82,7 @@ func run() -> void:
  ranking.disabled = true
  root.add_child(ranking)
  ranking.endpoint = "https://example.invalid/ranking"
+ ranking.competitive_build = true
  ranking.pending = {}
  ranking.queue_record({"mode": "endless", "seconds": 45.0, "kills": 10, "level": 3, "character": "default", "reason": "died"})
  var outbox_key: String = ranking.competitive_version + ":endless"
