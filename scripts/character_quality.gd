@@ -48,6 +48,7 @@ func draw_fish(game: Node2D, view: Rect2, offset: Vector2) -> void:
    batch.instance_count = maxi(64, game.enemies.size() * 2)
  for enemy in game.enemies:
   if enemy.get("species", "") in ["dourado", "pacu"]: continue
+  if enemy.get("obstacle", false): continue
   if enemy.boss or not view.grow(enemy.radius + 2).has_point(enemy.pos): continue
   var species := 1 if enemy.tank else 0
   var size: Vector2 = fish_sizes[species] * float(enemy.radius) * 2.0

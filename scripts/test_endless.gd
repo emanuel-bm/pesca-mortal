@@ -36,7 +36,7 @@ func run() -> void:
  game.kills = 3000
  game.elapsed = 780
  game.spawn_endless_bosses()
- assert(game.enemies.size() == 21 and game.endless_wave == 6, "Timed waves must spawn 1+2+3+4+5+6 independent of kills")
+ assert(game.enemies.size() == 16 and game.endless_wave == 6, "Sixth wave restarts the count with one Pai do Mato")
  game.spawn_enemy(false)
  var fish: Dictionary = game.enemies.back()
  fish.pos = Vector2(50, 50)
@@ -158,7 +158,7 @@ func run() -> void:
  game.kills = 4000
  game.elapsed = 780
  game.spawn_endless_bosses()
- assert(game.enemies.size() == 13 and game.next_boss_time == 900)
+ assert(game.enemies.size() == 8 and game.next_boss_time == 900)
  game.restart_run()
  assert(not game.test_run and game.run_mode == "endless" and game.level == 1 and game.kills == 0 and game.enemies.is_empty())
  assert(game.next_boss_time == 180, "Restart must restore the first boss at three minutes")

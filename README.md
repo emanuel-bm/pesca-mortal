@@ -5,8 +5,11 @@ incluídos no projeto. Ferramentas locais, caches e builds exportadas ficam
 fora do Git; pacotes para jogar são distribuídos pelas Releases.
 
 O menu oferece **Modo infinito** e **Modo por chefões**. O modo por chefões
-mantém o confronto aos cinco minutos e termina com vitória ao vencer o Minhocão.
-O próximo chefão ainda não foi implementado.
+mantém o primeiro confronto aos cinco minutos e continua com ondas a cada dois minutos.
+Nos dois modos, as cinco primeiras ondas trazem apenas Minhocões, em quantidades
+de um a cinco. A sexta reinicia a contagem com um Pai do Mato; a sétima tem dois,
+a oitava três, e assim por diante. Minhocões de ondas anteriores continuam vivos
+até serem derrotados; novas ondas não geram Minhocões depois da quinta.
 No infinito, o primeiro chefão aparece aos três minutos. Depois, novas ondas
 aparecem a cada dois minutos, com dois chefões na segunda, três na terceira
 e assim por diante, sem remover chefões ainda vivos. Cada chefão abatido
@@ -15,7 +18,7 @@ atingindo os atuais e os próximos. Tamanho e XP dos peixes não mudam com o buf
 O contador de eliminações inclui chefões no modo infinito.
 Cada chefão deixa uma ventrecha gigante de 112 pixels (8 vezes a comum),
 com 100 XP base, sujeitos ao bônus de experiência. No modo por chefões,
-a partida termina ao derrotar o chefe, sem coleta do drop final.
+a partida continua e permite coletar o drop do chefe.
 As ventrechas usam contorno marrom com espessura de 1,5 pixel.
 
 O histórico do infinito é local, em `user://endless_runs.json`. O ranking ordena

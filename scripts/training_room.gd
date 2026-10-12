@@ -39,7 +39,8 @@ const ACTIONS := {
  KEY_F8: ["F8 · Restaurar vida", "heal"],
  KEY_F9: ["F9 · Invocar quatro cartas", "cards"],
  KEY_F10: ["F10 · +10 Dourados", "dourado"],
- KEY_F11: ["F11 · +10 Pacus", "pacu"]
+ KEY_F11: ["F11 · +10 Pacus", "pacu"],
+ KEY_F12: ["F12 · Invocar Pai do Mato", "pai_do_mato"]
 }
 const CARD_KEYS := {KEY_1: "ima", KEY_2: "furia", KEY_3: "intangivel", KEY_4: "perfurante"}
 
@@ -302,6 +303,9 @@ func act_progression(action: String) -> void:
 func act(action: String) -> void:
  if game.run_mode != "training" or game.state not in ["playing", "paused"]: return
  match action:
+  "pai_do_mato":
+   game.spawn_enemy(true, "pai_do_mato")
+   game.boss_spawned = true
   "dourado", "pacu":
    for index in mini(10, maxi(0, game.MAX_ENEMIES - game.enemies.size())):
     game.spawn_enemy(false, action)
@@ -319,9 +323,10 @@ func act(action: String) -> void:
     else: game.boss_spawned = true
   "fish_clear", "clear":
    for index in range(game.enemies.size() - 1, -1, -1):
-    if action == "clear" or not game.enemies[index].boss:
+    if action == "clear" or (not game.enemies[index].boss and not game.enemies[index].get("obstacle", false)):
+     var obstacle: bool = game.enemies[index].get("obstacle", false)
      game.enemies.remove_at(index)
-     game.kills += 1
+     if not obstacle: game.kills += 1
    if action == "clear": game.boss_spawned = false
    game.crowd_refresh_timer = 0.0
   "time":

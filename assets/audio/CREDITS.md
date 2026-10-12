@@ -63,9 +63,28 @@ terra rompendo e água deslocada; investida de 0,5 segundo com deslocamento de
 ar e massa grave. Mono PCM16/44.100 Hz, sem samples externos, com fades nas
 bordas. `python assets/audio/compose_boss_sounds.py` regenera os três efeitos.
 
+## Pai do Mato — efeitos originais
+
+Efeitos sintetizados para o jogo, sem gravações, samples ou vozes de terceiros.
+Mono PCM16/44.100 Hz, com fades nas bordas e amplitude limitada.
+
+- `pai_log_throw_v1.wav`: 0,325 segundo de deslocamento de ar com peso grave,
+  usado no gesto inicial do arremesso; o tempo de voo depende da distância.
+- `pai_log_splash_v1.wav`: 1,05 segundo de impacto na água, spray e gotas.
+- `pai_hand_slap_v2.wav`: 0,58 segundo de palma mais estridente, com impacto grave de 68 Hz e transientes
+  próximos e uma cauda úmida mais curta que a do tronco.
+- `pai_roar_v1.wav`: 2,4 segundos de vocalização sintetizada “OOOOOOHHH”,
+  com fundamental grave, subida de tom, formantes de vogal O, aspereza e sopro.
+  É uma aproximação estilizada de voz envelhecida, não uma gravação humana.
+
+Para regenerar: `python assets/audio/compose_pai_do_mato.py` (requer NumPy). O gerador reutiliza RATE, noise e save de compose_boss_sounds.py, seguindo o processo dos efeitos atuais do Minhocão.
+Os quatro efeitos usam o controle independente “Sons do Pai do Mato”.
+
 ## Versões arquivadas
 
 V0 a V4 e o arquivo anterior estão preservados em `unused versions/`, junto
 com os scripts e os créditos históricos. A pasta pode ser versionada no Git,
 mas contém `.gdignore` e é excluída nos presets Windows, macOS e Linux para
 não entrar na exportação oficial. Consulte `unused versions/README.md`.
+
+A versão anterior da palma foi preservada em pai_hand_slap_v1.wav. A V2 usa estalo mais brilhante, reforço de grave e volume máximo de 0,65 no jogo.

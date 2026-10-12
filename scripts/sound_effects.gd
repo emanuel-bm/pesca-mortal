@@ -7,6 +7,7 @@ var random := RandomNumberGenerator.new()
 var last_death_ms := -1000
 var last_boss_ms := -1000
 var pending_roars: Array[float] = []
+var pending_roar_ids: Array[String] = []
 var roar_spacing_remaining := 0.0
 var roar_voices: Array[AudioStreamPlayer] = []
 var music_player: AudioStreamPlayer
@@ -21,16 +22,18 @@ var music_gain := 1.0
 var outgoing_music_gain := 0.0
 var music_clock := 0.0
 var focus_paused := false
-const VOLUME_NAMES := {"master": "Geral", "music": "Música", "boss": "Sons do Minhocão", "shot": "Lança", "death": "Peixes mergulhando", "hurt": "Dano recebido", "level": "Subida de nível", "cards": "Cartas"}
-const MAX_EFFECT_VOLUME := {"boss": 0.65, "boss_death": 0.65, "emerge": 0.5, "dash": 0.45, "shot": 0.5, "death": 0.2, "hurt": 1.0, "level": 0.55, "card_ima": 0.4, "card_furia": 0.4, "card_intangivel": 0.4, "card_perfurante": 0.4}
+const VOLUME_NAMES := {"master": "Geral", "music": "Música", "boss": "Sons do Minhocão", "pai_do_mato": "Sons do Pai do Mato", "shot": "Lança", "death": "Peixes mergulhando", "hurt": "Dano recebido", "level": "Subida de nível", "cards": "Cartas"}
+const MAX_EFFECT_VOLUME := {"boss": 0.65, "pai_do_mato": 0.65, "pai_log_throw": 0.45, "pai_log_splash": 0.5, "pai_hand": 0.65, "boss_death": 0.65, "emerge": 0.5, "dash": 0.45, "shot": 0.5, "death": 0.2, "hurt": 1.0, "level": 0.55, "card_ima": 0.4, "card_furia": 0.4, "card_intangivel": 0.4, "card_perfurante": 0.4}
 const VOLUME_VERSION := 2
-var volumes := {"master": 1.0, "music": 0.7, "boss": 0.8, "shot": 1.0, "death": 1.0, "hurt": 1.0, "level": 1.0, "cards": 1.0}
+const FOREST_AUDIO := {"pai_do_mato": "pai_roar_v1", "pai_log_throw": "pai_log_throw_v1", "pai_log_splash": "pai_log_splash_v1", "pai_hand": "pai_hand_slap_v2"}
+var volumes := {"master": 1.0, "music": 0.7, "boss": 0.8, "pai_do_mato": 0.8, "shot": 1.0, "death": 1.0, "hurt": 1.0, "level": 1.0, "cards": 1.0}
 
 func _ready() -> void:
  random.randomize()
- for id in ["shot", "death", "hurt", "level", "boss", "boss_death", "emerge", "dash", "card_ima", "card_furia", "card_intangivel", "card_perfurante"]:
+ for id in ["shot", "death", "hurt", "level", "boss", "boss_death", "emerge", "dash", "card_ima", "card_furia", "card_intangivel", "card_perfurante"] + FOREST_AUDIO.keys():
   var player := AudioStreamPlayer.new()
-  if id == "boss": player.stream = load("res://assets/audio/minhocao_roar.wav")
+  if FOREST_AUDIO.has(id): player.stream = load("res://assets/audio/%s.wav" % FOREST_AUDIO[id])
+  elif id == "boss": player.stream = load("res://assets/audio/minhocao_roar.wav")
   elif id == "boss_death": player.stream = load("res://assets/audio/minhocao_death.wav")
   elif id == "emerge": player.stream = load("res://assets/audio/minhocao_emerge_v1.wav")
   elif id == "dash": player.stream = load("res://assets/audio/minhocao_dash_v3.wav")
@@ -42,7 +45,7 @@ func _ready() -> void:
    if id == "card_perfurante": version = "v6"
    player.stream = load("res://assets/audio/%s_%s.wav" % [id, version])
   else: player.stream = synthesize(id)
-  player.max_polyphony = 3 if id in ["emerge", "dash", "boss_death"] else 1
+  player.max_polyphony = 3 if id in ["emerge", "dash", "boss_death"] or FOREST_AUDIO.has(id) else 1
   add_child(player)
   players[id] = player
  # Um player exclusivo preserva a música durante pausas e escolhas de melhorias.
@@ -71,13 +74,18 @@ func apply_volumes() -> void:
  for id in players:
   players[id].volume_linear = MAX_EFFECT_VOLUME[id] * volumes.master * volumes[volume_group(id)]
   if not effect_enabled(id): players[id].stop()
- for voice in roar_voices:
-  voice.volume_linear = MAX_EFFECT_VOLUME.boss * volumes.master * volumes.boss
-  if not effect_enabled("boss"): voice.stop()
- if not effect_enabled("boss"):
-  pending_roars.clear()
+ for voice in roar_voices.duplicate():
+  var id: String = voice.get_meta("effect_id", "boss")
+  voice.volume_linear = MAX_EFFECT_VOLUME[id] * volumes.master * volumes[volume_group(id)]
+  if not effect_enabled(id):
+   voice.stop()
+   on_roar_finished(voice)
+ for index in range(pending_roars.size() - 1, -1, -1):
+  if not effect_enabled(pending_roar_ids[index]):
+   pending_roars.remove_at(index)
+   pending_roar_ids.remove_at(index)
+ if not effect_enabled("boss") and not effect_enabled("pai_do_mato"):
   roar_spacing_remaining = 0.0
-  clear_roar_voices()
  apply_music_volume()
 
 func apply_music_volume() -> void:
@@ -157,6 +165,7 @@ func update_music(delta: float) -> void:
  apply_music_volume()
 
 func volume_group(id: String) -> String:
+ if FOREST_AUDIO.has(id): return "pai_do_mato"
  if id.begins_with("card_"): return "cards"
  return "boss" if id in ["boss", "boss_death", "emerge", "dash"] else id
 
@@ -197,15 +206,16 @@ func play_boss_dash() -> void:
 func play_boss_death() -> void:
  play_effect("boss_death", 1.0, 1.0)
 
-func announce_boss() -> void:
+func announce_boss(id: String = "boss") -> void:
  request_battle_music()
- if not effect_enabled("boss"): return
+ if not effect_enabled(id): return
  last_boss_ms = Time.get_ticks_msec()
  # Cada chefe conserva seu rugido; os da mesma onda começam desencontrados.
  if roar_spacing_remaining <= 0.0:
-  play_roar_voice()
+  play_roar_voice(id)
  else:
   pending_roars.append(roar_spacing_remaining)
+  pending_roar_ids.append(id)
  roar_spacing_remaining += random.randf_range(0.18, 0.28)
 
 func update_roars(delta: float) -> void:
@@ -213,15 +223,18 @@ func update_roars(delta: float) -> void:
  for index in range(pending_roars.size() - 1, -1, -1):
   pending_roars[index] -= delta
   if pending_roars[index] <= 0.0:
+   var id: String = pending_roar_ids[index]
    pending_roars.remove_at(index)
-   play_roar_voice()
+   pending_roar_ids.remove_at(index)
+   play_roar_voice(id)
 
-func play_roar_voice() -> void:
- if not effect_enabled("boss"): return
+func play_roar_voice(id: String = "boss") -> void:
+ if not effect_enabled(id): return
  var voice := AudioStreamPlayer.new()
- voice.stream = players.boss.stream
+ voice.stream = players[id].stream
+ voice.set_meta("effect_id", id)
  voice.pitch_scale = random.randf_range(0.97, 1.03)
- voice.volume_linear = MAX_EFFECT_VOLUME.boss * volumes.master * volumes.boss
+ voice.volume_linear = MAX_EFFECT_VOLUME[id] * volumes.master * volumes[volume_group(id)]
  add_child(voice)
  roar_voices.append(voice)
  voice.finished.connect(on_roar_finished.bind(voice))
@@ -251,6 +264,7 @@ func play_effect(id: String, pitch_min: float, pitch_max: float) -> void:
 
 func reset() -> void:
  pending_roars.clear()
+ pending_roar_ids.clear()
  roar_spacing_remaining = 0.0
  clear_roar_voices()
  for player in players.values(): player.stop()

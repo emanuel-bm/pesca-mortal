@@ -18,6 +18,7 @@ const MOVEMENT_MULTIPLIER := 1.2
 const FASTEST_ENEMY_SPEED := 125.0
 const BASE_PLAYER_SPEED := 190.0
 const MINHOCAO = preload("res://scripts/minhocao.gd")
+const PAI_DO_MATO = preload("res://scripts/pai_do_mato.gd")
 const DOURADO = preload("res://scripts/dourado.gd")
 const FISH_VISUALS = preload("res://scripts/fish_visuals.gd")
 const RUN_HISTORY = preload("res://scripts/run_history.gd")
@@ -162,9 +163,12 @@ var piranha_art: Dictionary = {}
 var pintado_art: Dictionary = {}
 var dourado_art: Dictionary = {}
 var pacu_art: Dictionary = {}
+var pai_do_mato_art: Dictionary = {}
+var log_art: Dictionary = {}
 var water_texture: Texture2D
 var canoe_texture: Texture2D
 var canoe_region: Rect2
+var canoe_waterline := PackedVector2Array()
 var xp_texture: Texture2D
 var xp_region: Rect2
 var xp_outline_material: ShaderMaterial
@@ -174,6 +178,9 @@ var water_material: ShaderMaterial
 var water_time := 0.0
 var wake_timer := 0.0
 var water_ripples: Array[Dictionary] = []
+var boat_particles: Array[Dictionary] = []
+var boat_particle_timer := 0.0
+var boat_particle_sequence := 0
 var online: Node
 var online_status_label: Label
 var nickname_edit: LineEdit
@@ -199,6 +206,8 @@ func _ready() -> void:
  pintado_art = FISH_VISUALS.load_art("res://assets/pintado-v2.png")
  dourado_art = FISH_VISUALS.load_art("res://assets/dourado-v1.png")
  pacu_art = FISH_VISUALS.load_art("res://assets/pacu-v4.png")
+ pai_do_mato_art = FISH_VISUALS.load_art("res://assets/pai-do-mato-v2.png")
+ log_art = FISH_VISUALS.load_art("res://assets/tronco-pai-do-mato-v3.png")
  if ResourceLoader.exists("res://assets/water.png"): water_texture = load("res://assets/water.png")
  if ResourceLoader.exists("res://assets/ventrescha-v3.png"):
   xp_texture = load("res://assets/ventrescha-v3.png")
@@ -213,6 +222,7 @@ func _ready() -> void:
  if ResourceLoader.exists("res://assets/player-canoe.png"):
   canoe_texture = load("res://assets/player-canoe.png")
   canoe_region = Rect2(canoe_texture.get_image().get_used_rect())
+  setup_canoe_waterline()
  setup_water()
  texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
  if ResourceLoader.exists("res://assets/player.png"): player_texture = load("res://assets/player.png")
@@ -415,14 +425,60 @@ func update_water(dt: float) -> void:
   water_material.set_shader_parameter("view_size", get_viewport_rect().size)
   water_material.set_shader_parameter("camera_world", camera_offset())
   water_material.set_shader_parameter("water_time", water_time)
- if state != "playing" or graphics_quality == 0: return
+ if state != "playing": return
  for i in range(water_ripples.size() - 1, -1, -1):
   water_ripples[i].age += dt
-  if water_ripples[i].age > 1.3: water_ripples.remove_at(i)
+  if water_ripples[i].age > float(water_ripples[i].get("life", 1.3)): water_ripples.remove_at(i)
+ update_boat_particles(dt)
+ if graphics_quality == 0: return
  wake_timer -= dt
  if not movement().is_zero_approx() and wake_timer <= 0:
-  water_ripples.append({"pos": player - movement() * 20, "age": 0.0})
+  water_ripples.append({"pos": player - movement() * 30, "age": 0.0, "direction": movement()})
   wake_timer = 0.22 if graphics_quality == 2 else 0.5
+
+func setup_canoe_waterline() -> void:
+ canoe_waterline.clear()
+ var image := canoe_texture.get_image()
+ var size := canoe_region.size / maxf(canoe_region.size.x, canoe_region.size.y) * 72
+ # Sample the actual lower hull silhouette, trimming both pointed ends.
+ for index in 40:
+  var fraction := lerpf(0.16, 0.85, float(index) / 39)
+  var x := int(canoe_region.position.x + fraction * (canoe_region.size.x - 1))
+  for y in range(int(canoe_region.end.y) - 1, int(canoe_region.position.y) - 1, -1):
+   if image.get_pixel(x, y).a > 0.5:
+    var point := (Vector2(x, y + 1) - canoe_region.position) / canoe_region.size - Vector2(0.5, 0.5)
+    canoe_waterline.append(point * size)
+    break
+
+func make_boat_particle(sequence: int, move_direction: Vector2 = Vector2.ZERO) -> Dictionary:
+ var velocity := -move_direction.normalized() * 18.0
+ if canoe_waterline.size() < 2: return {"age": 0.0, "origin": player + Vector2(0, 18), "velocity": velocity}
+ var position := fposmod(sequence * 0.618034, 1.0) * (canoe_waterline.size() - 1)
+ var index := mini(floori(position), canoe_waterline.size() - 2)
+ var tangent := (canoe_waterline[index + 1] - canoe_waterline[index]).normalized()
+ var normal := Vector2(-tangent.y, tangent.x)
+ var point := canoe_waterline[index].lerp(canoe_waterline[index + 1], position - index)
+ var spawn_offset := point + normal * 0.5
+ if facing_left: spawn_offset.x *= -1
+ return {"age": 0.0, "origin": player + spawn_offset, "velocity": velocity}
+
+func update_boat_particles(dt: float) -> void:
+ for index in range(boat_particles.size() - 1, -1, -1):
+  boat_particles[index].age += dt
+  if boat_particles[index].age >= 0.20: boat_particles.remove_at(index)
+ var direction := movement()
+ if direction.is_zero_approx():
+  boat_particle_timer = 0.0
+  return
+ var count: int = [8, 10, 12][graphics_quality]
+ boat_particle_timer -= dt
+ var emitted := 0
+ while boat_particle_timer <= 0 and emitted < count:
+  if boat_particles.size() >= count: boat_particles.pop_front()
+  boat_particles.append(make_boat_particle(boat_particle_sequence, direction))
+  boat_particle_sequence += 1
+  boat_particle_timer += 0.20 / count
+  emitted += 1
 
 func title(text: String, size: int = 28) -> void:
  var label := Label.new()
@@ -1066,6 +1122,9 @@ func apply_display_settings(save: bool = true) -> void:
 func apply_graphics_quality() -> void:
  if water_material: water_material.set_shader_parameter("quality", graphics_quality)
  water_ripples.clear()
+ boat_particles.clear()
+ boat_particle_timer = 0.0
+ boat_particle_sequence = 0
  damage_numbers.clear()
  minimap_timer = 0.0
  if xp_renderer:
@@ -1186,7 +1245,7 @@ func start_run(mode: String = "bosses") -> void:
  run_recorded = false
  test_run = mode == "training"
  bosses_defeated = 0
- next_boss_time = ENDLESS_FIRST_BOSS_TIME
+ next_boss_time = RUN_SECONDS if mode == "bosses" else ENDLESS_FIRST_BOSS_TIME
  endless_wave = 0
  stats_panel.hide()
  sounds.reset()
@@ -1200,6 +1259,9 @@ func start_run(mode: String = "bosses") -> void:
  cards.reset()
  damage_numbers.clear()
  water_ripples.clear()
+ boat_particles.clear()
+ boat_particle_timer = 0.0
+ boat_particle_sequence = 0
  wake_timer = 0.0
  gems.clear()
  max_health = MAX_HEALTH
@@ -1346,9 +1408,9 @@ func _process(delta: float) -> void:
  health_bar.max_value = max_health
  health_label.text = "%d / %d HP" % [maxi(0, int(health)), roundi(max_health)]
  hud.text = "%02d:%02d    ELIMINAÇÕES %d" % [int(elapsed) / 60, int(elapsed) % 60, kills]
- if run_mode == "endless" and state in ["playing", "upgrade", "paused"]:
+ if run_mode in ["endless", "bosses"] and state in ["playing", "upgrade", "paused"]:
   var remaining := maxi(0, ceili(next_boss_time - elapsed))
-  hud.text += "\nINFINITO · PRÓXIMOS CHEFÕES EM %02d:%02d" % [floori(remaining / 60.0), remaining % 60]
+  hud.text += "\n%s · ONDA %d EM %02d:%02d" % ["INFINITO" if run_mode == "endless" else "CHEFÕES", endless_wave + 1, floori(remaining / 60.0), remaining % 60]
  if not profile_panel: setup_profile_panel()
  profile_panel.visible = not run_active and state not in ["nickname", "lost", "patch_notes", "legends"]
  hud.visible = run_active
@@ -1371,7 +1433,7 @@ func _process(delta: float) -> void:
   var visible_fish := 0
   var visible_area := Rect2(camera_offset(), get_viewport_rect().size)
   for enemy in enemies:
-   if enemy.boss or enemy.hp <= 0: continue
+   if enemy.boss or enemy.hp <= 0 or enemy.get("obstacle", false): continue
    fish_count += 1
    if test_run and visible_area.grow(enemy.radius + 2).has_point(enemy.pos): visible_fish += 1
   hud.text += "\nPEIXES %d" % fish_count
@@ -1388,9 +1450,12 @@ func _process(delta: float) -> void:
   for enemy in enemies:
    if enemy.boss:
     count += 1
-    if action.is_empty(): action = {"burrow": "MERGULHOU", "tracking": "SAIA DA MARCA", "emerge_warning": "VAI EMERGIR!", "dash_warning": "SAIA DA FAIXA!", "dash": "INVESTIDA", "exposed": "EXPOSTO — ATAQUE!"}[enemy.phase]
+    if action.is_empty(): action = {"burrow": "MERGULHOU", "tracking": "SAIA DA MARCA", "emerge_warning": "VAI EMERGIR!", "dash_warning": "SAIA DA FAIXA!", "dash": "INVESTIDA", "exposed": "EXPOSTO — ATAQUE!"}.get(enemy.phase, str(enemy.phase).replace("_", " ").to_upper())
   if count > 0:
-   hud.text += "\nMINHOCÃO x%d" % count
+   var boss_name := "MINHOCÃO"
+   if enemies.any(func(enemy: Dictionary): return enemy.get("species", "") == "pai_do_mato"):
+    boss_name = "PAI DO MATO" if enemies.all(func(enemy: Dictionary): return not enemy.boss or enemy.get("species", "") == "pai_do_mato") else "CHEFÕES"
+   hud.text += "\n%s x%d" % [boss_name, count]
    if run_mode == "bosses": hud.text += " · " + action
  queue_redraw()
 
@@ -1403,13 +1468,10 @@ func update_game(dt: float) -> void:
   var first_boss_time: float = RUN_SECONDS if run_mode == "bosses" else next_boss_time
   sounds.prepare_boss_music(first_boss_time - elapsed)
  invulnerability = maxf(0.0, invulnerability - dt)
- player += (movement() * effective_speed() + knockback_velocity) * dt
+ player = move_player_around_logs(player, (movement() * effective_speed() + knockback_velocity) * dt)
  if absf(movement().x) > 0.1: facing_left = movement().x < 0
  knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, KNOCKBACK_DECELERATION * dt)
  player = player.clamp(Vector2(18, 18), ARENA - Vector2(18, 18))
- if run_mode == "bosses" and elapsed >= RUN_SECONDS and not boss_spawned:
-  boss_spawned = true
-  spawn_enemy(true)
  if run_mode != "training" or training.auto_spawn: spawn_timer -= dt
  if spawn_timer <= 0 and (run_mode != "training" or training.auto_spawn):
   spawn_timer += 1.0
@@ -1426,6 +1488,17 @@ func update_game(dt: float) -> void:
  for enemy_index in enemies.size():
   var enemy: Dictionary = enemies[enemy_index]
   var old_position: Vector2 = enemy.pos
+  if enemy.get("obstacle", false):
+   update_log(enemy, dt)
+   if state != "playing": return
+   continue
+  if enemy.get("species", "") == "pai_do_mato":
+   var attack: String = PAI_DO_MATO.update(enemy, dt, player, ARENA, Rect2(camera_offset(), get_viewport_rect().size))
+   execute_forest_attack(enemy, attack)
+   if state != "playing": return
+   if enemy_overlaps(enemy, player, 14): receive_hit(enemy.contact, enemy.pos, enemy, "Contato")
+   if state != "playing": return
+   continue
   if enemy.get("species", "") == "dourado":
    DOURADO.update(enemy, dt, player, ARENA, movement() * effective_speed())
    if invulnerability <= 0 and enemy_overlaps(enemy, player, 14):
@@ -1488,6 +1561,9 @@ func update_game(dt: float) -> void:
   var enemy := enemies[i]
   enemy.flash = maxf(0, enemy.flash - dt)
   if enemy.hp <= 0:
+   if enemy.get("obstacle", false):
+    enemies.remove_at(i)
+    continue
    if enemy.boss: sounds.play_boss_death()
    else: sounds.play_death()
    gems.append({"pos": enemy.pos, "xp": enemy_xp_reward(enemy), "giant": enemy.boss})
@@ -1498,10 +1574,7 @@ func update_game(dt: float) -> void:
    cards.drop(enemy)
    kills += 1
    enemies.remove_at(i)
-   if enemy.boss and run_mode == "bosses":
-    finish(true)
-    return
- if run_mode == "endless": spawn_endless_bosses()
+ if run_mode in ["bosses", "endless"]: spawn_endless_bosses()
  for i in range(gems.size() - 1, -1, -1):
   var distance: float = gems[i].pos.distance_to(player)
   if distance < magnet or bool(gems[i].get("magnetized", false)):
@@ -1514,13 +1587,96 @@ func update_game(dt: float) -> void:
  cards.update_pickups(dt)
  show_pending_level_up()
 
+func effective_speed() -> float:
+ return speed * (1.2 if cards.active("furia") else 1.0)
+
 func enemy_vulnerable(enemy: Dictionary) -> bool:
  if enemy.get("obstacle", false): return bool(enemy.get("landed", false))
  if enemy.get("species", "") == "pai_do_mato": return true
  return not enemy.boss or MINHOCAO.vulnerable(enemy)
 
-func effective_speed() -> float:
- return speed * (1.2 if cards.active("furia") else 1.0)
+func execute_forest_attack(enemy: Dictionary, attack: String) -> void:
+ match attack:
+  "hand":
+   sounds.play_effect("pai_hand", 0.98, 1.02)
+   spawn_water_impact(enemy.target, enemy.hand_angle - PI / 2, "hand_impact")
+   if PAI_DO_MATO.hand_hits(enemy, player): receive_hit(PAI_DO_MATO.HAND_DAMAGE * float(enemy.get("stat_multiplier", 1.0)), enemy.target, enemy, "Mãozona")
+  "log":
+   sounds.play_effect("pai_log_throw", 1.0, 1.0)
+   var hp: float = enemy.max_hp * 0.5
+   enemies.append({"pos": enemy.pos, "start": enemy.pos, "target": enemy.target, "angle": (Vector2(enemy.target) - Vector2(enemy.pos)).angle(), "shapes": PAI_DO_MATO.log_shapes(log_art), "flight": 0.0, "landed": false, "hp": hp, "max_hp": hp, "radius": PAI_DO_MATO.LOG_SIZE.length() / 2, "speed": 0.0, "contact": 0.0, "flight_damage": PAI_DO_MATO.LOG_DAMAGE * float(enemy.get("stat_multiplier", 1.0)), "attacker": enemy, "flight_hit": false, "boss": false, "tank": false, "species": "tronco", "obstacle": true, "flash": 0.0, "display_name": "Tronco"})
+
+func update_log(log: Dictionary, dt: float) -> void:
+ if log.landed: return
+ var previous: Vector2 = log.pos
+ var distance: float = Vector2(log.start).distance_to(log.target)
+ log.flight = minf(1.0, log.flight + dt * PAI_DO_MATO.LOG_SPEED / distance) if distance > 0.001 else 1.0
+ log.pos = Vector2(log.start).lerp(log.target, log.flight)
+ if not log.flight_hit and flying_log_hits(log, previous, log.pos):
+  log.flight_hit = true
+  receive_hit(log.flight_damage, log.pos, log.attacker, "Tronco arremessado")
+ if log.flight >= 1.0:
+  log.landed = true
+  sounds.play_effect("pai_log_splash", 0.98, 1.02)
+  spawn_water_impact(log.pos, log.angle, "log_impact")
+  # Landing displaces an overlapping canoe without inflicting damage.
+  if PAI_DO_MATO.log_hits(log, player, 14): resolve_log_landing()
+
+func spawn_water_impact(point: Vector2, angle: float, kind: String) -> void:
+ water_ripples.append({"pos": point, "age": 0.0, "life": 1.0, "kind": kind, "angle": angle})
+
+func flying_log_hits(log: Dictionary, start: Vector2, end: Vector2) -> bool:
+ var steps := maxi(1, ceili(start.distance_to(end) / 8.0))
+ var sample := log.duplicate()
+ for index in range(steps + 1):
+  sample.pos = start.lerp(end, float(index) / steps)
+  if PAI_DO_MATO.log_hits(sample, player, 14): return true
+ return false
+
+func resolve_log_landing() -> void:
+ var logs: Array[Dictionary] = []
+ var candidates: Array[Vector2] = []
+ for log in enemies:
+  if not log.get("obstacle", false) or not log.landed or log.hp <= 0: continue
+  var rect := PAI_DO_MATO.log_rect(log).grow(14)
+  logs.append(log)
+  candidates.append_array([Vector2(rect.position.x - 0.1, player.y), Vector2(rect.end.x + 0.1, player.y), Vector2(player.x, rect.position.y - 0.1), Vector2(player.x, rect.end.y + 0.1)])
+  for shape in log.shapes:
+   for index in shape.size():
+    var start: Vector2 = log.pos + shape[index].rotated(log.angle)
+    var end: Vector2 = log.pos + shape[(index + 1) % shape.size()].rotated(log.angle)
+    var closest := Geometry2D.get_closest_point_to_segment(player, start, end)
+    var normal := (end - start).normalized().orthogonal() * 14.1
+    candidates.append_array([closest + normal, closest - normal])
+ candidates.append_array([Vector2(18, 18), Vector2(ARENA.x - 18, 18), ARENA - Vector2(18, 18), Vector2(18, ARENA.y - 18)])
+ var distance := INF
+ var best := player
+ for candidate in candidates:
+  var point := candidate.clamp(Vector2(18, 18), ARENA - Vector2(18, 18))
+  if logs.any(func(log: Dictionary): return PAI_DO_MATO.log_hits(log, point, 14)): continue
+  if player.distance_squared_to(point) < distance:
+   distance = player.distance_squared_to(point)
+   best = point
+ player = best
+
+func move_player_around_logs(origin: Vector2, displacement: Vector2) -> Vector2:
+ var logs := enemies.filter(func(enemy: Dictionary): return enemy.get("obstacle", false) and enemy.hp > 0 and enemy.landed)
+ if logs.is_empty(): return origin + displacement
+ # Short swept steps prevent fast movement and knockback tunnelling through a log.
+ var bounded_displacement := (origin + displacement).clamp(Vector2(18, 18), ARENA - Vector2(18, 18)) - origin
+ var steps := maxi(1, ceili(bounded_displacement.length() / 8.0))
+ var position := origin
+ var step := bounded_displacement / steps
+ for index in steps:
+  for axis in [Vector2(step.x, 0), Vector2(0, step.y)]:
+   var candidate: Vector2 = position + axis
+   var blocked := false
+   for log in logs:
+    if log.get("obstacle", false) and log.hp > 0 and log.landed and PAI_DO_MATO.log_hits(log, candidate, 14):
+     blocked = true
+     break
+   if not blocked: position = candidate
+ return position
 
 func effective_attack_delay() -> float:
  return attack_delay / (1.5 if cards.active("furia") else 1.0)
@@ -1529,7 +1685,7 @@ func effective_damage() -> float:
  return damage * (1.5 if cards.active("furia") else 1.0)
 
 func hit_with_spear(enemy: Dictionary, amount: float = -1.0) -> void:
- if enemy.hp <= 0 or (enemy.boss and not MINHOCAO.vulnerable(enemy)): return
+ if enemy.hp <= 0 or not enemy_vulnerable(enemy): return
  if amount < 0.0: amount = effective_damage()
  var critical := crit_chance > 0 and rng.randf() < crit_chance / 100.0
  if critical: amount *= 2.0
@@ -1552,15 +1708,15 @@ func fish_spawn_rate() -> float:
 func spawn_endless_bosses() -> void:
  while elapsed >= next_boss_time:
   endless_wave += 1
-  var count := endless_wave
-  for index in count: spawn_enemy(true)
+  var count := endless_wave if endless_wave < 6 else endless_wave - 5
+  for index in count: spawn_enemy(true, "pai_do_mato" if endless_wave >= 6 else "")
   boss_spawned = true
   next_boss_time += ENDLESS_BOSS_INTERVAL
 
 func buff_endless_enemies() -> void:
  bosses_defeated += 1
  for enemy in enemies:
-  if enemy.hp <= 0: continue
+  if enemy.hp <= 0 or enemy.get("obstacle", false): continue
   enemy.hp *= 1.05
   enemy.max_hp *= 1.05
   enemy.speed *= 1.05
@@ -1579,7 +1735,7 @@ func fish_damage_multiplier() -> float:
 func update_minute_buffs() -> void:
  var minute := floori(elapsed / 60.0)
  for enemy in enemies:
-  if enemy.boss or enemy.hp <= 0: continue
+  if enemy.boss or enemy.hp <= 0 or enemy.get("obstacle", false): continue
   var previous := int(enemy.get("buff_minute", minute))
   if minute <= previous: continue
   var multiplier := pow(1.08, minute - previous)
@@ -1750,7 +1906,7 @@ func rebuild_crowd_grid() -> void:
   crowd_positions[index] = enemies[index].pos
   crowd_radii[index] = separation_radius(enemies[index])
   crowd_max_radius = maxf(crowd_max_radius, crowd_radii[index])
-  crowd_active[index] = int(enemies[index].hp > 0 and (not enemies[index].boss or MINHOCAO.vulnerable(enemies[index])))
+  crowd_active[index] = int(enemies[index].hp > 0 and enemy_vulnerable(enemies[index]))
   var cell := Vector2i((crowd_positions[index] / CROWD_CELL_SIZE).floor())
   if not crowd_grid.has(cell): crowd_grid[cell] = []
   crowd_grid[cell].append(index)
@@ -1766,7 +1922,7 @@ func projectile_target(point: Vector2, excluded: Array = []) -> int:
     if index >= best: continue
     var enemy := enemies[index]
     if enemy in excluded: continue
-    if enemy.hp <= 0 or (enemy.boss and not MINHOCAO.vulnerable(enemy)): continue
+    if enemy.hp <= 0 or not enemy_vulnerable(enemy): continue
     if enemy_overlaps(enemy, point, 5): best = index
  return best if best < enemies.size() else -1
 
@@ -1836,6 +1992,7 @@ func piercing_candidates(start: Vector2, end: Vector2, hit_ids: Dictionary) -> A
  return targets
 
 func enemy_overlaps(enemy: Dictionary, point: Vector2, padding: float) -> bool:
+ if enemy.get("obstacle", false): return PAI_DO_MATO.log_hits(enemy, point, padding)
  if enemy.boss:
   var reach: float = enemy.radius + padding
   return point.distance_squared_to(enemy.pos) < reach * reach
@@ -1923,7 +2080,7 @@ func show_fatal_hit() -> void:
  var texture: Texture2D
  if not enemy.is_empty():
   if enemy.get("boss", false):
-   texture = boss_texture
+   texture = pai_do_mato_art.texture if enemy.get("species", "") == "pai_do_mato" else boss_texture
   else:
    var art := fish_art(enemy)
    var atlas := AtlasTexture.new()
@@ -2010,7 +2167,7 @@ func spawn_enemy(boss: bool, species: String = "") -> void:
  if is_pacu: tank = false
  if is_dourado: tank = false
  var hp := 200.0 if tank else 21.0
- if boss: hp = 32000.0
+ if boss: hp = PAI_DO_MATO.BASE_HEALTH if species == "pai_do_mato" else 32000.0
  var enemy := {"pos": position, "hp": hp, "max_hp": hp, "radius": 38.0 if boss else (44.0 if tank else 13.0), "speed": 120.0 if boss else (80.0 if tank else 125.0), "contact": 60.0 if boss else (20.0 if tank else 10.0), "boss": boss, "tank": tank, "flash": 0.0}
  if is_dourado:
   enemy.species = "dourado"
@@ -2037,15 +2194,22 @@ func spawn_enemy(boss: bool, species: String = "") -> void:
  for stat in ["hp", "max_hp", "speed"]: enemy[stat] *= multiplier
  enemy.contact *= multiplier if boss else fish_damage_multiplier()
  if boss:
-  enemy.display_name = "Minhocão"
-  MINHOCAO.initialize(enemy)
+  if species == "pai_do_mato":
+   enemy.species = species
+   enemy.display_name = "Pai do Mato"
+   enemy.radius = 70.0
+   enemy.speed = PAI_DO_MATO.MOVE_SPEED * multiplier
+   PAI_DO_MATO.initialize(enemy)
+  else:
+   enemy.display_name = "Minhocão"
+   MINHOCAO.initialize(enemy)
  enemies.append(enemy)
  if boss:
-  sounds.announce_boss()
+  sounds.announce_boss("pai_do_mato" if enemy.get("species", "") == "pai_do_mato" else "boss")
   announce_boss_arrival(enemy)
 
 func announce_boss_arrival(enemy: Dictionary) -> void:
- boss_arrival_label.text = "O MINHOCAO DESPERTOU!"
+ boss_arrival_label.text = "O PAI DO MATO DESPERTOU!" if enemy.get("species", "") == "pai_do_mato" else "O MINHOCAO DESPERTOU!"
  boss_arrival_timer = BOSS_ARRIVAL_DURATION
  boss_shake_timer = BOSS_SHAKE_DURATION
  update_boss_arrival(0.0)
@@ -2074,7 +2238,7 @@ func fire() -> void:
  var nearest := player
  var best := INF
  for enemy in enemies:
-  if enemy.boss and not MINHOCAO.vulnerable(enemy): continue
+  if not enemy_vulnerable(enemy): continue
   var distance := player.distance_squared_to(enemy.pos)
   if distance < best:
    best = distance
@@ -2287,6 +2451,58 @@ func draw_spear(canvas: CanvasItem, tip: Vector2, direction: Vector2) -> void:
  canvas.draw_line(tip - direction * 18.75, tip - direction * 3.75, Color(0.7, 0.44, 0.19), 2.25)
  canvas.draw_colored_polygon(PackedVector2Array([tip + direction * 5.25, tip - direction * 4.5 + side * 3, tip - direction * 2.25, tip - direction * 4.5 - side * 3]), Color(0.85, 0.93, 0.89))
 
+func draw_water_impact(impact: Dictionary, offset: Vector2) -> void:
+ var age: float = impact.age
+ var fade := clampf(1.0 - age / float(impact.life), 0, 1)
+ var center: Vector2 = impact.pos - offset
+ var angle: float = impact.angle
+ var segments := 24 if graphics_quality > 0 else 12
+ var reach := 80.0 if impact.kind == "log_impact" else 45.0
+ var circular: bool = impact.kind == "hand_impact"
+ for ring in 3:
+  var elapsed_ring := age - ring * 0.045
+  if elapsed_ring < 0: continue
+  var points := PackedVector2Array()
+  var radius := reach + elapsed_ring * 320
+  for index in range(segments + 1):
+   var theta := lerpf(0.0, TAU, float(index) / segments) if circular else lerpf(-PI * 0.36, PI * 0.36, float(index) / segments)
+   var point := Vector2(cos(theta) * radius, sin(theta) * radius * (1.0 if circular else 0.65))
+   points.append(center + point.rotated(angle))
+  draw_polyline(points, Color(0.65, 0.95, 1, fade * fade * (0.85 - ring * 0.15)), 4 if ring == 0 else 2)
+ if age < 0.7:
+  var count: int = [12, 28, 48][graphics_quality]
+  for index in count:
+   var elapsed_drop: float = age - (index % 4) * 0.012
+   if elapsed_drop < 0: continue
+   var theta := index * TAU / count if circular else lerpf(-PI * 0.38, PI * 0.38, float(index) / maxi(1, count - 1))
+   var speed: float = 140.0 + (index % 7) * 22.0
+   var origin := Vector2((index % 5 - 2) * 9.0, (index % 3 - 1) * 10.0)
+   var spread: Vector2 = origin + Vector2.from_angle(theta) * speed * elapsed_drop
+   var height := maxf(0, (210 + (index % 5) * 28) * elapsed_drop - 470 * elapsed_drop * elapsed_drop)
+   var point := center + spread.rotated(angle) - Vector2(0, height)
+   var alpha := clampf(1.0 - elapsed_drop / 0.7, 0, 1)
+   draw_line(point, point + Vector2(0, 5 + height * 0.09), Color(0.8, 1, 1, alpha), 2 + index % 3)
+
+func draw_boat_wake(ripple: Dictionary, offset: Vector2) -> void:
+ var age: float = ripple.age
+ var center: Vector2 = ripple.pos - offset
+ var fade := clampf(1.0 - age / 1.3, 0, 1)
+ draw_arc(center, 12 + age * 30, 0, TAU, 32, Color(0.4, 0.78, 0.82, fade * 0.6), 2)
+
+func draw_boat_particles(offset: Vector2) -> void:
+ for particle in boat_particles:
+  var age: float = particle.age
+  var point: Vector2 = particle.origin - offset + particle.velocity * age
+  draw_rect(Rect2(point, Vector2(2, 2)), Color(0.75, 0.95, 1, 0.8 * (1 - age / 0.20)))
+
+func draw_boss_health(enemy: Dictionary, bar_position: Vector2, width: float, color: Color) -> void:
+ draw_rect(Rect2(bar_position - Vector2.ONE, Vector2(width + 2, 8)), Color(0.05, 0.04, 0.08))
+ draw_rect(Rect2(bar_position, Vector2(width, 6)), Color(0.2, 0.1, 0.25))
+ draw_rect(Rect2(bar_position, Vector2(width * clampf(enemy.hp / enemy.max_hp, 0, 1), 6)), color)
+ var hp_text := "%d / %d" % [ceili(maxf(0, enemy.hp)), ceili(enemy.max_hp)]
+ var hp_position := bar_position + Vector2(width / 2 - game_font.get_string_size(hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x / 2, 18)
+ draw_string(game_font, hp_position.round(), hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
+
 func _draw() -> void:
  var offset := camera_offset()
  var viewport := get_viewport_rect().size
@@ -2303,17 +2519,30 @@ func _draw() -> void:
    draw_line(Vector2(0, y) - offset, Vector2(ARENA.x, y) - offset, Color(0.09, 0.11, 0.14))
  draw_rect(Rect2(-offset, ARENA), Color(0.3, 0.4, 0.5), false, 3)
  for ripple in water_ripples:
-  draw_arc(ripple.pos - offset, 12 + ripple.age * 27, 0, TAU, 32, Color(0.18, 0.35, 0.33, (1.0 - ripple.age / 1.3) * 0.25), 1.5)
+  if ripple.get("kind", "") in ["log_impact", "hand_impact"]:
+   draw_water_impact(ripple, offset)
+   continue
+  draw_boat_wake(ripple, offset)
  for projectile in bullets:
   if not visible_world.grow(26).has_point(projectile.pos): continue
   var tip: Vector2 = projectile.pos - offset
   var direction: Vector2 = projectile.velocity.normalized()
   draw_spear(self, tip, direction)
  if graphics_quality < 2: character_quality.draw_fish(self, visible_world, offset)
- for enemy in enemies:
-  if graphics_quality < 2 and character_quality.fish_batches.size() == 2 and not enemy.boss and enemy.get("species", "") not in ["dourado", "pacu"]: continue
+ # Keep ordinary fish ordering, then draw every boss over all fallen logs.
+ var render_enemies: Array = enemies.filter(func(enemy: Dictionary): return not enemy.boss) + enemies.filter(func(enemy: Dictionary): return enemy.boss)
+ for enemy in render_enemies:
+  if graphics_quality < 2 and character_quality.fish_batches.size() == 2 and not enemy.boss and not enemy.get("obstacle", false) and enemy.get("species", "") not in ["dourado", "pacu"]: continue
   if not enemy.boss and not visible_world.grow(enemy.radius + 2).has_point(enemy.pos): continue
   var position: Vector2 = enemy.pos - offset
+  if enemy.get("obstacle", false):
+   draw_set_transform(position, float(enemy.get("angle", 0.0)), Vector2(-1, 1))
+   if not log_art.is_empty(): draw_texture_rect_region(log_art.texture, Rect2(-PAI_DO_MATO.LOG_SIZE / 2, PAI_DO_MATO.LOG_SIZE), Rect2(log_art.region), Color.WHITE if enemy.flash <= 0 else Color(1.7, 1.7, 1.7))
+   draw_set_transform(Vector2.ZERO)
+   continue
+  if enemy.get("species", "") == "pai_do_mato":
+   PAI_DO_MATO.draw(self, enemy, offset, pai_do_mato_art)
+   continue
   var radius: float = enemy.radius
   var color := Color(0.7, 0.3, 1) if enemy.boss else (Color(1, 0.55, 0.15) if enemy.tank else Color(0.95, 0.25, 0.3))
   if enemy.flash > 0: color = Color.WHITE
@@ -2350,12 +2579,7 @@ func _draw() -> void:
     else: draw_rect(Rect2(position - Vector2.ONE * radius, Vector2.ONE * radius * 2), color)
     if run_mode in ["endless", "training"]:
      var bar_position := (position + Vector2(-50, maxf(60, radius + 8))).round()
-     draw_rect(Rect2(bar_position - Vector2.ONE, Vector2(102, 8)), Color(0.05, 0.04, 0.08))
-     draw_rect(Rect2(bar_position, Vector2(100, 6)), Color(0.2, 0.1, 0.25))
-     draw_rect(Rect2(bar_position, Vector2(100 * clampf(enemy.hp / enemy.max_hp, 0, 1), 6)), Color(0.7, 0.3, 1))
-     var hp_text := "%d / %d" % [ceili(maxf(0, enemy.hp)), ceili(enemy.max_hp)]
-     var hp_position := bar_position + Vector2(50 - game_font.get_string_size(hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x / 2, 18)
-     draw_string(game_font, hp_position.round(), hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
+     draw_boss_health(enemy, bar_position, 100, Color(0.7, 0.3, 1))
   else:
    if enemy.get("species", "") == "dourado" and enemy.phase == "warning":
     var end: Vector2 = position + enemy.dash_direction * DOURADO.DASH_SPEED * DOURADO.DASH_TIME * float(enemy.get("stat_multiplier", 1.0))
@@ -2380,6 +2604,8 @@ func _draw() -> void:
  if run_mode == "bosses" and boss_max_health > 0:
   var boss_bar_color := Color(0.7, 0.3, 1)
   var boss_title := "MINHOCÃO"
+  if enemies.any(func(enemy: Dictionary): return enemy.get("species", "") == "pai_do_mato"):
+   boss_title = "PAI DO MATO" if enemies.all(func(enemy: Dictionary): return not enemy.boss or enemy.get("species", "") == "pai_do_mato") else "MINHOCÃO + PAI DO MATO"
   var boss_title_size := 24
   var boss_title_width := game_font.get_string_size(boss_title, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_title_size).x
   var boss_title_position := Vector2((viewport.x - boss_title_width) / 2, viewport.y - 47).round()
@@ -2413,6 +2639,7 @@ func _draw() -> void:
   draw_texture_rect(character_quality.texture_for("player", graphics_quality, player_texture), Rect2(Vector2(-32, -32), Vector2(64, 64)), false, Color(2, 2, 2) if player_color == Color.WHITE else player_tint)
   draw_set_transform(Vector2.ZERO)
  else: draw_rect(Rect2(viewport / 2 - Vector2(14, 14), Vector2(28, 28)), player_color * player_tint)
+ draw_boat_particles(offset)
  if run_active: cards.draw_player_effects(self, viewport / 2)
  if state == "lost":
   draw_arc(viewport / 2, 44, 0, TAU, 48, Color(1, 0.45, 0.35), 2, true)

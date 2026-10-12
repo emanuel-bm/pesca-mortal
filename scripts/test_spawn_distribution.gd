@@ -34,7 +34,7 @@ func run() -> void:
  game.spawn_enemy(true)
  game.enemies.back().hp = 0
  game.update_game(0)
- assert(game.state == "won" and not game.run_active and game.bosses_defeated == 1, "Defeating Minhocao must finish boss mode with victory")
+ assert(game.state == "playing" and game.run_active and game.bosses_defeated == 1, "Boss mode must continue into later waves")
  assert(game.kills == 1 and game.enemies.is_empty(), "Victory must include the defeated boss in the final count")
  game.start_run("training")
  game.elapsed = 600

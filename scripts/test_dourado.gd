@@ -29,7 +29,7 @@ func run() -> void:
  for enemy in game.enemies:
   assert(enemy.get("species", "") == "dourado")
   var relative: Vector2 = enemy.pos - game.player
-  assert(is_equal_approx(relative.length(), 300.0))
+  assert(is_equal_approx(relative.length(), game.ENEMY_SPAWN_DISTANCE))
   quadrants[Vector2i(signi(int(relative.x)), signi(int(relative.y)))] = true
  assert(quadrants.size() == 4, "Training horde must surround the canoe")
  var fish: Dictionary = game.enemies.back()

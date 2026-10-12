@@ -74,6 +74,7 @@ static func totals(records: Array) -> Dictionary:
 ## IDs estáveis agrupam variantes do mesmo inimigo, independentemente do nome exibido.
 static func killer_details(enemy: Dictionary) -> Dictionary:
  if enemy.is_empty(): return {"killer_id": "unknown", "killer_name": "Origem desconhecida"}
+ if enemy.get("species", "") == "pai_do_mato": return {"killer_id": "pai_do_mato", "killer_name": "Pai do Mato"}
  if enemy.get("boss", false): return {"killer_id": "minhocao", "killer_name": str(enemy.get("display_name", "Minhocão"))}
  var species := str(enemy.get("species", ""))
  if species not in ["pacu", "dourado"]: species = "pintado" if enemy.get("tank", false) else "piranha"

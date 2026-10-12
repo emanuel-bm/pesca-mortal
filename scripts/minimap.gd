@@ -8,6 +8,7 @@ var small_points := PackedVector2Array()
 var large_points := PackedVector2Array()
 var boss_points := PackedVector2Array()
 var card_points := PackedVector2Array()
+var log_points := PackedVector2Array()
 var card_colors := PackedColorArray()
 const CARD_COLOR := Color(1, 0.85, 0.3)
 const EXPIRING_CARD_COLOR := Color(1, 0.2, 0.24)
@@ -50,11 +51,13 @@ func refresh(game: Node) -> void:
  small_points.clear()
  large_points.clear()
  boss_points.clear()
+ log_points.clear()
  card_points.clear()
  card_colors.clear()
  for enemy in game.enemies:
   var point: Vector2 = origin + Vector2(enemy.pos).clamp(Vector2.ZERO, game.ARENA) * scale_factor
-  if enemy.boss: boss_points.append(point)
+  if enemy.get("obstacle", false): log_points.append(point)
+  elif enemy.boss: boss_points.append(point)
   elif enemy.tank: large_points.append(point)
   else: small_points.append(point)
  for pickup in game.cards.pickups:
@@ -76,6 +79,7 @@ func _draw() -> void:
  draw_rect(viewport_box, Color(0.55, 0.7, 0.7, 0.3), false, 1)
  for batch in marker_batches:
   if batch.visible_instance_count > 0: draw_multimesh(batch, null)
+ for point in log_points: draw_rect(Rect2(point - Vector2(4, 2), Vector2(8, 4)), Color(0.6, 0.35, 0.12))
  for index in card_points.size():
   var point := card_points[index]
   var card_rect := Rect2(point - Vector2(3, 4), Vector2(6, 8))

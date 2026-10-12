@@ -14,7 +14,7 @@ func run() -> void:
  game.training.act("pacu")
  assert(game.enemies.size() == 10)
  var fish: Dictionary = game.enemies.back()
- assert(fish.speed == 80 and fish.hp == 80)
+ assert(fish.speed == 125 and fish.hp == 80)
  game.enemies.clear()
  game.enemies.append(fish)
  game.cards.activate("furia")

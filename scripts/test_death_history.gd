@@ -39,7 +39,8 @@ func run() -> void:
  game.start_run()
  game.elapsed = 10
  game.record_run("quit")
- assert(game.run_history.back().killer_id == "")
+ var quit_records: Array = game.run_history.filter(func(record: Dictionary): return record.reason == "quit")
+ assert(quit_records.size() == 1 and quit_records[0].killer_id == "")
  DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
  game.run_active = false
  game.queue_free()

@@ -132,7 +132,7 @@ func run() -> void:
   root.get_texture().get_image().save_png("res://.tools/player-left-preview.png")
  game.start_run("bosses")
  game.test_run = true
- for id in ["damage", "rate", "shots", "speed", "magnet"]:
+ for id in ["damage", "rate", "shots", "speed", "xp_bonus"]:
   for rank in (5 if id == "speed" else 6): game.choose_upgrade(id)
  game.level = 30
  game.elapsed = game.RUN_SECONDS
@@ -141,7 +141,7 @@ func run() -> void:
  assert(game.level == 30 and game.health == game.MAX_HEALTH and game.xp == 0)
  assert(game.boss_spawned and game.enemies.size() == 1 and game.enemies[0].boss)
  var ranks := 0
- for id in ["damage", "rate", "shots", "speed", "magnet"]:
+ for id in ["damage", "rate", "shots", "speed", "xp_bonus"]:
   assert(game.upgrade_levels[id] > 0)
   ranks += game.upgrade_levels[id]
  assert(ranks == 29 and game.elapsed == game.RUN_SECONDS)
