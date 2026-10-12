@@ -20,6 +20,7 @@ var fetched_at := ""
 var status := ""
 var busy := false
 var disabled := false
+var competitive_build := not OS.is_debug_build()
 var network_disabled := false
 var request: HTTPRequest
 var action := ""
@@ -116,6 +117,7 @@ func fetch_legends(version: String) -> void:
  if not busy: _next()
 
 func queue_record(record: Dictionary) -> void:
+ if not competitive_build or not HISTORY.eligible(record): return
  if record.mode == "bosses" and record.reason != "won": return
  var mode: String = record.mode
  var version := str(record.get("competitive_version", competitive_version))
@@ -143,7 +145,7 @@ func _next() -> void:
  # the same token so the server returns the existing account on a retry.
  if not profile.has("player_id") and valid_nickname(nickname()) and profile.has("token"):
   _send("register", {"nickname": nickname()})
- elif profile.has("player_id") and not pending.is_empty():
+ elif competitive_build and profile.has("player_id") and not pending.is_empty():
   var mode: String = str(pending.keys()[0])
   sent_record = pending[mode].duplicate(true)
   _send("submit", {"record": sent_record})

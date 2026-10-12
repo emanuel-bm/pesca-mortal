@@ -1107,7 +1107,7 @@ func record_run(reason: String) -> void:
  if RUN_HISTORY.save_records(run_history, history_path) != OK:
   push_warning("Não foi possível salvar o histórico local.")
   return
- if (run_mode == "endless" or (run_mode == "bosses" and reason == "won")) and online.better(record, previous):
+ if RUN_HISTORY.eligible(record) and (run_mode == "endless" or (run_mode == "bosses" and reason == "won")) and online.better(record, previous):
   online.queue_record(record)
 
 func quit_game() -> void:

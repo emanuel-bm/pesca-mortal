@@ -25,7 +25,7 @@ static func normalized(records: Array) -> Array:
  return result
 
 static func ranked(records: Array) -> Array:
- var result: Array = normalized(records).filter(func(record: Dictionary) -> bool: return record.mode == "endless")
+ var result: Array = normalized(records).filter(func(record: Dictionary) -> bool: return record.mode == "endless" and eligible(record))
  result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
   if a.seconds != b.seconds: return a.seconds > b.seconds
   return a.kills > b.kills
@@ -46,7 +46,7 @@ static func load_records(path: String = "user://endless_runs.json") -> Array:
 static func save_records(records: Array, path: String = "user://endless_runs.json") -> Error:
  var file := FileAccess.open(path, FileAccess.WRITE)
  if file == null: return FileAccess.get_open_error()
- file.store_string(JSON.stringify({"version": 4, "runs": chronological(records)}, "\t"))
+ file.store_string(JSON.stringify({"version": 5, "runs": chronological(records)}, "\t"))
  return OK
 
 static func time_text(seconds: float) -> String:
@@ -59,7 +59,7 @@ static func character_text(record: Dictionary) -> String:
  return "%s (lv%d)" % [name, final_level] if final_level > 0 else name
 
 static func boss_ranked(records: Array) -> Array:
- var result: Array = normalized(records).filter(func(record: Dictionary) -> bool: return record.mode == "bosses" and record.reason == "won")
+ var result: Array = normalized(records).filter(func(record: Dictionary) -> bool: return record.mode == "bosses" and record.reason == "won" and eligible(record))
  result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
   if a.seconds != b.seconds: return a.seconds < b.seconds
   return a.kills > b.kills

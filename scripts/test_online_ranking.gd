@@ -1,5 +1,6 @@
 extends SceneTree
 
+const HISTORY = preload("res://scripts/run_history.gd")
 const ONLINE = preload("res://scripts/online_ranking.gd")
 var client: Node
 
@@ -20,6 +21,8 @@ func own_score() -> Dictionary:
 
 func run() -> void:
  client = ONLINE.new()
+ client.competitive_version = HISTORY.LEGACY_VERSION
+ client.competitive_build = true # Exercise release submission against the local mock.
  client.storage_path = "user://test_online_%d.json" % Time.get_ticks_usec()
  root.add_child(client)
  client.endpoint = "http://127.0.0.1:18745/exec"
@@ -86,7 +89,7 @@ func run() -> void:
   game.elapsed = seconds
   game.kills = 10
   game.record_run("death")
-  assert(game.online.pending["0.3:endless"].seconds == (70.0 if seconds == 70.0 else 60.0))
+  assert(game.online.pending.is_empty(), "Debug game runs must stay out of the online outbox")
  game.show_nickname()
  await process_frame
  assert(game.nickname_edit != null)
