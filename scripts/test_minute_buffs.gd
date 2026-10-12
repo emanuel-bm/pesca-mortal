@@ -21,7 +21,7 @@ func run() -> void:
  game.update_minute_buffs()
  assert(is_equal_approx(fish.hp, 108) and is_equal_approx(fish.max_hp, 216))
  assert(is_equal_approx(fish.speed, 108) and is_equal_approx(fish.contact, 15.6))
- assert(is_equal_approx(game.DOURADO.dash_range(fish), game.DOURADO.DASH_SPEED * game.DOURADO.DASH_TIME * 1.05))
+ assert(is_equal_approx(game.DOURADO.dash_range(fish), game.DOURADO.DASH_BASE_DISTANCE * 1.05))
  assert(boss.hp == 32000, "Minute buffs apply only to fish")
  game.update_minute_buffs()
  assert(is_equal_approx(fish.hp, 108), "Same minute must not buff twice")
