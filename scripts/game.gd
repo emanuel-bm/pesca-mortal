@@ -80,6 +80,13 @@ var level_healing := 0
 var xp := 0
 var kills := 0
 var damage := 20.0
+var match_damage_dealt := 0.0
+var match_damage_taken := 0.0
+var match_card_uses: Dictionary = {}
+var match_card_seconds: Dictionary = {}
+var match_won := false
+var match_enemies: Dictionary = {}
+var match_details_button: Button
 var fatal_hit: Dictionary = {}
 var fatal_hit_panel: PanelContainer
 var attack_delay := 0.65
@@ -574,6 +581,10 @@ func move_menu_focus(direction: int) -> void:
  enabled[posmod(index + direction, enabled.size())].grab_focus()
 
 func clear_panel() -> void:
+ if is_instance_valid(match_details_button):
+  match_details_button.get_parent().remove_child(match_details_button)
+  match_details_button.queue_free()
+ match_details_button = null
  clear_fatal_hit_panel()
  notes_actions.hide()
  for child in notes_actions.get_children():
@@ -587,6 +598,7 @@ func clear_panel() -> void:
  setup_menu_navigation.call_deferred()
  overlay.custom_minimum_size.x = 620
  stats_panel.hide()
+ stats_panel.get_child(0).get_child(0).get_child(-1).show()
  if records_panel: records_panel.hide()
  if boss_records_panel: boss_records_panel.hide()
  preview_upgrade = ""
@@ -638,13 +650,25 @@ func setup_stats_panel() -> void:
 func layout_modals() -> void:
  if not overlay: return
  var viewport := get_viewport_rect().size
- if state == "patch_notes":
+ if state in ["patch_notes", "match_details", "history"]:
   var action_width := 120.0
   var notes_width := minf(868.0, viewport.x - 2.0 * (action_width + 32.0))
+  var modal_left := (viewport.x - notes_width) / 2.0
+  if state == "match_details" and is_instance_valid(profile_panel):
+   var profile_width := profile_panel.get_combined_minimum_size().x * profile_panel.scale.x
+   var available_left := profile_panel.position.x + profile_width + 16.0
+   if stats_panel.visible:
+    stats_panel.size = stats_panel.get_combined_minimum_size()
+    var stats_top := profile_panel.position.y + profile_panel.get_combined_minimum_size().y * profile_panel.scale.y + 16.0
+    var stats_scale := minf(1.0, minf(profile_width / stats_panel.size.x, (viewport.y - stats_top - 16.0) / stats_panel.size.y))
+    stats_panel.scale = Vector2.ONE * stats_scale
+    stats_panel.position = Vector2(profile_panel.position.x, stats_top)
+   notes_width = minf(800.0, viewport.x - available_left - 16.0)
+   modal_left = available_left + (viewport.x - available_left - 16.0 - notes_width) / 2.0
   overlay.custom_minimum_size.x = notes_width
   overlay.scale = Vector2.ONE
   overlay.size = Vector2(notes_width, viewport.y - 24.0)
-  overlay.position = Vector2((viewport.x - notes_width) / 2.0, 12.0)
+  overlay.position = Vector2(modal_left, 12.0)
   notes_actions.size = Vector2(action_width, notes_actions.get_combined_minimum_size().y)
   notes_actions.position = Vector2(viewport.x - action_width - 16.0, viewport.y - notes_actions.size.y - 16.0)
   return
@@ -1008,36 +1032,54 @@ func history_cell(grid: GridContainer, text: String) -> void:
  cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
  grid.add_child(cell)
 
+func make_panel_body_scrollable() -> void:
+ var body := VBoxContainer.new()
+ body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+ body.add_theme_constant_override("separation", 16)
+ var children := panel.get_children()
+ for index in range(1, children.size()):
+  var child: Node = children[index]
+  panel.remove_child(child)
+  body.add_child(child)
+ var scroll := ScrollContainer.new()
+ scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+ scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+ panel.add_child(scroll)
+ scroll.add_child(body)
+
 func show_history() -> void:
  state = "history"
  clear_panel()
- overlay.custom_minimum_size.x = 860
  title("HISTÓRICO DE PARTIDAS")
  title("Partidas mais recentes primeiro", 18)
- var scroll := ScrollContainer.new()
- scroll.custom_minimum_size = Vector2(0, 280)
- scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
- panel.add_child(scroll)
  var grid := GridContainer.new()
  grid.columns = 5
  grid.add_theme_constant_override("h_separation", 20)
  grid.add_theme_constant_override("v_separation", 12)
  grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
- scroll.add_child(grid)
+ panel.add_child(grid)
  for heading in ["Data", "Personagem", "Modo", "Tempo total", "Eliminações"]: history_cell(grid, heading)
  for record in RUN_HISTORY.chronological(run_history):
   var date_parts: PackedStringArray = record.date.split("T")
   var date := str(date_parts[0])
   var parts := date.split("-")
-  if parts.size() == 3: date = "%s/%s/%s" % [parts[2], parts[1], parts[0]]
-  if date_parts.size() > 1: date += " " + date_parts[1]
+  if parts.size() == 3: date = "%s/%s/%s" % [parts[2], parts[1], parts[0].right(2)]
+  if date_parts.size() > 1: date += " " + date_parts[1].left(5)
   history_cell(grid, date)
   history_cell(grid, RUN_HISTORY.character_text(record))
-  history_cell(grid, "Infinito" if record.mode == "endless" else "Chefão")
-  history_cell(grid, RUN_HISTORY.time_text(record.seconds))
+  var mode_label := "Infinito" if record.mode == "endless" else "Chefão"
+  if not RUN_HISTORY.eligible(record): mode_label += " (debug)"
+  history_cell(grid, mode_label)
+  history_cell(grid, "%02d:%02d" % [maxi(0, int(record.seconds)) / 60, maxi(0, int(record.seconds)) % 60])
   history_cell(grid, str(record.kills))
  if run_history.is_empty(): title("Nenhuma partida registrada.", 18)
+ var spacer := Control.new()
+ spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+ panel.add_child(spacer)
  button("Voltar à tela inicial", show_menu)
+ make_panel_body_scrollable()
+ layout_modals()
 
 func record_run(reason: String) -> void:
  if not run_active or run_recorded or test_run: return
@@ -1045,7 +1087,7 @@ func record_run(reason: String) -> void:
  if elapsed <= 0: return
  var previous_rank: Array = RUN_HISTORY.ranked(RUN_HISTORY.for_version(run_history, online.competitive_version)) if run_mode == "endless" else RUN_HISTORY.boss_ranked(RUN_HISTORY.for_version(run_history, online.competitive_version))
  var previous: Dictionary = previous_rank[0] if not previous_rank.is_empty() else {}
- var record := {"seconds": elapsed, "kills": kills, "date": Time.get_datetime_string_from_system(), "reason": reason, "character": "Pescador", "level": level, "mode": run_mode, "competitive_version": online.competitive_version}
+ var record := {"seconds": elapsed, "kills": kills, "date": Time.get_datetime_string_from_system(), "reason": reason, "character": "Pescador", "level": level, "mode": run_mode, "competitive_version": online.competitive_version, "debug_run": OS.is_debug_build(), "record_valid": not OS.is_debug_build()}
  if reason == "death":
   record.merge(RUN_HISTORY.killer_details(fatal_hit.get("enemy", {})))
   record["fatal_attack"] = str(fatal_hit.get("attack", ""))
@@ -1255,6 +1297,14 @@ func start_run(mode: String = "bosses") -> void:
  minimap_timer = 0.0
  bullets.clear()
  cards.reset()
+ match_damage_dealt = 0.0
+ match_damage_taken = 0.0
+ match_card_uses.clear()
+ match_card_seconds.clear()
+ match_enemies.clear()
+ for id in cards.IDS:
+  match_card_uses[id] = 0
+  match_card_seconds[id] = 0.0
  damage_numbers.clear()
  water_ripples.clear()
  boat_particles.clear()
@@ -1344,6 +1394,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
    leave_settings()
   elif state in ["patch_notes", "legends", "history"]:
    show_menu()
+  elif state == "match_details":
+   finish(match_won)
  if state == "upgrade" and not event.ctrl_pressed:
   var index := -1
   if event.keycode == KEY_1: index = 0
@@ -1410,7 +1462,7 @@ func _process(delta: float) -> void:
   var remaining := maxi(0, ceili(next_boss_time - elapsed))
   hud.text += "\n%s · ONDA %d EM %02d:%02d" % ["INFINITO" if run_mode == "endless" else "CHEFÕES", endless_wave + 1, floori(remaining / 60.0), remaining % 60]
  if not profile_panel: setup_profile_panel()
- profile_panel.visible = not run_active and state not in ["nickname", "lost", "patch_notes", "legends"]
+ profile_panel.visible = not run_active and state not in ["nickname", "lost", "patch_notes", "legends", "history"]
  hud.visible = run_active
  if not run_active:
   hud.text = "ELIMINAÇÕES TOTAIS %d\nTEMPO TOTAL %s\nNÍVEIS CONQUISTADOS %d" % [player_totals.kills, RUN_HISTORY.time_text(player_totals.seconds), player_totals.levels]
@@ -1571,6 +1623,8 @@ func update_game(dt: float) -> void:
     elif run_mode == "endless": buff_endless_enemies()
    cards.drop(enemy)
    kills += 1
+   var enemy_stats := match_enemy_stats(enemy)
+   enemy_stats.kills += 1
    enemies.remove_at(i)
  if run_mode in ["bosses", "endless"]: spawn_endless_bosses()
  for i in range(gems.size() - 1, -1, -1):
@@ -1687,6 +1741,7 @@ func hit_with_spear(enemy: Dictionary, amount: float = -1.0) -> void:
  if amount < 0.0: amount = effective_damage()
  var critical := crit_chance > 0 and rng.randf() < crit_chance / 100.0
  if critical: amount *= 2.0
+ match_damage_dealt += minf(maxf(amount, 0.0), maxf(enemy.hp, 0.0))
  enemy.hp -= amount
  add_damage_number(enemy.pos - Vector2(0, enemy.radius + 8), amount, CRITICAL_COLOR if critical else Color(1, 0.88, 0.45), 0.9 if critical else 0.7, 48 if critical else 32)
  enemy.flash = 0.12
@@ -2047,6 +2102,11 @@ func receive_hit(amount: float, source: Vector2, attacker: Dictionary = {}, atta
   return
  if invulnerability > 0: return
  var health_before := health
+ var received_damage := minf(maxf(amount, 0.0), maxf(health_before, 0.0))
+ match_damage_taken += received_damage
+ if received_damage > 0.0:
+  var enemy_stats := match_enemy_stats(attacker)
+  enemy_stats.damage += received_damage
  health -= amount
  if amount > 0.0:
   add_damage_number(player - Vector2(0, 48), amount, Color(1.0, 0.15, 0.15), 1.4, 28)
@@ -2378,6 +2438,7 @@ func choose_upgrade(id: String) -> void:
  show_pending_level_up()
 
 func finish(won: bool) -> void:
+ match_won = won
  record_run("death" if not won else "won")
  run_active = false
  state = "won" if won else "lost"
@@ -2400,6 +2461,7 @@ func finish(won: bool) -> void:
   title("Nível: %d · Eliminações: %d" % [level, kills], 16)
   title("Peixes vivos: %d · Chefes vivos: %d" % [living_fish, living_bosses], 16)
   show_fatal_hit()
+  setup_match_details_button()
   var actions := HBoxContainer.new()
   actions.add_theme_constant_override("separation", 12)
   panel.add_child(actions)
@@ -2414,8 +2476,76 @@ func finish(won: bool) -> void:
   queue_redraw()
   return
  title("Tempo: %02d:%02d\nNível: %d · Eliminações: %d" % [int(elapsed) / 60, int(elapsed) % 60, level, kills], 22)
+ setup_match_details_button()
  button("Jogar novamente", restart_run)
  button("Voltar à tela inicial", show_menu)
+
+func match_enemy_stats(enemy: Dictionary) -> Dictionary:
+ var details := RUN_HISTORY.killer_details(enemy)
+ var id: String = details.killer_id
+ if not match_enemies.has(id):
+  match_enemies[id] = {"name": details.killer_name, "kills": 0, "damage": 0.0}
+ return match_enemies[id]
+
+func setup_match_details_button() -> void:
+ var heading := panel.get_child(0) as Label
+ panel.remove_child(heading)
+ var row := HBoxContainer.new()
+ row.add_theme_constant_override("separation", 8)
+ panel.add_child(row)
+ panel.move_child(row, 0)
+ var spacer := Control.new()
+ spacer.custom_minimum_size.x = 24
+ row.add_child(spacer)
+ heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ row.add_child(heading)
+ match_details_button = Button.new()
+ match_details_button.text = "?"
+ match_details_button.tooltip_text = "Ver estatísticas da partida"
+ match_details_button.custom_minimum_size = Vector2(24, 24)
+ match_details_button.add_theme_font_size_override("font_size", 24)
+ match_details_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+ match_details_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+ row.add_child(match_details_button)
+ style_menu_button(match_details_button)
+ match_details_button.pressed.connect(show_match_details)
+
+func show_match_details() -> void:
+ state = "match_details"
+ clear_panel()
+ title("ESTATÍSTICAS DA PARTIDA")
+ title("Tempo: %02d:%02d · Nível: %d · Eliminações: %d" % [int(elapsed) / 60, int(elapsed) % 60, level, kills], 16)
+ title("Dano causado: %s · Dano recebido: %s" % [format_xp(match_damage_dealt), format_xp(match_damage_taken)], 16)
+ var total := 0
+ for count in match_card_uses.values(): total += int(count)
+ title("Cartas utilizadas: %d" % total, 16)
+ var grid := GridContainer.new()
+ grid.columns = 3
+ grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ grid.add_theme_constant_override("h_separation", 24)
+ grid.add_theme_constant_override("v_separation", 12)
+ panel.add_child(grid)
+ for heading in ["Carta", "Usos", "Tempo sob efeito"]: history_cell(grid, heading)
+ for id in cards.IDS:
+  history_cell(grid, cards.NAMES[id])
+  history_cell(grid, str(match_card_uses.get(id, 0)))
+  history_cell(grid, "Instantâneo" if id == "ima" else "%.1f s" % float(match_card_seconds.get(id, 0.0)))
+ for heading in ["Inimigo", "Eliminações", "Dano recebido"]: history_cell(grid, heading)
+ var enemy_ids := match_enemies.keys()
+ enemy_ids.sort()
+ for id in enemy_ids:
+  var details: Dictionary = match_enemies[id]
+  history_cell(grid, details.name)
+  history_cell(grid, str(details.kills))
+  history_cell(grid, format_xp(details.damage))
+ if match_enemies.is_empty():
+  for text in ["Nenhum inimigo", "0", "0"]: history_cell(grid, text)
+ make_panel_body_scrollable()
+ button("Voltar ao resultado", finish.bind(match_won))
+ update_stats_preview()
+ stats_panel.get_child(0).get_child(0).get_child(-1).hide()
+ stats_panel.show()
+ layout_modals()
 
 func camera_offset() -> Vector2:
  return player - get_viewport_rect().size / 2

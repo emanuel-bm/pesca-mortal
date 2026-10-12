@@ -3,6 +3,9 @@ extends RefCounted
 
 const LEGACY_VERSION := "0.3"
 
+static func eligible(record: Dictionary) -> bool:
+ return not bool(record.get("debug_run", false)) and bool(record.get("record_valid", true))
+
 static func competitive_version(value: String = "") -> String:
  if value.is_empty(): value = str(ProjectSettings.get_setting("application/config/version", "0.3.0"))
  var parts := value.trim_prefix("v").split(".")
@@ -18,7 +21,7 @@ static func normalized(records: Array) -> Array:
   var seconds: float = float(record.get("seconds", -1))
   var kills: int = int(record.get("kills", -1))
   if not is_finite(seconds) or seconds < 0 or kills < 0: continue
-  result.append({"seconds": seconds, "kills": kills, "date": str(record.get("date", "")), "reason": str(record.get("reason", "death")), "character": str(record.get("character", "Pescador")), "level": maxi(0, int(record.get("level", 0))), "mode": str(record.get("mode", "endless")), "competitive_version": str(record.get("competitive_version", LEGACY_VERSION)), "killer_id": str(record.get("killer_id", "")), "killer_name": str(record.get("killer_name", "")), "fatal_attack": str(record.get("fatal_attack", ""))})
+  result.append({"seconds": seconds, "kills": kills, "date": str(record.get("date", "")), "reason": str(record.get("reason", "death")), "character": str(record.get("character", "Pescador")), "level": maxi(0, int(record.get("level", 0))), "mode": str(record.get("mode", "endless")), "competitive_version": str(record.get("competitive_version", LEGACY_VERSION)), "killer_id": str(record.get("killer_id", "")), "killer_name": str(record.get("killer_name", "")), "fatal_attack": str(record.get("fatal_attack", "")), "debug_run": bool(record.get("debug_run", false)), "record_valid": eligible(record)})
  return result
 
 static func ranked(records: Array) -> Array:

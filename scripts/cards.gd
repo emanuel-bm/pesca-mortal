@@ -107,6 +107,9 @@ func spawn(id: String, world_position: Vector2) -> void:
 
 func activate(id: String) -> void:
  if blocked_seconds > 0: return
+ if id not in IDS: return
+ if game.run_active:
+  game.match_card_uses[id] = int(game.match_card_uses.get(id, 0)) + 1
  game.sounds.play_card(id)
  if id == "ima":
   magnet_visual_seconds = 1.0
@@ -122,7 +125,10 @@ func tick_effects(dt: float) -> void:
  fury_burst_seconds = maxf(0.0, fury_burst_seconds - dt)
  shield_impact_seconds = maxf(0.0, shield_impact_seconds - dt)
  blocked_seconds = maxf(0.0, blocked_seconds - dt)
- for id in effects: effects[id] = maxf(0.0, effects[id] - dt)
+ for id in effects:
+  if game.run_active:
+   game.match_card_seconds[id] = float(game.match_card_seconds.get(id, 0.0)) + minf(maxf(dt, 0.0), effects[id])
+  effects[id] = maxf(0.0, effects[id] - dt)
 
 func attack_feedback() -> void:
  if active("furia"): fury_burst_seconds = 0.24
