@@ -11,7 +11,7 @@ const ENEMY_SPAWN_DISTANCE := 680.0
 const MAX_HEALTH := 100.0
 const XP_GROWTH_PER_LEVEL := 1.06
 const XP_COLOR := Color(0.25, 0.65, 1.0)
-const CRITICAL_COLOR := Color(1.0, 0.88, 0.2)
+const CRITICAL_COLOR := Color(1.0, 0.5, 0.1)
 const XP_ATTRACTION_SPEED := 630.0
 const KNOCKBACK_BASE_DAMAGE := 10.0
 const KNOCKBACK_BASE_SPEED := 420.0
@@ -71,7 +71,7 @@ var max_health := MAX_HEALTH
 var xp_bonus := 0
 var luck := 0
 var persistence := 0
-var crit_chance := 0
+var crit_chance := 1
 var xp_remainder := 0
 var health := MAX_HEALTH
 var knockback_velocity := Vector2.ZERO
@@ -136,6 +136,8 @@ var menu_mouse_navigation := false
 var hud: Label
 var xp_bar: ProgressBar
 var xp_label: Label
+var xp_current_level_label: Label
+var xp_next_level_label: Label
 var health_bar: ProgressBar
 var health_label: Label
 var overlay: PanelContainer
@@ -317,6 +319,12 @@ func _ready() -> void:
  xp_label.add_theme_constant_override("outline_size", 0)
  xp_label.add_theme_color_override("font_color", Color.WHITE)
  layer.add_child(xp_label)
+ xp_current_level_label = xp_label.duplicate() as Label
+ xp_current_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+ layer.add_child(xp_current_level_label)
+ xp_next_level_label = xp_label.duplicate() as Label
+ xp_next_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+ layer.add_child(xp_next_level_label)
  health_bar = ProgressBar.new()
  health_bar.show_percentage = false
  health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1360,7 +1368,7 @@ func start_run(mode: String = "bosses") -> void:
  xp_bonus = 0
  luck = 0
  persistence = 0
- crit_chance = 0
+ crit_chance = 1
  xp_remainder = 0
  prevent_player_death = false
  knockback_velocity = Vector2.ZERO
@@ -1486,7 +1494,7 @@ func _process(delta: float) -> void:
  cards.refresh()
  update_water(minf(delta, 0.05))
  var show_player_bars := run_active or state in ["won", "lost"]
- for item in [health_bar, health_label, xp_bar, xp_label]:
+ for item in [health_bar, health_label, xp_bar, xp_label, xp_current_level_label, xp_next_level_label]:
   item.visible = show_player_bars
  xp_bar.position = Vector2(0, 20)
  xp_bar.size = Vector2(get_viewport_rect().size.x, 20)
@@ -1495,6 +1503,11 @@ func _process(delta: float) -> void:
  xp_label.size = xp_bar.size
  xp_label.position = xp_bar.position
  xp_label.text = "%s / %d XP" % [format_xp(current_xp()), xp_needed()]
+ for level_label in [xp_current_level_label, xp_next_level_label]:
+  level_label.position = xp_bar.position + Vector2(8, 0)
+  level_label.size = Vector2(xp_bar.size.x - 16, xp_bar.size.y)
+ xp_current_level_label.text = "NÍVEL %d" % level
+ xp_next_level_label.text = "NÍVEL %d" % (level + 1)
  health_bar.size = xp_bar.size
  health_bar.value = maxf(0, health)
  health_label.size = health_bar.size
@@ -1799,7 +1812,7 @@ func hit_with_spear(enemy: Dictionary, amount: float = -1.0) -> void:
  if critical: amount *= 2.0
  match_damage_dealt += minf(maxf(amount, 0.0), maxf(enemy.hp, 0.0))
  enemy.hp -= amount
- add_damage_number(enemy.pos - Vector2(0, enemy.radius + 8), amount, CRITICAL_COLOR if critical else Color(1, 0.88, 0.45), 0.9 if critical else 0.7, 48 if critical else 32)
+ add_damage_number(enemy.pos - Vector2(0, enemy.radius + 8), amount, CRITICAL_COLOR if critical else Color(1, 0.88, 0.45), 0.9 if critical else 0.7, 48 if critical else 32, critical)
  enemy.flash = 0.12
 
 func show_pending_level_up() -> void:
@@ -2153,12 +2166,12 @@ func enemy_xp_reward(enemy: Dictionary) -> int:
  if enemy.get("tank", false): return 5
  return maxi(1, roundi(pow(float(enemy.radius) / 13.0, 2)))
 
-func add_damage_number(position: Vector2, amount: float, color: Color = Color(1, 0.88, 0.45), duration: float = 0.7, font_size: int = 32) -> void:
+func add_damage_number(position: Vector2, amount: float, color: Color = Color(1, 0.88, 0.45), duration: float = 0.7, font_size: int = 32, critical: bool = false) -> void:
  var limit := floating_number_limit()
  if limit == 0: return
  if damage_numbers.size() >= limit: damage_numbers.pop_front()
  var text := str(roundi(amount))
- damage_numbers.append({"pos": position + Vector2((damage_numbers.size() % 5 - 2) * 8, 0), "text": text, "life": duration, "color": color, "font_size": font_size})
+ damage_numbers.append({"pos": position + Vector2((damage_numbers.size() % 5 - 2) * 8, 0), "text": text, "life": duration, "color": color, "font_size": font_size, "critical": critical})
 
 func add_xp_number(position: Vector2, amount: float) -> void:
  var limit := floating_number_limit()
@@ -2185,7 +2198,7 @@ func receive_hit(amount: float, source: Vector2, attacker: Dictionary = {}, atta
   enemy_stats.damage += received_damage
  health -= amount
  if amount > 0.0:
-  add_damage_number(player - Vector2(0, 48), amount, Color(1.0, 0.15, 0.15), 1.4, 28)
+  add_damage_number(player - Vector2(0, 48), amount, Color(1.0, 0.15, 0.15), 1.4, 32)
   reset_damage_flash()
   damage_flash.color.a = 0.28
   damage_flash_tween = create_tween()
@@ -2481,11 +2494,13 @@ func build_upgrade_card(content: VBoxContainer, id: String, current: Dictionary,
  description.add_theme_font_size_override("font_size", 20)
  description.mouse_filter = Control.MOUSE_FILTER_IGNORE
  footer.add_child(description)
- var value := Label.new()
- value.text = format_stat(id, current[id]) + " > " + format_stat(id, next[id])
- value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
- value.add_theme_font_size_override("font_size", 24)
- value.add_theme_color_override("font_color", Color(0.4, 1.0, 0.65))
+ var value := RichTextLabel.new()
+ value.bbcode_enabled = true
+ value.fit_content = true
+ value.scroll_active = false
+ value.text = "[center]%s > [color=#66ffa6]%s[/color][/center]" % [format_stat(id, current[id]), format_stat(id, next[id])]
+ value.add_theme_font_size_override("normal_font_size", 24)
+ value.add_theme_color_override("default_color", Color.WHITE)
  value.mouse_filter = Control.MOUSE_FILTER_IGNORE
  footer.add_child(value)
 
@@ -2840,6 +2855,15 @@ func _draw() -> void:
   var tint: Color = number.get("color", Color(1, 0.88, 0.45))
   tint.a = alpha
   draw_string(number_font, text_position, number.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, tint)
+  if number.get("critical", false):
+   var icon_center := text_position + Vector2(number_font.get_string_size(number.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x + 12, -font_size * 0.4)
+   var points := PackedVector2Array()
+   for point in 8:
+    var angle := point * PI / 4.0 - PI / 2.0
+    points.append(icon_center + Vector2(cos(angle), sin(angle)) * (9.0 if point % 2 == 0 else 3.5))
+   draw_colored_polygon(points, tint)
+   points.append(points[0])
+   draw_polyline(points, Color(0.03, 0.02, 0.01, alpha), 2.0, true)
  var player_color := Color(0.3, 0.75, 1)
  var player_tint: Color = cards.player_tint()
  if invulnerability > 0 and int(invulnerability * 15) % 2 == 0: player_color = Color.WHITE
@@ -2978,7 +3002,7 @@ func render_legends() -> void:
 func legend_values(record: Dictionary, position: String) -> Array:
  return [position, str(record.get("nickname", online.nickname())), str(int(record.get("level", 0))), RUN_HISTORY.time_text(record.seconds), str(int(record.kills))]
 
-func make_legend_row(values: Array, background: Color = Color.TRANSPARENT, color: Color = Color.WHITE, font_size: int = 16, border_width: int = 0) -> PanelContainer:
+func make_legend_row(values: Array, background: Color = Color.TRANSPARENT, color: Color = Color.WHITE, font_size: int = 24, border_width: int = 0) -> PanelContainer:
  var card := PanelContainer.new()
  card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
  var style := StyleBoxFlat.new()

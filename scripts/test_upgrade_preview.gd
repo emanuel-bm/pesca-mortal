@@ -34,7 +34,7 @@ func run() -> void:
   assert(game.stats_panel.visible)
   var before: Dictionary = game.projected_stats()
   game.update_stats_preview(id)
-  assert("→" in game.stat_values[id].text)
+  assert(">" in game.stat_values[id].text)
   assert(game.projected_stats() == before, "Hover must not modify stats")
   var expected: Dictionary = game.projected_stats(id)
   game.choose_upgrade(id)
@@ -43,7 +43,7 @@ func run() -> void:
   assert(not game.stats_panel.visible)
  game.speed = 250.0
  game.update_stats_preview("speed")
- assert(game.stat_values.speed.text == "250 → 275")
+ assert(game.stat_values.speed.text == "250 > 275")
  game.start_run()
  game.show_upgrades()
  for child in game.panel.get_children():

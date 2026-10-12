@@ -66,7 +66,7 @@ func run() -> void:
  assert(game.level == 2 and game.health == game.MAX_HEALTH and game.state == "upgrade", "Level up must fully heal")
  assert(game.level_healing == game.MAX_HEALTH - 10, "Level up must restore all missing health")
  game.add_xp_number(game.player, 5)
- assert(game.damage_numbers.back().text == "+5 XP" and game.damage_numbers.back().color == game.XP_COLOR and game.damage_numbers.back().font_size == 12)
+ assert(game.damage_numbers.back().text == "+5 XP" and game.damage_numbers.back().color == game.XP_COLOR and game.damage_numbers.back().font_size == 20)
  assert(game.sounds.players.has("level"))
  var previous_cost := 0
  for rank in range(1, 51):

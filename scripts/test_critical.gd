@@ -7,6 +7,8 @@ func run() -> void:
  game.online.disabled = true
  game.start_run()
  game.set_process(false)
+ assert(game.crit_chance == 1)
+ game.crit_chance = 0
  game.spawn_enemy(false)
  var enemy = game.enemies.back()
  enemy.hp = 100000.0
@@ -16,6 +18,8 @@ func run() -> void:
  game.hit_with_spear(enemy, 70.0)
  assert(enemy.hp == 99760.0)
  assert(game.damage_numbers.back().font_size == 48)
+ assert(game.damage_numbers.back().critical)
+ assert(game.damage_numbers.back().color == Color(1.0, 0.5, 0.1))
  game.cards.activate("furia")
  var before = enemy.hp
  game.hit_with_spear(enemy)
@@ -66,6 +70,6 @@ func run() -> void:
   game.show_upgrades()
   assert(not "crit_chance" in game.choices)
  game.start_run()
- assert(game.crit_chance == 0)
+ assert(game.crit_chance == 1)
  print("CRITICAL PASS: 0/50/100%, fury, independent piercing hits, repeat overlap, boss immunity, cap and reset")
  quit()
