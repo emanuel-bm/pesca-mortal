@@ -20,6 +20,20 @@ func run() -> void:
  game.online.disabled = true
  var passed: bool = game.fps_limit == 360 and Engine.max_fps == 360
  passed = passed and int(ProjectSettings.get_setting("application/run/max_fps")) == 360
+ passed = passed and game.show_fps
+ game.show_settings()
+ passed = passed and game.fps_toggle.button_pressed
+ for enabled in [false, true]:
+  game.fps_toggle.button_pressed = enabled
+  game.save_settings_from_ui()
+  config.load(path)
+  passed = passed and bool(config.get_value("display", "show_fps", not enabled)) == enabled
+  game.show_fps = not enabled
+  game.load_display_settings()
+  passed = passed and game.show_fps == enabled
+  game.show_settings()
+  passed = passed and game.fps_toggle.button_pressed == enabled
+ game.leave_settings()
  for limit in [60, 61, 100, 143, 180, 250, 359, 360]:
   game.show_settings()
   game.fps_limit_slider.value = limit
@@ -74,5 +88,5 @@ func run() -> void:
   push_error("FPS settings failed: defaults, save/reload, cancel, invalid value or window mode")
   quit(1)
   return
- print("FPS SETTINGS PASS: 360 default, slider/input synchronization, typed limits, persistence, cancel, invalid value and window modes")
+ print("FPS SETTINGS PASS: counter enabled by default, explicit counter preferences preserved, 360 default, slider/input synchronization, typed limits, persistence, cancel, invalid value and window modes")
  quit()

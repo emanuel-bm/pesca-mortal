@@ -149,7 +149,7 @@ var fullscreen := false
 var settings_return := "menu"
 var resolution_picker: OptionButton
 var fullscreen_toggle: CheckButton
-var show_fps := false
+var show_fps := true
 const FPS_MIN := 60
 const FPS_MAX := 360
 var fps_limit := FPS_MAX
@@ -1189,7 +1189,7 @@ func load_display_settings() -> void:
   var saved: Vector2i = config.get_value("display", "resolution", selected_resolution)
   if saved in RESOLUTIONS: selected_resolution = saved
   fullscreen = bool(config.get_value("display", "fullscreen", false))
-  show_fps = bool(config.get_value("display", "show_fps", false))
+  show_fps = bool(config.get_value("display", "show_fps", true))
   var saved_fps := int(config.get_value("display", "fps_limit", FPS_MAX))
   fps_limit = FPS_MAX if saved_fps <= 0 else clampi(saved_fps, FPS_MIN, FPS_MAX)
   graphics_quality = clampi(int(config.get_value("display", "quality", 2)), 0, 2)
