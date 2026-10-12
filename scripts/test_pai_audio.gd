@@ -23,7 +23,7 @@ func run() -> void:
  sounds.volumes.boss = 1
  sounds.volumes.pai_do_mato = 1
  sounds.apply_volumes()
- for pair in [["pai_log_throw", .325], ["pai_log_splash", 1.05], ["pai_hand", .58], ["pai_do_mato", 2.4]]:
+ for pair in [["pai_log_throw", .325], ["pai_log_splash", 1.05], ["pai_hand", 1.15], ["pai_do_mato", 2.4]]:
   assert(absf(sounds.players[pair[0]].stream.get_length() - pair[1]) < 1.0 / 44100.0)
   assert(sounds.volume_group(pair[0]) == "pai_do_mato")
  game.start_run("training")

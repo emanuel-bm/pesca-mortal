@@ -25,7 +25,7 @@ var focus_paused := false
 const VOLUME_NAMES := {"master": "Geral", "music": "Música", "boss": "Sons do Minhocão", "pai_do_mato": "Sons do Pai do Mato", "shot": "Lança", "death": "Peixes mergulhando", "hurt": "Dano recebido", "level": "Subida de nível", "cards": "Cartas"}
 const MAX_EFFECT_VOLUME := {"boss": 0.65, "pai_do_mato": 0.65, "pai_log_throw": 0.45, "pai_log_splash": 0.5, "pai_hand": 0.65, "boss_death": 0.65, "emerge": 0.5, "dash": 0.45, "shot": 0.5, "death": 0.2, "hurt": 1.0, "level": 0.55, "card_ima": 0.4, "card_furia": 0.4, "card_intangivel": 0.4, "card_perfurante": 0.4}
 const VOLUME_VERSION := 2
-const FOREST_AUDIO := {"pai_do_mato": "pai_roar_v1", "pai_log_throw": "pai_log_throw_v1", "pai_log_splash": "pai_log_splash_v1", "pai_hand": "pai_hand_slap_v2"}
+const FOREST_AUDIO := {"pai_do_mato": "pai_roar_v1", "pai_log_throw": "pai_log_throw_v1", "pai_log_splash": "pai_log_splash_v1", "pai_hand": "pai_hand_slap_v3"}
 var volumes := {"master": 1.0, "music": 0.7, "boss": 0.8, "pai_do_mato": 0.8, "shot": 1.0, "death": 1.0, "hurt": 1.0, "level": 1.0, "cards": 1.0}
 
 func _ready() -> void:

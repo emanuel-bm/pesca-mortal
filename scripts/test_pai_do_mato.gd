@@ -9,7 +9,7 @@ func run() -> void:
  root.add_child(game)
  await process_frame
  game.set_process(false)
- for mode in ["bosses", "endless"]:
+ for mode in ["endless"]:
   game.start_run(mode)
   for wave in range(1, 9):
    game.enemies.clear()
@@ -38,19 +38,38 @@ func run() -> void:
  assert(facing_boss.facing_left)
  game.PAI_DO_MATO.update(facing_boss, 0.1, Vector2(1100, 900), game.ARENA)
  assert(not facing_boss.facing_left)
- assert(boss.speed == 162)
+ assert(boss.speed == 120, "Pai do Mato base movement speed is 120")
  for phase in ["approach", "hand_warning", "hand_impact", "recovery", "log_impact", "log_warning"]:
   var moving_boss := boss.duplicate(true)
   moving_boss.pos = Vector2(800, 600)
   moving_boss.phase = phase
   moving_boss.timer = 1.0
   game.PAI_DO_MATO.update(moving_boss, 0.1, Vector2(1200, 600), game.ARENA)
-  assert(is_equal_approx(moving_boss.pos.x, 800.0 if phase == "log_warning" else 816.2), "Only log preparation stops pursuit: " + phase)
+  assert(moving_boss.pos.is_equal_approx(Vector2(806 if phase == "log_warning" else 812, 600)), "Half speed during log preparation, full speed otherwise: " + phase)
  var view := Rect2(Vector2(600, 400), Vector2(1200, 1000))
+ var slow_boss := boss.duplicate(true)
+ slow_boss.pos = Vector2(800, 900)
+ slow_boss.speed = 140.0
+ slow_boss.timer = 0.0
+ game.PAI_DO_MATO.update(slow_boss, 0.0, Vector2(1400, 900), game.ARENA, view)
+ assert(slow_boss.phase == "log_warning" and slow_boss.timer == 0.6)
+ var log_target: Vector2 = slow_boss.target
+ assert(game.PAI_DO_MATO.update(slow_boss, 0.5, Vector2(1400, 900), game.ARENA, view) == "")
+ assert(slow_boss.pos.is_equal_approx(Vector2(835, 900)) and slow_boss.speed == 140.0, "Log preparation halves movement without changing base speed")
+ assert(slow_boss.target == log_target, "Log aim remains locked while moving")
+ assert(game.PAI_DO_MATO.update(slow_boss, 0.1, Vector2(1400, 900), game.ARENA, view) == "log", "Log launches after 0.6 seconds")
+ var impact_position: Vector2 = slow_boss.pos
+ game.PAI_DO_MATO.update(slow_boss, 0.1, Vector2(1400, 900), game.ARENA, view)
+ assert(slow_boss.pos.is_equal_approx(impact_position + Vector2(14, 0)), "Full speed resumes after preparation")
  boss.pos = Vector2(1000, 900)
- assert(game.PAI_DO_MATO.choose_attack(boss, boss.pos + Vector2(260, 0), view) == "hand")
- assert(game.PAI_DO_MATO.choose_attack(boss, boss.pos + Vector2(261, 0), view) == "log")
- assert(game.PAI_DO_MATO.choose_attack(boss, boss.pos + Vector2(400, 0), Rect2(1500, 400, 500, 1000)) == "")
+ assert(game.PAI_DO_MATO.choose_attack(boss, boss.pos + Vector2(160, 0), view) == "hand")
+ assert(game.PAI_DO_MATO.choose_attack(boss, boss.pos + Vector2(161, 0), view) == "log")
+ var range_player := Vector2(1200, 900)
+ var range_view := Rect2(600, 400, 1200, 1000)
+ for offset in [Vector2(899, 0), Vector2(-899, 0), Vector2(0, 749), Vector2(0, -749)]:
+  assert(game.PAI_DO_MATO.choose_attack({"pos": range_player + offset}, range_player, range_view) == "log", "Log activation range extends 50% beyond the camera")
+ for offset in [Vector2(901, 0), Vector2(-901, 0), Vector2(0, 751), Vector2(0, -751)]:
+  assert(game.PAI_DO_MATO.choose_attack({"pos": range_player + offset}, range_player, range_view) == "", "No launch outside the expanded range")
  var waiting := boss.duplicate(true)
  waiting.timer = 0
  game.PAI_DO_MATO.update(waiting, 0, Vector2(1800, 900), game.ARENA, Rect2(1500, 400, 500, 1000))
@@ -61,12 +80,13 @@ func run() -> void:
  boss.timer = 0
  assert(game.PAI_DO_MATO.update(boss, 0, game.player, game.ARENA) == "")
  assert(boss.phase == "hand_warning")
+ assert(boss.timer == 0.5, "Hand preparation lasts half a second")
  var locked: Vector2 = boss.target
  var initial_position: Vector2 = boss.pos
  var locked_angle: float = boss.hand_angle
  var locked_offset: Vector2 = boss.hand_offset
- game.PAI_DO_MATO.update(boss, 0.5, game.player + Vector2(200, 0), game.ARENA)
- assert(boss.pos != initial_position and boss.target != locked)
+ assert(game.PAI_DO_MATO.update(boss, 0.2, game.player + Vector2(200, 0), game.ARENA) == "")
+ assert(boss.pos != initial_position and boss.target != locked, "Hand target follows the moving boss")
  assert(Vector2(boss.target - boss.pos).is_equal_approx(locked_offset))
  assert(boss.hand_angle == locked_angle)
  game.PAI_DO_MATO.update(boss, 0.1, game.player + Vector2(0, 200), game.ARENA)
@@ -80,11 +100,12 @@ func run() -> void:
  game.health = 500
  game.player = locked
  var hp: float = game.health
- var attack: String = game.PAI_DO_MATO.update(boss, 1, game.player, game.ARENA)
+ assert(game.PAI_DO_MATO.update(boss, 0.199, game.player, game.ARENA) == "", "No hand impact before 0.5 seconds")
+ var attack: String = game.PAI_DO_MATO.update(boss, 0.0011, game.player, game.ARENA)
  assert(attack == "hand")
  game.player = boss.target
  game.execute_forest_attack(boss, attack)
- assert(game.health == hp - 120)
+ assert(game.health == hp - 280)
  assert(game.PAI_DO_MATO.update(boss, 0, game.player, game.ARENA) == "", "Impact only fires once")
  boss.max_hp = 800000
  boss.pos = Vector2(800, 600)
@@ -136,7 +157,7 @@ func run() -> void:
  for angle in [0.0, PI / 2, -PI / 4, PI]:
   var aimed_player := origin + Vector2.RIGHT.rotated(angle) * 300
   var endpoint: Vector2 = game.PAI_DO_MATO.throw_endpoint(origin, aimed_player, game.ARENA)
-  assert(endpoint.is_equal_approx(origin + (aimed_player - origin) * 1.3))
+  assert(endpoint.is_equal_approx(origin + (aimed_player - origin) * 1.5))
   var rotated_log := {"pos": origin, "angle": angle, "shapes": game.PAI_DO_MATO.log_shapes(game.log_art)}
   assert(game.PAI_DO_MATO.log_hits(rotated_log, origin))
   assert(not game.PAI_DO_MATO.log_hits(rotated_log, origin + Vector2(0, 45).rotated(angle)))

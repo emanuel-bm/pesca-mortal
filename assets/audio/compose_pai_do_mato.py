@@ -19,19 +19,25 @@ def throw():
     save("pai_log_throw_v1.wav", signal, .72)
 
 def impact(palm=False):
-    duration = .58 if palm else 1.05
+    duration = 1.15 if palm else 1.05
     t = np.arange(round(RATE * duration)) / RATE
     water = noise(len(t), 170, 4400)
     body = noise(len(t), 40, 480)
     air = noise(len(t), 1400, 9500)
     if palm:
-        # V2: a sharper skin crack, chesty sub impact and brighter palm resonance.
+        # V3: bright skin crack with metallic upper resonance and diffuse reverb.
         envelope = sum(np.exp(-np.maximum(t-delay, 0)/.016) * (t >= delay) for delay in [0, .004, .011])
-        signal = .58 * air * envelope + .52 * body * np.exp(-t/.12)
+        signal = .82 * air * envelope + .32 * body * np.exp(-t/.12)
         signal += .36 * np.sin(2*np.pi*68*t) * np.exp(-t/.15)
         signal += .24 * np.sin(2*np.pi*220*t) * np.exp(-t/.08)
-        signal += .10 * np.sin(2*np.pi*1800*t) * np.exp(-t/.025)
+        signal += .24 * np.sin(2*np.pi*2800*t) * np.exp(-t/.045)
+        signal += .16 * np.sin(2*np.pi*4300*t) * np.exp(-t/.032)
         signal += .04 * water * np.exp(-t/.20)
+        dry = signal.copy()
+        # Many irregular reflections soften into a decaying tail, avoiding a single echo.
+        for delay in [.031, .047, .071, .097, .131, .173, .223, .281, .347, .421, .503, .593, .691, .797]:
+            shift = round(delay * RATE)
+            signal[shift:] += dry[:-shift] * (.21 * np.exp(-delay/.34))
     else:
         rise = 1 - np.exp(-t/.008)
         signal = rise * (.4*body*np.exp(-t/.11) + .28*water*np.exp(-t/.24))
@@ -40,7 +46,7 @@ def impact(palm=False):
             start = RNG.uniform(.08, .85)
             age = np.maximum(t-start, 0)
             signal += .045*np.sin(2*np.pi*RNG.uniform(420, 2200)*age)*np.exp(-age/.018)*(t>=start)*(1-start)
-    save("pai_hand_slap_v2.wav" if palm else "pai_log_splash_v1.wav", signal, .90 if palm else .82)
+    save("pai_hand_slap_v3.wav" if palm else "pai_log_splash_v1.wav", signal, .90 if palm else .82)
 
 def roar():
     t = np.arange(round(RATE * 2.4)) / RATE

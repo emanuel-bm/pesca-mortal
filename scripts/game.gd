@@ -1,6 +1,7 @@
 extends Node2D
 
-const RUN_SECONDS := 300.0
+const RUN_SECONDS := 180.0
+const FINAL_BOSS_TIME := 360.0
 const ENDLESS_FIRST_BOSS_TIME := 180.0
 const ENDLESS_BOSS_INTERVAL := 120.0
 const ARENA := Vector2(2400, 1800)
@@ -116,6 +117,7 @@ var cards: Node2D
 var bosses_defeated := 0
 var next_boss_time := ENDLESS_FIRST_BOSS_TIME
 var endless_wave := 0
+var boss_stage := 0
 var run_history: Array = []
 var legends_version := ""
 var legends_mode := "endless"
@@ -1287,6 +1289,7 @@ func start_run(mode: String = "bosses") -> void:
  bosses_defeated = 0
  next_boss_time = RUN_SECONDS if mode == "bosses" else ENDLESS_FIRST_BOSS_TIME
  endless_wave = 0
+ boss_stage = 0
  stats_panel.hide()
  sounds.reset()
  player = ARENA / 2
@@ -1458,9 +1461,12 @@ func _process(delta: float) -> void:
  health_bar.max_value = max_health
  health_label.text = "%d / %d HP" % [maxi(0, int(health)), roundi(max_health)]
  hud.text = "%02d:%02d    ELIMINAÇÕES %d" % [int(elapsed) / 60, int(elapsed) % 60, kills]
- if run_mode in ["endless", "bosses"] and state in ["playing", "upgrade", "paused"]:
+ if run_mode == "endless" and state in ["playing", "upgrade", "paused"]:
   var remaining := maxi(0, ceili(next_boss_time - elapsed))
-  hud.text += "\n%s · ONDA %d EM %02d:%02d" % ["INFINITO" if run_mode == "endless" else "CHEFÕES", endless_wave + 1, floori(remaining / 60.0), remaining % 60]
+  hud.text += "\nINFINITO · ONDA %d EM %02d:%02d" % [endless_wave + 1, floori(remaining / 60.0), remaining % 60]
+ elif run_mode == "bosses" and state in ["playing", "upgrade", "paused"] and boss_stage < 2:
+  var remaining := maxi(0, ceili(next_boss_time - elapsed))
+  hud.text += "\n%s EM %02d:%02d" % ["MINHOCÃO" if boss_stage == 0 else "PAI DO MATO", floori(remaining / 60.0), remaining % 60]
  if not profile_panel: setup_profile_panel()
  profile_panel.visible = not run_active and state not in ["nickname", "lost", "patch_notes", "legends", "history"]
  hud.visible = run_active
@@ -1607,6 +1613,7 @@ func update_game(dt: float) -> void:
     hit = true
   var outside: bool = not Rect2(Vector2.ZERO, ARENA).has_point(projectile.pos)
   if hit or projectile.life <= 0 or outside: bullets.remove_at(i)
+ var final_boss_defeated := false
  for i in range(enemies.size() - 1, -1, -1):
   var enemy := enemies[i]
   enemy.flash = maxf(0, enemy.flash - dt)
@@ -1620,13 +1627,18 @@ func update_game(dt: float) -> void:
    if enemy.boss:
     if run_mode == "bosses":
      bosses_defeated += 1
+     if enemy.get("species", "") == "pai_do_mato": final_boss_defeated = true
     elif run_mode == "endless": buff_endless_enemies()
    cards.drop(enemy)
    kills += 1
    var enemy_stats := match_enemy_stats(enemy)
    enemy_stats.kills += 1
    enemies.remove_at(i)
- if run_mode in ["bosses", "endless"]: spawn_endless_bosses()
+ if final_boss_defeated:
+  finish(true)
+  return
+ if run_mode == "bosses": spawn_boss_mode_bosses()
+ elif run_mode == "endless": spawn_endless_bosses()
  for i in range(gems.size() - 1, -1, -1):
   var distance: float = gems[i].pos.distance_to(player)
   if distance < magnet or bool(gems[i].get("magnetized", false)):
@@ -1758,7 +1770,20 @@ func show_pending_level_up() -> void:
 func fish_spawn_rate() -> float:
  return floorf(maxf(2.0, elapsed / 60.0) * 1.5)
 
+func spawn_boss_mode_bosses() -> void:
+ if run_mode != "bosses": return
+ if boss_stage == 0 and elapsed >= RUN_SECONDS:
+  spawn_enemy(true)
+  boss_spawned = true
+  boss_stage = 1
+  next_boss_time = FINAL_BOSS_TIME
+ if boss_stage == 1 and elapsed >= FINAL_BOSS_TIME:
+  spawn_enemy(true, "pai_do_mato")
+  boss_stage = 2
+  next_boss_time = INF
+
 func spawn_endless_bosses() -> void:
+ if run_mode != "endless": return
  while elapsed >= next_boss_time:
   endless_wave += 1
   var count := endless_wave if endless_wave < 6 else endless_wave - 5

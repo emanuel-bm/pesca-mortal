@@ -1,17 +1,20 @@
 extends RefCounted
 
 const BASE_HEALTH := 32000.0 * 20.0
-const HAND_DAMAGE := 120.0
+const HAND_DAMAGE := 280.0
 const LOG_DAMAGE := 200.0
 const LOG_SPEED := 600.0 / 0.325
-const LOG_OVERSHOOT := 1.3
+const LOG_OVERSHOOT := 1.5
+const LOG_RANGE_MULTIPLIER := 1.5
 const LOG_SIZE := Vector2(160, 56)
 const LOG_HITBOX_SIZE := Vector2(160, 36)
-const LOG_WARNING_TIME := 0.5
+const LOG_WARNING_TIME := 0.6
+const LOG_WARNING_SPEED_MULTIPLIER := 0.5
+const HAND_WARNING_TIME := 0.5
 const HAND_SCALE := 0.8
-const HAND_RANGE := 260.0
+const HAND_RANGE := 160.0
 const HAND_TARGET_OFFSET := 160.0
-const MOVE_SPEED := 162.0
+const MOVE_SPEED := 120.0
 
 static func initialize(enemy: Dictionary) -> void:
  enemy.phase = "approach"
@@ -41,13 +44,14 @@ static func hand_hits(enemy: Dictionary, point: Vector2, radius: float = 14.0) -
 
 static func choose_attack(enemy: Dictionary, player: Vector2, visible_world: Rect2) -> String:
  if enemy.pos.distance_to(player) <= HAND_RANGE: return "hand"
- return "log" if visible_world.has_point(enemy.pos) else ""
+ var launch_area := Rect2(visible_world.get_center() - visible_world.size * LOG_RANGE_MULTIPLIER / 2.0, visible_world.size * LOG_RANGE_MULTIPLIER)
+ return "log" if launch_area.has_point(enemy.pos) else ""
 
 static func update(enemy: Dictionary, dt: float, player: Vector2, arena: Vector2, visible_world: Rect2 = Rect2()) -> String:
- if enemy.phase != "log_warning":
-  var pursuit: Vector2 = player - enemy.pos
-  if absf(pursuit.x) > 0.01: enemy.facing_left = pursuit.x < 0
-  enemy.pos = enemy.pos.move_toward(player, enemy.speed * dt)
+ var pursuit: Vector2 = player - enemy.pos
+ if absf(pursuit.x) > 0.01: enemy.facing_left = pursuit.x < 0
+ var movement_multiplier := LOG_WARNING_SPEED_MULTIPLIER if enemy.phase == "log_warning" else 1.0
+ enemy.pos = enemy.pos.move_toward(player, enemy.speed * movement_multiplier * dt)
  if enemy.phase in ["hand_warning", "hand_impact"]:
   enemy.target = enemy.pos + enemy.hand_offset
  enemy.timer -= dt
@@ -56,7 +60,7 @@ static func update(enemy: Dictionary, dt: float, player: Vector2, arena: Vector2
    var attack := choose_attack(enemy, player, visible_world)
    if attack.is_empty(): return ""
    enemy.phase = attack + "_warning"
-   enemy.timer = 1.2 if attack == "hand" else LOG_WARNING_TIME
+   enemy.timer = HAND_WARNING_TIME if attack == "hand" else LOG_WARNING_TIME
    enemy.target = throw_endpoint(enemy.pos, player, arena) if attack == "log" else enemy.pos + (player - enemy.pos).limit_length(HAND_TARGET_OFFSET)
    enemy.hand_angle = (player - enemy.pos).angle() + PI / 2
    if attack == "hand": enemy.hand_offset = enemy.target - enemy.pos
