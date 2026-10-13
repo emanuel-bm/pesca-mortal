@@ -26,6 +26,7 @@ const PAI_DO_MATO = preload("res://scripts/pai_do_mato.gd")
 const DOURADO = preload("res://scripts/dourado.gd")
 const FISH_VISUALS = preload("res://scripts/fish_visuals.gd")
 const RUN_HISTORY = preload("res://scripts/run_history.gd")
+const NUMBER_FORMAT = preload("res://scripts/number_format.gd")
 const BASE_COLLECTION_RANGE := 180.0
 const UPGRADES := ["damage", "rate", "shots", "speed", "max_health", "xp_bonus", "luck", "persistence", "crit_chance"]
 const LABELS := {
@@ -677,7 +678,7 @@ func setup_stats_panel() -> void:
  column.add_theme_constant_override("separation", 14)
  margin.add_child(column)
  stats_heading = Label.new()
- stats_heading.text = "ATRIBUTOS DO PESCADOR (lv%d)" % level
+ stats_heading.text = "ATRIBUTOS DO PESCADOR (lv%s)" % format_integer(level)
  stats_heading.add_theme_font_size_override("font_size", 24)
  column.add_child(stats_heading)
  var names := {"max_health": "Vida máxima", "damage": "Dano", "rate": "Ataques por segundo", "shots": "Projéteis por ataque", "speed": "Velocidade", "xp_bonus": "Bônus de XP", "luck": "Drop de cartas", "persistence": "Duração das cartas", "crit_chance": "Chance de crítico"}
@@ -785,19 +786,19 @@ func projected_stats(id: String = "") -> Dictionary:
  return values
 
 func format_stat(id: String, value: float) -> String:
- if id == "rate": return ("%.2f" % value).replace(".", ",")
+ if id == "rate": return NUMBER_FORMAT.decimal(value, 2, false)
  if id == "crit_chance": return "%d%%" % roundi(value) + (" (MAX)" if value >= 100 else "")
- var text := ("+%d%%" % roundi(value)) if id in ["xp_bonus", "luck", "persistence"] else str(roundi(value))
+ var text := ("+%s%%" % format_integer(roundi(value))) if id in ["xp_bonus", "luck", "persistence"] else format_integer(roundi(value))
  return text
 
 func update_stats_preview(id: String = "") -> void:
- stats_heading.text = "ATRIBUTOS DO PESCADOR (lv%d)" % level
+ stats_heading.text = "ATRIBUTOS DO PESCADOR (lv%s)" % format_integer(level)
  preview_upgrade = id
  var current := projected_stats()
  var projected := projected_stats(id)
  for key in current:
   var ability_level := int(upgrade_levels.get(key, 0)) + 1
-  stat_names[key].text = stat_base_names[key] + (" (%d)" % ability_level if ability_level > 1 else "")
+  stat_names[key].text = stat_base_names[key] + (" (%s)" % format_integer(ability_level) if ability_level > 1 else "")
   var label: Label = stat_values[key]
   label.text = format_stat(key, current[key])
   label.remove_theme_color_override("font_color")
@@ -1036,11 +1037,11 @@ func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
   ranked = []
  for index in mini(10, ranked.size()):
   var record: Dictionary = ranked[index]
-  history_cell(grid, str(int(record.get("position", index + 1))))
+  history_cell(grid, format_integer(int(record.get("position", index + 1))))
   history_cell(grid, online.nickname() if personal else str(record.get("nickname", "")))
-  history_cell(grid, str(int(record.get("level", 0))))
+  history_cell(grid, format_integer(int(record.get("level", 0))))
   history_cell(grid, RUN_HISTORY.time_text(record.seconds))
-  history_cell(grid, str(int(record.kills)))
+  history_cell(grid, format_integer(int(record.kills)))
   if index < 3:
    var podium_color: Color = [Color("ffd36b"), Color("c7d5e5"), Color("bfa58c")][index]
    for cell_index in range(grid.get_child_count() - 5, grid.get_child_count()):
@@ -1128,7 +1129,7 @@ func show_history() -> void:
   if not RUN_HISTORY.eligible(record): mode_label += " (debug)"
   history_cell(grid, mode_label)
   history_cell(grid, "%02d:%02d" % [maxi(0, int(record.seconds)) / 60, maxi(0, int(record.seconds)) % 60])
-  history_cell(grid, str(record.kills))
+  history_cell(grid, format_integer(int(record.kills)))
  if run_history.is_empty(): title("Nenhuma partida registrada.", 18)
  var spacer := Control.new()
  spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -1535,21 +1536,21 @@ func _process(delta: float) -> void:
  xp_bar.value = current_xp()
  xp_label.size = xp_bar.size
  xp_label.position = xp_bar.position
- xp_label.text = "%s / %d XP" % [format_xp(current_xp()), xp_needed()]
+ xp_label.text = "%s / %s XP" % [format_xp(current_xp()), format_integer(xp_needed())]
  for level_label in [xp_current_level_label, xp_next_level_label]:
   level_label.position = xp_bar.position + Vector2(8, 0)
   level_label.size = Vector2(xp_bar.size.x - 16, xp_bar.size.y)
- xp_current_level_label.text = "NÍVEL %d" % level
- xp_next_level_label.text = "NÍVEL %d" % (level + 1)
+ xp_current_level_label.text = "NÍVEL %s" % format_integer(level)
+ xp_next_level_label.text = "NÍVEL %s" % format_integer(level + 1)
  health_bar.size = xp_bar.size
  health_bar.value = maxf(0, health)
  health_label.size = health_bar.size
  health_bar.max_value = max_health
- health_label.text = "%d / %d HP" % [maxi(0, int(health)), roundi(max_health)]
- hud.text = "%02d:%02d    ELIMINAÇÕES %d" % [int(elapsed) / 60, int(elapsed) % 60, kills]
+ health_label.text = "%s / %s HP" % [format_integer(maxi(0, int(health))), format_integer(roundi(max_health))]
+ hud.text = "%02d:%02d    ELIMINAÇÕES %s" % [int(elapsed) / 60, int(elapsed) % 60, format_integer(kills)]
  if run_mode == "endless" and state in ["playing", "upgrade", "paused"]:
   var remaining := maxi(0, ceili(next_boss_time - elapsed))
-  hud.text += "\nINFINITO · ONDA %d EM %02d:%02d" % [endless_wave + 1, floori(remaining / 60.0), remaining % 60]
+  hud.text += "\nINFINITO · ONDA %s EM %02d:%02d" % [format_integer(endless_wave + 1), floori(remaining / 60.0), remaining % 60]
  elif run_mode == "bosses" and state in ["playing", "upgrade", "paused"] and boss_stage < 2:
   var remaining := maxi(0, ceili(next_boss_time - elapsed))
   hud.text += "\n%s EM %02d:%02d" % ["MINHOCÃO" if boss_stage == 0 else "PAI DO MATO", floori(remaining / 60.0), remaining % 60]
@@ -1557,7 +1558,7 @@ func _process(delta: float) -> void:
  profile_panel.visible = not run_active and state not in ["nickname", "lost", "patch_notes", "legends", "history"]
  hud.visible = run_active
  if not run_active:
-  hud.text = "ELIMINAÇÕES TOTAIS %d\nTEMPO TOTAL %s\nNÍVEIS CONQUISTADOS %d" % [player_totals.kills, RUN_HISTORY.time_text(player_totals.seconds), player_totals.levels]
+  hud.text = "ELIMINAÇÕES TOTAIS %s\nTEMPO TOTAL %s\nNÍVEIS CONQUISTADOS %s" % [format_integer(int(player_totals.kills)), RUN_HISTORY.time_text(player_totals.seconds), format_integer(int(player_totals.levels))]
   hud.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
   hud.size = hud.get_minimum_size()
   hud.position = Vector2(get_viewport_rect().size.x - hud.size.x - 22, 70)
@@ -1578,10 +1579,10 @@ func _process(delta: float) -> void:
    if enemy.boss or enemy.hp <= 0 or enemy.get("obstacle", false): continue
    fish_count += 1
    if test_run and visible_area.grow(enemy.radius + 2).has_point(enemy.pos): visible_fish += 1
-  hud.text += "\nPEIXES %d" % fish_count
-  if test_run: hud.text += "\nPEIXES VISÍVEIS %d" % visible_fish
+  hud.text += "\nPEIXES %s" % format_integer(fish_count)
+  if test_run: hud.text += "\nPEIXES VISÍVEIS %s" % format_integer(visible_fish)
  fps_label.visible = show_fps
- fps_label.text = "%d FPS" % Engine.get_frames_per_second()
+ fps_label.text = "%s FPS" % format_integer(Engine.get_frames_per_second())
  var map_area := minimap_world_rect()
  var map_shown := minimap_renderer != null and minimap_renderer.visible
  fps_label.position = Vector2(map_area.position.x - 22 - 150 if map_shown else get_viewport_rect().size.x - 172, 46)
@@ -1597,7 +1598,7 @@ func _process(delta: float) -> void:
    var boss_name := "MINHOCÃO"
    if enemies.any(func(enemy: Dictionary): return enemy.get("species", "") == "pai_do_mato"):
     boss_name = "PAI DO MATO" if enemies.all(func(enemy: Dictionary): return not enemy.boss or enemy.get("species", "") == "pai_do_mato") else "CHEFÕES"
-   hud.text += "\n%s x%d" % [boss_name, count]
+   hud.text += "\n%s x%s" % [boss_name, format_integer(count)]
    if run_mode == "bosses": hud.text += " · " + action
  queue_redraw()
 
@@ -2207,7 +2208,13 @@ func current_xp() -> float:
  return xp + xp_remainder / 100.0
 
 func format_xp(amount: float) -> String:
- return ("%.1f" % amount).trim_suffix(".0")
+ return NUMBER_FORMAT.decimal(amount)
+
+func format_integer(value: int) -> String:
+ return NUMBER_FORMAT.integer(value)
+
+func format_stat_number(value: float) -> String:
+ return NUMBER_FORMAT.decimal(value)
 
 func collect_xp(base_amount: int) -> int:
  # Keep fractional XP across pickups: ten 1-XP pickups at +10% grant 11 XP.
@@ -2228,14 +2235,14 @@ func add_damage_number(position: Vector2, amount: float, color: Color = Color(1,
  var limit := floating_number_limit()
  if limit == 0: return
  if damage_numbers.size() >= limit: damage_numbers.pop_front()
- var text := str(roundi(amount))
+ var text := format_integer(roundi(amount))
  damage_numbers.append({"pos": position + Vector2((damage_numbers.size() % 5 - 2) * 8, 0), "text": text, "life": duration, "color": color, "font_size": font_size, "critical": critical})
 
 func add_xp_number(position: Vector2, amount: float) -> void:
  var limit := floating_number_limit()
  if limit == 0: return
  if damage_numbers.size() >= limit: damage_numbers.pop_front()
- damage_numbers.append({"pos": position + Vector2((damage_numbers.size() % 5 - 2) * 8, -24), "text": "+%d XP" % floori(amount), "life": 0.7, "color": XP_COLOR, "font_size": 20})
+ damage_numbers.append({"pos": position + Vector2((damage_numbers.size() % 5 - 2) * 8, -24), "text": "+%s XP" % format_integer(floori(amount)), "life": 0.7, "color": XP_COLOR, "font_size": 20})
 
 func update_damage_numbers(dt: float) -> void:
  for i in range(damage_numbers.size() - 1, -1, -1):
@@ -2248,6 +2255,7 @@ func receive_hit(amount: float, source: Vector2, attacker: Dictionary = {}, atta
   if amount > 0.0: cards.shield_feedback(source)
   return
  if invulnerability > 0: return
+ amount = roundf(amount)
  var health_before := health
  var received_damage := minf(maxf(amount, 0.0), maxf(health_before, 0.0))
  match_damage_taken += received_damage
@@ -2487,7 +2495,7 @@ func show_upgrades() -> void:
  state = "upgrade"
  clear_panel()
  overlay.custom_minimum_size.x = 770
- title("NÍVEL %d" % level)
+ title("NÍVEL %s" % format_integer(level))
  title("Escolha uma melhoria", 20)
  stats_panel.show()
  update_stats_preview()
@@ -2576,7 +2584,7 @@ func build_upgrade_keycap(number: int) -> PanelContainer:
 func build_upgrade_card(content: VBoxContainer, id: String, current: Dictionary, next: Dictionary) -> void:
  content.add_theme_constant_override("separation", 4)
  var heading := Label.new()
- heading.text = "%s (lv%d)" % [LABELS[id][0], int(upgrade_levels.get(id, 0)) + 1]
+ heading.text = "%s (lv%s)" % [LABELS[id][0], format_integer(int(upgrade_levels.get(id, 0)) + 1)]
  heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
  heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
  heading.add_theme_font_size_override("font_size", 32)
@@ -2671,8 +2679,8 @@ func finish(won: bool) -> void:
   for side in ["top", "bottom"]:
    panel.get_parent().add_theme_constant_override("margin_" + side, 8)
   title("%s · Tempo: %02d:%02d" % [online.nickname(), int(elapsed) / 60, int(elapsed) % 60], 16)
-  title("Nível: %d · Eliminações: %d" % [level, kills], 16)
-  title("Peixes vivos: %d · Chefes vivos: %d" % [living_fish, living_bosses], 16)
+  title("Nível: %s · Eliminações: %s" % [format_integer(level), format_integer(kills)], 16)
+  title("Peixes vivos: %s · Chefes vivos: %s" % [format_integer(living_fish), format_integer(living_bosses)], 16)
   show_fatal_hit()
   setup_match_details_button()
   var actions := HBoxContainer.new()
@@ -2688,7 +2696,7 @@ func finish(won: bool) -> void:
   layout_modals()
   queue_redraw()
   return
- title("Tempo: %02d:%02d\nNível: %d · Eliminações: %d" % [int(elapsed) / 60, int(elapsed) % 60, level, kills], 22)
+ title("Tempo: %02d:%02d\nNível: %s · Eliminações: %s" % [int(elapsed) / 60, int(elapsed) % 60, format_integer(level), format_integer(kills)], 22)
  setup_match_details_button()
  button("Jogar novamente", restart_run)
  button("Voltar à tela inicial", show_menu)
@@ -2727,11 +2735,11 @@ func show_match_details() -> void:
  state = "match_details"
  clear_panel()
  title("ESTATÍSTICAS DA PARTIDA")
- title("Tempo: %02d:%02d · Nível: %d · Eliminações: %d" % [int(elapsed) / 60, int(elapsed) % 60, level, kills], 16)
+ title("Tempo: %02d:%02d · Nível: %s · Eliminações: %s" % [int(elapsed) / 60, int(elapsed) % 60, format_integer(level), format_integer(kills)], 16)
  title("Dano causado: %s · Dano recebido: %s" % [format_xp(match_damage_dealt), format_xp(match_damage_taken)], 16)
  var total := 0
  for count in match_card_uses.values(): total += int(count)
- title("Cartas utilizadas: %d" % total, 16)
+ title("Cartas utilizadas: %s" % format_integer(total), 16)
  var grid := GridContainer.new()
  grid.columns = 3
  grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2742,7 +2750,7 @@ func show_match_details() -> void:
  for id in cards.IDS:
   history_cell(grid, cards.NAMES[id])
   history_cell(grid, str(match_card_uses.get(id, 0)))
-  history_cell(grid, "Instantâneo" if id == "ima" else "%.1f s" % float(match_card_seconds.get(id, 0.0)))
+  history_cell(grid, "Instantâneo" if id == "ima" else "%s s" % NUMBER_FORMAT.decimal(float(match_card_seconds.get(id, 0.0)), 1, false))
  for heading in ["Inimigo", "Eliminações", "Dano recebido"]: history_cell(grid, heading)
  var enemy_ids := match_enemies.keys()
  enemy_ids.sort()
@@ -2849,7 +2857,7 @@ func draw_boss_health(enemy: Dictionary, bar_position: Vector2, width: float, co
  draw_rect(Rect2(bar_position - Vector2.ONE, Vector2(width + 2, 8)), Color(0.05, 0.04, 0.08))
  draw_rect(Rect2(bar_position, Vector2(width, 6)), Color(0.2, 0.1, 0.25))
  draw_rect(Rect2(bar_position, Vector2(width * clampf(enemy.hp / enemy.max_hp, 0, 1), 6)), color)
- var hp_text := "%d / %d" % [ceili(maxf(0, enemy.hp)), ceili(enemy.max_hp)]
+ var hp_text := "%s/%s" % [format_integer(ceili(maxf(0, enemy.hp))), format_integer(ceili(enemy.max_hp))]
  var hp_position := bar_position + Vector2(width / 2 - game_font.get_string_size(hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x / 2, 18)
  draw_string(game_font, hp_position.round(), hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color.WHITE)
 
@@ -2893,9 +2901,7 @@ func _draw() -> void:
     var angle: float = enemy.get("angle", 0.0)
     var bottom := (absf(sin(angle)) * PAI_DO_MATO.LOG_HITBOX_SIZE.x + absf(cos(angle)) * PAI_DO_MATO.LOG_HITBOX_SIZE.y) / 2.0
     var bar_position := (position + Vector2(-24, bottom + 2)).round()
-    draw_rect(Rect2(bar_position - Vector2.ONE, Vector2(50, 6)), Color(0.05, 0.04, 0.08))
-    draw_rect(Rect2(bar_position, Vector2(48, 4)), Color(0.2, 0.1, 0.25))
-    draw_rect(Rect2(bar_position, Vector2(48 * clampf(enemy.hp / enemy.max_hp, 0, 1), 4)), Color(0.3, 0.8, 0.25))
+    draw_boss_health(enemy, bar_position, 48, Color(0.3, 0.8, 0.25))
    continue
   if enemy.get("species", "") == "pai_do_mato":
    PAI_DO_MATO.draw(self, enemy, offset, pai_do_mato_art)
@@ -3092,7 +3098,7 @@ func render_legends() -> void:
  list.add_theme_constant_override("separation", 5)
  scroll.add_child(list)
  for index in range(3, records.size()):
-  list.add_child(make_legend_row(legend_values(records[index], str(int(records[index].get("position", index + 1))))))
+  list.add_child(make_legend_row(legend_values(records[index], format_integer(int(records[index].get("position", index + 1))))))
  if records.is_empty() and not loading:
   var empty := Label.new()
   empty.text = online.status if not online.busy and not online.status.is_empty() and online.status != "Ranking atualizado." else "Nenhum recorde disponível nesta versão."
@@ -3109,7 +3115,7 @@ func render_legends() -> void:
   var same_player := not str(online.profile.get("player_id", "")).is_empty() and str(entry.get("player_id", "")) == str(online.profile.player_id)
   if same_player or (str(entry.get("player_id", "")).is_empty() and str(entry.get("nickname", "")) == online.nickname() and not online.nickname().is_empty()):
    own = entry
-   own_position = str(int(entry.get("position", index + 1)))
+   own_position = format_integer(int(entry.get("position", index + 1)))
    break
  var own_values: Array = [own_position, online.nickname(), "-", "-", "-"]
  if not own.is_empty(): own_values = legend_values(own, own_position)
@@ -3126,7 +3132,7 @@ func render_legends() -> void:
  layout_modals()
 
 func legend_values(record: Dictionary, position: String) -> Array:
- return [position, str(record.get("nickname", online.nickname())), str(int(record.get("level", 0))), RUN_HISTORY.time_text(record.seconds), str(int(record.kills))]
+ return [position, str(record.get("nickname", online.nickname())), format_integer(int(record.get("level", 0))), RUN_HISTORY.time_text(record.seconds), format_integer(int(record.kills))]
 
 func make_legend_row(values: Array, background: Color = Color.TRANSPARENT, color: Color = Color.WHITE, font_size: int = 24, border_width: int = 0) -> PanelContainer:
  var card := PanelContainer.new()

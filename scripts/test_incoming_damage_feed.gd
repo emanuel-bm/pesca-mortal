@@ -22,7 +22,7 @@ func run() -> void:
  assert(feed.entries.size() == 2 and feed.entries[0].aggressor == "Tronco")
  var log_portrait: AtlasTexture = feed.entries[0].card.get_child(0).get_child(0).texture
  assert(log_portrait.atlas == game.log_art.texture and log_portrait.region == Rect2(game.log_art.region))
- assert(feed.entries[0].damage == "15.5")
+ assert(feed.entries[0].damage == "16")
  game.invulnerability = 0
  game.receive_hit(1, game.player, pai, "Mãozona")
  assert(feed.entries[0].aggressor == "Pai do Mato", "Other boss attacks must retain the boss portrait and name")

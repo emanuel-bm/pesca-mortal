@@ -200,10 +200,10 @@ func refresh() -> void:
  for id in effects:
   indicators[id].icon.material.set_shader_parameter("blocked", blocked_seconds > 0)
   indicators[id].item.visible = active(id)
-  indicators[id].label.text = "%s\n%.1f s" % [NAMES[id], effects[id]]
+  indicators[id].label.text = "%s\n%s s" % [NAMES[id], game.NUMBER_FORMAT.decimal(effects[id], 1, false)]
  effect_row.reset_size()
  var viewport := get_viewport_rect().size
  block_label.visible = game.run_active and blocked_seconds > 0
- block_label.text = "CARTAS BLOQUEADAS · %.1f s" % blocked_seconds
+ block_label.text = "CARTAS BLOQUEADAS · %s s" % game.NUMBER_FORMAT.decimal(blocked_seconds, 1, false)
  block_label.position = Vector2((viewport.x - block_label.get_minimum_size().x) / 2, viewport.y - 82)
  effect_row.position = Vector2(maxf(22, (viewport.x - effect_row.size.x) / 2), viewport.y - 56)

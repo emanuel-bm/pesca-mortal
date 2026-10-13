@@ -56,7 +56,7 @@ static func time_text(seconds: float) -> String:
 static func character_text(record: Dictionary) -> String:
  var name: String = record.get("character", "Pescador")
  var final_level: int = int(record.get("level", 0))
- return "%s (lv%d)" % [name, final_level] if final_level > 0 else name
+ return "%s (lv%s)" % [name, preload("res://scripts/number_format.gd").integer(final_level)] if final_level > 0 else name
 
 static func boss_ranked(records: Array) -> Array:
  var result: Array = normalized(records).filter(func(record: Dictionary) -> bool: return record.mode == "bosses" and record.reason == "won" and eligible(record))

@@ -10,6 +10,7 @@ Status: definição confirmada e implementada.
 - No máximo cinco entradas visíveis; a sexta remove a mais antiga.
 - Cada entrada dura quatro segundos e desaparece suavemente.
 - Golpes bloqueados, esquivados ou anulados por invulnerabilidade não geram entrada.
+- O dano de todos os inimigos é arredondado para o inteiro mais próximo antes de reduzir a vida: 10,8 causa 11, 10,4 causa 10 e 10,5 causa 11. Indicadores, feed e estatísticas usam o dano aplicado; o HP é exibido como inteiro.
 
 ## Apresentação e ciclo de vida
 
