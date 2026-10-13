@@ -91,6 +91,7 @@ var match_enemies: Dictionary = {}
 var match_details_button: Button
 var fatal_hit: Dictionary = {}
 var fatal_hit_panel: PanelContainer
+var incoming_damage_feed: Control
 var attack_delay := 0.65
 var shot_count := 1
 var speed := BASE_PLAYER_SPEED
@@ -273,6 +274,9 @@ func _ready() -> void:
  online.changed.connect(online_changed)
  var layer := CanvasLayer.new()
  add_child(layer)
+ incoming_damage_feed = preload("res://scripts/incoming_damage_feed.gd").new()
+ layer.add_child(incoming_damage_feed)
+ incoming_damage_feed.hide()
  var damage_layer := CanvasLayer.new()
  damage_layer.layer = 20
  add_child(damage_layer)
@@ -1350,6 +1354,7 @@ func restart_run() -> void:
 
 func start_run(mode: String = "bosses") -> void:
  if mode not in ["endless", "bosses", "training"]: return
+ incoming_damage_feed.clear()
  upgrade_selection_pending = false
  fatal_hit.clear()
  clear_fatal_hit_panel()
@@ -1518,6 +1523,7 @@ func _process(delta: float) -> void:
  layout_modals()
  if state == "playing":
   update_game(minf(delta, 0.05))
+ incoming_damage_feed.refresh(delta, self)
  cards.refresh()
  update_water(minf(delta, 0.05))
  var show_player_bars := run_active or state in ["won", "lost"]
@@ -2256,6 +2262,10 @@ func receive_hit(amount: float, source: Vector2, attacker: Dictionary = {}, atta
   damage_flash_tween = create_tween()
   damage_flash_tween.tween_property(damage_flash, "color:a", 0.0, 0.25)
  if prevent_player_death: health = maxf(1.0, health)
+ var life_lost := maxf(0.0, health_before - maxf(health, 0.0))
+ if health > 0.0 and life_lost > 0.0:
+  var feed_name: String = "Tronco" if attack == "Tronco arremessado" else RUN_HISTORY.killer_details(attacker).killer_name
+  incoming_damage_feed.add_hit(feed_name, attacker_portrait(attacker, attack), format_xp(life_lost))
  sounds.play_hurt()
  invulnerability = 0.8
  var away := (player - source).normalized()
@@ -2272,11 +2282,12 @@ func clear_fatal_hit_panel() -> void:
   fatal_hit_panel.queue_free()
  fatal_hit_panel = null
 
-func show_fatal_hit() -> void:
- clear_fatal_hit_panel()
- if fatal_hit.is_empty(): return
- var enemy: Dictionary = fatal_hit.enemy
- var name: String = RUN_HISTORY.killer_details(enemy).killer_name
+func attacker_portrait(enemy: Dictionary, attack: String = "") -> Texture2D:
+ if attack == "Tronco arremessado":
+  var log_portrait := AtlasTexture.new()
+  log_portrait.atlas = log_art.texture
+  log_portrait.region = Rect2(log_art.region)
+  return log_portrait
  var texture: Texture2D
  if not enemy.is_empty():
   if enemy.get("boss", false):
@@ -2287,6 +2298,14 @@ func show_fatal_hit() -> void:
    atlas.atlas = art.texture
    atlas.region = Rect2(art.region)
    texture = atlas
+ return texture
+
+func show_fatal_hit() -> void:
+ clear_fatal_hit_panel()
+ if fatal_hit.is_empty(): return
+ var enemy: Dictionary = fatal_hit.enemy
+ var name: String = RUN_HISTORY.killer_details(enemy).killer_name
+ var texture := attacker_portrait(enemy)
  var card := PanelContainer.new()
  fatal_hit_panel = card
  var style := StyleBoxFlat.new()
@@ -2631,6 +2650,7 @@ func _apply_upgrade(id: String) -> void:
  health_bar.max_value = max_health
 
 func finish(won: bool) -> void:
+ incoming_damage_feed.hide()
  match_won = won
  record_run("death" if not won else "won")
  run_active = false

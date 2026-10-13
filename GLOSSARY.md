@@ -17,6 +17,14 @@ Travessia rápida do Minhocão por um trajeto reto anunciado no chão.
 **Exposição**:
 Período em que o Minhocão está à superfície e pode receber dano.
 
+## Dano recebido
+
+**Feed de dano recebido**:
+Lista temporária dos golpes que reduziram a vida do jogador, identificando o agressor e a quantidade de vida perdida em cada golpe.
+
+**Dano efetivamente recebido**:
+Quantidade de vida perdida pelo jogador após um golpe, limitada pela vida disponível e pelas proteções ativas.
+
 ## Cartas
 
 **Carta**:
