@@ -1,14 +1,9 @@
 [
   {
-    "tag_name": "v0.4.5",
-    "name": "Pesca Mortal 0.4.5 — Dano recebido, cartas e interface",
-    "published_at": "2026-10-13T17:55:42Z",
-    "body": "# Pesca Mortal 0.4.5 — Dano recebido, cartas e interface\r\n\r\nAgora você pode acompanhar a origem dos golpes recebidos durante a partida e consultar um resumo mais direto ao terminar. Esta atualização também melhora a variedade das cartas, ajusta a experiência de alguns peixes e reorganiza as notas de atualização.\r\n\r\n## Dano recebido e números\r\n\r\n- Novo feed abaixo do minimapa com retrato, nome do agressor e vida perdida em cada golpe: até cinco entradas, exibidas por quatro segundos.\r\n- Golpes bloqueados ou esquivados não aparecem no feed. O golpe fatal continua indicado na tela de fim de partida.\r\n- O dano inimigo é arredondado antes de descontar a vida: 10,4 → 10; 10,5 → 11.\r\n- Números grandes passam a usar separador de milhares, como 100.000, incluindo as estatísticas da partida.\r\n\r\n## Cartas\r\n\r\n- Cada repetição consecutiva reduz pela metade o peso da última carta no próximo sorteio. Outra carta encerra a sequência, e uma nova partida reinicia o histórico.\r\n- As duas cartas deixadas pelo Pai do Mato passam a ser sempre diferentes entre si.\r\n\r\n## Peixes\r\n\r\n- Experiência base do pacu por abate: 4 → 10 XP.\r\n- Experiência base do dourado por abate: 8 → 20 XP.\r\n- Vida base da piranha: 21 → 20 HP, antes dos bônus da partida.\r\n\r\n## Interface da partida\r\n\r\n- Tela de fim de partida com resumo de nível, tempo e eliminações e botões Jogar novamente, Estatísticas e Sair.\r\n- Ajuste da escala do painel do jogador para acompanhar o painel de recordes.\r\n- O contador de peixes vivos passa a incluir os chefões.\r\n\r\n## Notas de atualização\r\n\r\n- Lista de versões e datas separada do conteúdo da nota selecionada.\r\n- A tela abre a atualização mais recente; notas anteriores são carregadas ao selecionar a versão e ficam salvas para consulta offline.\r\n\r\nComparação completa: https://github.com/emanuel-bm/pesca-mortal/compare/v0.4.4...v0.4.5\r\n"
-  },
-  {
     "tag_name": "v0.4.4",
     "name": "Pesca Mortal 0.4.4 — Cartas do Pai do Mato e arrancadas do Dourado",
-    "published_at": "2026-10-12T19:11:31Z"
+    "published_at": "2026-10-12T19:11:31Z",
+    "body": "O Pai do Mato passa a deixar duas cartas no modo infinito. O Dourado ganha arrancadas mais frequentes e um alcance que cresce mais rápido ao longo da partida.\r\n\r\n## Pai do Mato\r\n\r\n- Recompensa de cartas por abate no modo infinito: 1 → 2 cartas.\r\n- As duas cartas aparecem separadas no chão e cada uma é sorteada individualmente.\r\n\r\n## Dourado\r\n\r\n- Cooldown adicional entre arrancadas: 1 a 3 segundos → nenhum. O descanso de 0,75 segundo permanece; depois dele, o Dourado pode preparar outra arrancada assim que estiver no alcance.\r\n- Crescimento do alcance da arrancada por minuto: 5% → 8%, de forma acumulativa.\r\n- A velocidade da arrancada permanece fixa em 1.400 pixels/s. No infinito, o alcance mantém o bônus adicional de 5% por chefão derrotado.\r\n\r\nComparação completa do código: https://github.com/emanuel-bm/pesca-mortal/compare/v0.4.3...v0.4.4\r\n"
   },
   {
     "tag_name": "v0.4.3",
