@@ -135,7 +135,7 @@ perda de foco e botões de telas anteriores com níveis acumulados. O teste
 os modos de janela e verifica áudio, Voltar e Continuar.
 
 O pacu voltou como inimigo separado do dourado: usa `assets/pacu-v4.png`,
-tem 80 HP base escalados pelo tempo, 30 de dano, 4 XP e velocidade de 80 pixels/s,
+tem 80 HP base escalados pelo tempo, 30 de dano, 10 XP e velocidade de 80 pixels/s,
 sem arrancada. Compartilha a liberação do dourado. **F11** invoca 10 pacus no treino.
 Um dano de pacu bloqueia novas ativações de cartas por cinco segundos de jogo;
 outro dano renova o tempo. Cartas no chão e ícones dos efeitos ficam cinza durante
@@ -154,7 +154,7 @@ e ao longo de todo o percurso. Inicia o preparo a até 70% do alcance
 atual da arrancada; esse limite cresce junto com os buffs. Descansa
 por 0,75 segundo. Depois do descanso, pode preparar outra arrancada assim que
 estiver dentro do alcance de preparo, sem cooldown adicional. Tem 200 de vida base, 15 de dano e dá
-8 XP; recebe +8% de vida, velocidade de nado e alcance da arrancada por minuto, +4% de dano, além de +5% por chefão no infinito. A velocidade da arrancada permanece fixa.
+20 XP; recebe +8% de vida, velocidade de nado e alcance da arrancada por minuto, +4% de dano, além de +5% por chefão no infinito. A velocidade da arrancada permanece fixa.
 Na sala de treino, **F10** invoca 10 dourados ao redor da canoa.
 
 Distribuição por surgimento automático (um único sorteio):
@@ -234,7 +234,7 @@ Melhorias de vida máxima e dano de ataque aumentam o valor atual em 20% por esc
 Valores exibidos são arredondados para inteiros; cálculos mantêm a precisão.
 O alcance de coleta de XP é fixo em 180, sem melhoria e oculto nos atributos do pescador.
 Aprendizado aumenta o bônus de ganho de XP em 20 pontos percentuais por escolha, sem limite máximo.
-Experiência base: piranha 1 XP, pintado 5 XP, pacu 4 XP, dourado 8 XP e chefão 100 XP.
+Experiência base: piranha 1 XP, pintado 5 XP, pacu 10 XP, dourado 20 XP e chefão 100 XP.
 Cristais de maior valor aparecem maiores e concedem todo o XP ao serem coletados.
 Projéteis são lanças orientadas pelo disparo. Personagem, canoa, Minhocão,
 piranhas, pintados e água usam pixel art gerada com ImageGen.

@@ -1566,6 +1566,8 @@ func _process(delta: float) -> void:
   profile_label.text = hud.text
   profile_panel.size = profile_panel.get_combined_minimum_size()
   var profile_scale := minf(1.0, (get_viewport_rect().size.x - 44) / profile_panel.size.x)
+  if is_instance_valid(records_panel):
+   profile_scale = minf(profile_scale, records_panel.scale.x)
   profile_panel.scale = Vector2.ONE * profile_scale
   profile_panel.position = Vector2(22, 22)
  else:
@@ -1576,7 +1578,7 @@ func _process(delta: float) -> void:
   var visible_fish := 0
   var visible_area := Rect2(camera_offset(), get_viewport_rect().size)
   for enemy in enemies:
-   if enemy.boss or enemy.hp <= 0 or enemy.get("obstacle", false): continue
+   if enemy.hp <= 0 or enemy.get("obstacle", false): continue
    fish_count += 1
    if test_run and visible_area.grow(enemy.radius + 2).has_point(enemy.pos): visible_fish += 1
   hud.text += "\nPEIXES %s" % format_integer(fish_count)
@@ -2226,8 +2228,8 @@ func collect_xp(base_amount: int) -> int:
 
 func enemy_xp_reward(enemy: Dictionary) -> int:
  if enemy.get("boss", false): return 5000 if enemy.get("species", "") == "pai_do_mato" else 250
- if enemy.get("species", "") == "pacu": return 4
- if enemy.get("species", "") == "dourado": return 8
+ if enemy.get("species", "") == "pacu": return 10
+ if enemy.get("species", "") == "dourado": return 20
  if enemy.get("tank", false): return 5
  return maxi(1, roundi(pow(float(enemy.radius) / 13.0, 2)))
 
@@ -2393,7 +2395,7 @@ func spawn_enemy(boss: bool, species: String = "", arrival_count: int = 1) -> vo
  var is_pacu := not boss and species == "pacu"
  if is_pacu: tank = false
  if is_dourado: tank = false
- var hp := 200.0 if tank else 21.0
+ var hp := 200.0 if tank else 20.0
  if boss: hp = PAI_DO_MATO.BASE_HEALTH if species == "pai_do_mato" else 32000.0
  var enemy := {"pos": position, "hp": hp, "max_hp": hp, "radius": 38.0 if boss else (44.0 if tank else 13.0), "speed": 120.0 if boss else (80.0 if tank else 125.0), "contact": 60.0 if boss else (20.0 if tank else 10.0), "boss": boss, "tank": tank, "flash": 0.0}
  if is_dourado:
@@ -2707,7 +2709,7 @@ func show_match_details() -> void:
  clear_panel()
  title("ESTATÍSTICAS DA PARTIDA")
  title("Tempo: %02d:%02d · Nível: %s · Eliminações: %s" % [int(elapsed) / 60, int(elapsed) % 60, format_integer(level), format_integer(kills)], 16)
- title("Dano causado: %s · Dano recebido: %s" % [format_xp(match_damage_dealt), format_xp(match_damage_taken)], 16)
+ title("Dano causado: %s · Dano recebido: %s" % [format_stat_number(match_damage_dealt), format_stat_number(match_damage_taken)], 16)
  var total := 0
  for count in match_card_uses.values(): total += int(count)
  title("Cartas utilizadas: %s" % format_integer(total), 16)
@@ -2720,7 +2722,7 @@ func show_match_details() -> void:
  for heading in ["Carta", "Usos", "Tempo sob efeito"]: history_cell(grid, heading)
  for id in cards.IDS:
   history_cell(grid, cards.NAMES[id])
-  history_cell(grid, str(match_card_uses.get(id, 0)))
+  history_cell(grid, format_integer(int(match_card_uses.get(id, 0))))
   history_cell(grid, "Instantâneo" if id == "ima" else "%s s" % NUMBER_FORMAT.decimal(float(match_card_seconds.get(id, 0.0)), 1, false))
  for heading in ["Inimigo", "Eliminações", "Dano recebido"]: history_cell(grid, heading)
  var enemy_ids := match_enemies.keys()
@@ -2728,8 +2730,8 @@ func show_match_details() -> void:
  for id in enemy_ids:
   var details: Dictionary = match_enemies[id]
   history_cell(grid, details.name)
-  history_cell(grid, str(details.kills))
-  history_cell(grid, format_xp(details.damage))
+  history_cell(grid, format_integer(int(details.kills)))
+  history_cell(grid, format_stat_number(details.damage))
  if match_enemies.is_empty():
   for text in ["Nenhum inimigo", "0", "0"]: history_cell(grid, text)
  make_panel_body_scrollable()

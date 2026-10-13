@@ -37,7 +37,7 @@ func run() -> void:
  assert(is_equal_approx(fish.hp, 200.0) and is_equal_approx(fish.max_hp, 200.0))
  assert(not game.dourado_art.is_empty() and not game.dourado_art.polygons.is_empty())
  assert(game.enemy_overlaps(fish, fish.pos, 0))
- assert(game.enemy_xp_reward(fish) == 8)
+ assert(game.enemy_xp_reward(fish) == 20)
  for multiplier in [1.0, 2.0, 4.0]:
   game.DOURADO.initialize(fish)
   fish.stat_multiplier = multiplier
