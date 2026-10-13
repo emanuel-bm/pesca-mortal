@@ -99,21 +99,22 @@ comandos de instalação, detalhes técnicos ou relatórios de testes nas notas.
    em `docs/releases/<versão>.md`, descrevendo as novidades, correções e ajustes
    dessa versão para os jogadores. Executar
    `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync_release_notes.ps1 -IncludeCurrentVersion`
-   para incluir o histórico e as notas dessa versão na build offline.
+   para incluir a lista de versões e apenas as notas dessa versão na build offline.
 2. Incluir essas notas no corpo da nova Release do GitHub, com título e tag
    correspondentes à versão publicada. Não publicar uma release sem notas.
 3. Depois de publicar, executar
    `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync_release_notes.ps1`
    e incluir `assets/release_notes.json` atualizado no próximo commit. Esse
-   arquivo mantém o histórico oficial disponível offline nas próximas builds.
+   arquivo inclui a lista de versões e apenas o conteúdo da última atualização.
 4. Conferir a nova versão na tela **Notas de atualização** do jogo.
 
-A tela consulta as releases públicas estáveis ao ser aberta, da mais recente
-para a mais antiga, e salva o resultado localmente. Novas releases e correções
-em suas descrições aparecem sem precisar alterar o código ou instalar outro
-executável. Consultas na mesma sessão são espaçadas por cinco minutos. Sem
-internet ou em modo offline, o jogo usa o histórico salvo ou o incluído na
-build. Rascunhos e pré-releases não aparecem.
+A tela abre a última atualização e mostra as versões e datas na lista à
+esquerda. Apenas a última nota acompanha a build; as anteriores são baixadas
+ao selecionar e ficam salvas para leitura offline. A lista pública de releases
+é atualizada ao abrir a tela, com intervalo de cinco minutos entre consultas.
+A API de listagem do GitHub inclui os corpos das releases na resposta; o jogo
+descarta esses corpos e mantém apenas versão e data, buscando a nota selecionada
+pelo endpoint de tag. Rascunhos e pré-releases não aparecem.
 
 Abra `Jogar.bat`. A engine portátil está em `.tools/godot` nesta máquina.
 Para editar, abra `Abrir-editor.bat` ou importe `project.godot` em Godot 4.7.2.

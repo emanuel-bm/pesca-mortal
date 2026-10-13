@@ -136,6 +136,8 @@ var menu_controls: Array[Control] = []
 var version_badge: PanelContainer
 var patch_notes: Node
 var notes_scroll: ScrollContainer
+var notes_focus_key := ""
+var notes_history_panel: PanelContainer
 var notes_actions: VBoxContainer
 var menu_mouse_navigation := false
 var hud: Label
@@ -404,6 +406,10 @@ func _ready() -> void:
  notes_actions.add_theme_constant_override("separation", 12)
  modal_row.add_child(notes_actions)
  notes_actions.hide()
+ notes_history_panel = PanelContainer.new()
+ modal_row.add_child(notes_history_panel)
+ notes_history_panel.hide()
+ notes_history_panel.add_theme_stylebox_override("panel", overlay.get_theme_stylebox("panel").duplicate())
  var padding := MarginContainer.new()
  for side in ["left", "right", "top", "bottom"]:
   padding.add_theme_constant_override("margin_" + side, 24)
@@ -614,7 +620,9 @@ func setup_menu_navigation() -> void:
  if state == "menu":
   if records_panel: collect_menu_controls(records_panel)
   if boss_records_panel: collect_menu_controls(boss_records_panel)
- if state == "patch_notes": collect_menu_controls(notes_actions)
+ if state == "patch_notes":
+  collect_menu_controls(notes_history_panel)
+  collect_menu_controls(notes_actions)
  if state in ["menu", "nickname"] and version_badge:
   collect_menu_controls(version_badge)
  for i in menu_controls.size():
@@ -625,6 +633,15 @@ func setup_menu_navigation() -> void:
   item.focus_neighbor_bottom = next
   item.focus_previous = previous
   item.focus_next = next
+ if state == "patch_notes" and not notes_focus_key.is_empty():
+  for item: Control in menu_controls:
+   if str(item.get_meta("notes_focus_key", "")) == notes_focus_key:
+    item.grab_focus()
+    return
+  for item: Control in menu_controls:
+   if str(item.get_meta("notes_focus_key", "")) == patch_notes.selected_tag:
+    item.grab_focus()
+    return
  if not menu_controls.is_empty(): menu_controls[0].grab_focus()
 
 func move_menu_focus(direction: int) -> void:
@@ -638,6 +655,10 @@ func move_menu_focus(direction: int) -> void:
  enabled[posmod(index + direction, enabled.size())].grab_focus()
 
 func clear_panel() -> void:
+ notes_history_panel.hide()
+ for child in notes_history_panel.get_children():
+  notes_history_panel.remove_child(child)
+  child.queue_free()
  if is_instance_valid(match_details_button):
   match_details_button.get_parent().remove_child(match_details_button)
   match_details_button.queue_free()
@@ -710,6 +731,7 @@ func layout_modals() -> void:
  if state in ["patch_notes", "match_details", "history"]:
   var action_width := 120.0
   var notes_width := minf(868.0, viewport.x - 2.0 * (action_width + 32.0))
+  if state == "patch_notes": notes_width = minf(868.0, viewport.x - 424.0)
   var modal_left := (viewport.x - notes_width) / 2.0
   if state == "match_details" and is_instance_valid(profile_panel):
    var profile_width := profile_panel.get_combined_minimum_size().x * profile_panel.scale.x
@@ -726,6 +748,9 @@ func layout_modals() -> void:
   overlay.scale = Vector2.ONE
   overlay.size = Vector2(notes_width, viewport.y - 24.0)
   overlay.position = Vector2(modal_left, 12.0)
+  if state == "patch_notes":
+   notes_history_panel.size = Vector2(184.0, minf(560.0, viewport.y - 24.0))
+   notes_history_panel.position = Vector2(modal_left - 200.0, (viewport.y - notes_history_panel.size.y) / 2.0)
   notes_actions.size = Vector2(action_width, notes_actions.get_combined_minimum_size().y)
   notes_actions.position = Vector2(viewport.x - action_width - 16.0, viewport.y - notes_actions.size.y - 16.0)
   return
@@ -871,16 +896,66 @@ func show_menu() -> void:
  online.synchronize()
 
 func open_patch_notes() -> void:
+ if not patch_notes.entries.is_empty(): patch_notes.select(str(patch_notes.entries[0].tag_name))
  show_patch_notes()
  patch_notes.refresh()
 
+func select_patch_note(tag: String) -> void:
+ notes_scroll.scroll_vertical = 0
+ patch_notes.select(tag)
+
 func show_patch_notes() -> void:
+ if state == "patch_notes":
+  var focused := get_viewport().gui_get_focus_owner()
+  if is_instance_valid(focused): notes_focus_key = str(focused.get_meta("notes_focus_key", ""))
+ else:
+  notes_focus_key = ""
  var scroll_position := notes_scroll.scroll_vertical if state == "patch_notes" and is_instance_valid(notes_scroll) else 0
  state = "patch_notes"
  clear_panel()
  title("NOTAS DE ATUALIZAÇÃO", 26)
  if not patch_notes.status.is_empty(): title(patch_notes.status, 16)
+ var list_padding := MarginContainer.new()
+ for side in ["left", "right", "top", "bottom"]:
+  list_padding.add_theme_constant_override("margin_" + side, 10)
+ notes_history_panel.add_child(list_padding)
+ var history := ScrollContainer.new()
+ history.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+ list_padding.add_child(history)
+ notes_history_panel.show()
+ var versions := VBoxContainer.new()
+ versions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ versions.add_theme_constant_override("separation", 10)
+ history.add_child(versions)
+ for entry: Dictionary in patch_notes.entries:
+  var item := Button.new()
+  var is_open: bool = entry.tag_name == patch_notes.selected_tag
+  item.text = preload("res://scripts/patch_notes.gd").label(entry).replace(" · ", " - ")
+  item.tooltip_text = "Nota aberta" if is_open else "Abrir notas desta atualização"
+  item.toggle_mode = true
+  item.button_pressed = entry.tag_name == patch_notes.selected_tag
+  item.alignment = HORIZONTAL_ALIGNMENT_CENTER
+  item.set_meta("notes_focus_key", str(entry.tag_name))
+  item.add_theme_font_size_override("font_size", 16)
+  item.set_meta("keep_default_button_style", true)
+  style_menu_button(item)
+  if is_open:
+   var marker := Label.new()
+   marker.text = "▶"
+   marker.add_theme_font_size_override("font_size", 12)
+   marker.add_theme_color_override("font_color", Color.WHITE)
+   marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+   item.add_child(marker)
+   marker.set_anchors_and_offsets_preset(Control.PRESET_CENTER_LEFT)
+   marker.offset_left = 0
+   marker.offset_right = 7
+   marker.offset_top = -9
+   marker.offset_bottom = 9
+   marker.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+  item.pressed.connect(select_patch_note.bind(str(entry.tag_name)))
+  versions.add_child(item)
  notes_scroll = ScrollContainer.new()
+ notes_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
  notes_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
  notes_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
  panel.add_child(notes_scroll)
@@ -888,25 +963,30 @@ func show_patch_notes() -> void:
  content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
  content.add_theme_constant_override("separation", 18)
  notes_scroll.add_child(content)
- for entry: Dictionary in patch_notes.entries:
-  if content.get_child_count() > 0:
-   var divider := HSeparator.new()
-   var divider_style := StyleBoxLine.new()
-   divider_style.color = Color(0.23, 0.32, 0.43)
-   divider_style.thickness = 2
-   divider.add_theme_stylebox_override("separator", divider_style)
-   content.add_child(divider)
-  var body := RichTextLabel.new()
-  body.bbcode_enabled = true
-  body.fit_content = true
-  body.scroll_active = false
-  body.text = preload("res://scripts/patch_notes.gd").text(entry)
-  content.add_child(body)
- if patch_notes.entries.is_empty():
-  var empty := Label.new()
-  empty.text = "Nenhuma nota de atualização disponível."
-  content.add_child(empty)
+ if patch_notes.body_loading or not patch_notes.body_status.is_empty():
+  var message := Label.new()
+  message.text = "Carregando notas…" if patch_notes.body_loading else patch_notes.body_status
+  message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+  content.add_child(message)
+  if not patch_notes.body_loading:
+   var retry := Button.new()
+   retry.text = "Tentar novamente"
+   retry.set_meta("notes_focus_key", "retry")
+   retry.pressed.connect(select_patch_note.bind(patch_notes.selected_tag))
+   content.add_child(retry)
+ else:
+  for entry: Dictionary in patch_notes.entries:
+   if entry.tag_name != patch_notes.selected_tag: continue
+   var selected := entry.duplicate()
+   selected["body"] = patch_notes.bodies.get(entry.tag_name, "")
+   var body := RichTextLabel.new()
+   body.bbcode_enabled = true
+   body.fit_content = true
+   body.scroll_active = false
+   body.text = preload("res://scripts/patch_notes.gd").text(selected)
+   content.add_child(body)
  var back := button("Voltar", show_menu)
+ back.set_meta("notes_focus_key", "back")
  panel.remove_child(back)
  notes_actions.add_child(back)
  back.add_theme_font_size_override("font_size", 24)

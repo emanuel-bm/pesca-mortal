@@ -28,6 +28,13 @@ if ($IncludeCurrentVersion) {
         $entries = @([pscustomobject]@{ tag_name = "v$version"; name = $heading; body = $body; published_at = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ') }) + $entries
     }
 }
-$json = ConvertTo-Json -InputObject $entries -Depth 5
+$snapshot = @()
+for ($index = 0; $index -lt $entries.Count; $index++) {
+    $entry = $entries[$index]
+    $item = [ordered]@{ tag_name = $entry.tag_name; name = $entry.name; published_at = $entry.published_at }
+    if ($index -eq 0) { $item.body = $entry.body }
+    $snapshot += $item
+}
+$json = ConvertTo-Json -InputObject $snapshot -Depth 5
 [IO.File]::WriteAllText((Join-Path $projectDirectory 'assets/release_notes.json'), $json, [Text.UTF8Encoding]::new($false))
-Write-Output "Offline history refreshed: $($entries.Count) releases"
+Write-Output "Release index and latest notes refreshed: $($entries.Count) releases"

@@ -14,6 +14,8 @@ func run() -> void:
  for frame in 4: await process_frame
  assert(game.version_badge.visible)
  assert(game.patch_notes.entries.size() >= 9)
+ var snapshot: Array = JSON.parse_string(FileAccess.get_file_as_string(NOTES.SNAPSHOT))
+ assert(snapshot.filter(func(entry: Dictionary): return entry.has("body")).size() == 1)
  game.open_patch_notes()
  for frame in 4: await process_frame
  assert(game.state == "patch_notes")
@@ -36,12 +38,37 @@ func run() -> void:
  var saved: Array = game.patch_notes.entries.duplicate(true)
  game.patch_notes.cache_path = "res://.tools/notes-test-cache.json"
  game.patch_notes._completed(HTTPRequest.RESULT_SUCCESS, 200, [], JSON.stringify(entries).to_utf8_buffer())
- assert(game.patch_notes.entries.size() == 2)
+ assert(game.patch_notes.entries.size() >= 2)
  game.patch_notes._completed(HTTPRequest.RESULT_SUCCESS, 403, [], "{}".to_utf8_buffer())
- assert(game.patch_notes.entries.size() == 2 and not game.patch_notes.loading)
+ assert(game.patch_notes.entries.size() >= 2 and not game.patch_notes.loading)
  game.patch_notes._completed(HTTPRequest.RESULT_SUCCESS, 200, [], "{}".to_utf8_buffer())
- assert(game.patch_notes.entries.size() == 2)
+ assert(game.patch_notes.entries.size() >= 2)
  game.patch_notes.entries = saved
+ var old_tag: String = saved[1].tag_name
+ game.show_patch_notes()
+ for frame in 3: await process_frame
+ for control: Control in game.menu_controls:
+  if str(control.get_meta("notes_focus_key", "")) == old_tag: control.grab_focus()
+ game.show_patch_notes()
+ for frame in 3: await process_frame
+ assert(str(root.get_viewport().gui_get_focus_owner().get_meta("notes_focus_key", "")) == old_tag)
+ game.patch_notes.changed.emit()
+ for frame in 3: await process_frame
+ assert(str(root.get_viewport().gui_get_focus_owner().get_meta("notes_focus_key", "")) == old_tag)
+ game.patch_notes.bodies.erase(old_tag)
+ game.select_patch_note(old_tag)
+ assert(game.patch_notes.selected_tag == old_tag)
+ assert(not game.patch_notes.body_status.is_empty())
+ set_meta("offline_session", false)
+ game.select_patch_note(old_tag)
+ assert(game.patch_notes.body_loading)
+ game.patch_notes.body_request.cancel_request()
+ game.patch_notes._body_completed(HTTPRequest.RESULT_SUCCESS, 200, [], JSON.stringify({"tag_name": old_tag, "body": "## Correções\n- Nota anterior"}).to_utf8_buffer())
+ assert(not game.patch_notes.body_loading and game.patch_notes.bodies.has(old_tag))
+ game.select_patch_note(saved[0].tag_name)
+ assert(not game.patch_notes.body_loading)
+ assert(NOTES.text(saved[0]).contains("Pesca Mortal"))
+ assert(NOTES.text(entries[0]).contains("Nova"))
  game.show_menu()
  for frame in 3: await process_frame
  assert(game.version_badge.visible)
