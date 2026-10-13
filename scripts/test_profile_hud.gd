@@ -75,16 +75,23 @@ func run() -> void:
  var summary := ""
  for child in game.panel.get_children():
   if child is Label: summary += child.text + "\n"
- assert(summary.contains("Teste"))
- assert(summary.contains("Peixes vivos: 2 · Chefes vivos: 1"))
+ assert(not summary.contains("Teste"))
+ assert(summary.contains("Tempo:"))
+ assert(summary.contains("Eliminações:"))
+ assert(summary.contains("Level: %s · Tempo:" % game.format_integer(game.level)))
+ assert(not summary.contains("Peixes vivos:"))
+ assert(not summary.contains("Chefes vivos:"))
  assert(not summary.contains("ELIMINAÇÕES TOTAIS"))
  var actions: HBoxContainer = game.panel.get_child(game.panel.get_child_count() - 1)
  assert(actions.get_child_count() == 2)
+ assert(game.panel.get_child(game.panel.get_child_count() - 2).text == "Jogar novamente")
+ assert(actions.get_child(0).text == "Estatísticas")
+ assert(actions.get_child(1).text == "Sair")
  for frame in 5: await process_frame
  assert(actions.get_child(0).get_global_rect().end.x <= actions.get_child(1).get_global_rect().position.x)
  game.enemies.clear()
  game._process(0)
- assert(game.panel.get_child(3).text == "Peixes vivos: 2 · Chefes vivos: 1")
+ assert(game.panel.get_child(1).text.contains("Eliminações:"))
  game.show_menu()
  game._process(0)
  assert(game.profile_panel.visible)

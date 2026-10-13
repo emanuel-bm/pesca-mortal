@@ -2665,41 +2665,31 @@ func finish(won: bool) -> void:
  state = "won" if won else "lost"
  clear_panel()
  title("VITÓRIA!" if won else "FIM DE PARTIDA")
- if not won:
-  var living_fish := 0
-  var living_bosses := 0
-  for enemy in enemies:
-   if enemy.hp <= 0: continue
-   if enemy.boss: living_bosses += 1
-   else: living_fish += 1
-  panel.add_theme_constant_override("separation", 8)
-  overlay.custom_minimum_size.x = 480
-  for side in ["left", "right"]:
-   panel.get_parent().add_theme_constant_override("margin_" + side, 16)
-  for side in ["top", "bottom"]:
-   panel.get_parent().add_theme_constant_override("margin_" + side, 8)
-  title("%s · Tempo: %02d:%02d" % [online.nickname(), int(elapsed) / 60, int(elapsed) % 60], 16)
-  title("Nível: %s · Eliminações: %s" % [format_integer(level), format_integer(kills)], 16)
-  title("Peixes vivos: %s · Chefes vivos: %s" % [format_integer(living_fish), format_integer(living_bosses)], 16)
-  show_fatal_hit()
-  setup_match_details_button()
-  var actions := HBoxContainer.new()
-  actions.add_theme_constant_override("separation", 12)
-  panel.add_child(actions)
-  for item in [button("Jogar novamente", restart_run), button("Voltar à tela inicial", show_menu)]:
-   panel.remove_child(item)
-   actions.add_child(item)
-   item.custom_minimum_size.y = 48
-   item.add_theme_font_size_override("font_size", 24)
-   item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-  if profile_panel: profile_panel.hide()
-  layout_modals()
-  queue_redraw()
-  return
- title("Tempo: %02d:%02d\nNível: %s · Eliminações: %s" % [int(elapsed) / 60, int(elapsed) % 60, format_integer(level), format_integer(kills)], 22)
+ panel.add_theme_constant_override("separation", 8)
+ overlay.custom_minimum_size.x = 480
+ for side in ["left", "right"]:
+  panel.get_parent().add_theme_constant_override("margin_" + side, 16)
+ for side in ["top", "bottom"]:
+  panel.get_parent().add_theme_constant_override("margin_" + side, 8)
+ title("Level: %s · Tempo: %02d:%02d · Eliminações: %s" % [format_integer(level), int(elapsed) / 60, int(elapsed) % 60, format_integer(kills)], 16)
+ if not won: show_fatal_hit()
+ var replay := button("Jogar novamente", restart_run)
+ replay.custom_minimum_size.y = 44
+ replay.add_theme_font_size_override("font_size", 24)
+ var actions := HBoxContainer.new()
+ actions.add_theme_constant_override("separation", 12)
+ panel.add_child(actions)
  setup_match_details_button()
- button("Jogar novamente", restart_run)
- button("Voltar à tela inicial", show_menu)
+ var exit_button := button("Sair", show_menu)
+ for item in [match_details_button, exit_button]:
+  panel.remove_child(item)
+  actions.add_child(item)
+  item.custom_minimum_size.y = 44
+  item.add_theme_font_size_override("font_size", 24)
+  item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ if profile_panel: profile_panel.hide()
+ layout_modals()
+ queue_redraw()
 
 func match_enemy_stats(enemy: Dictionary) -> Dictionary:
  var details := RUN_HISTORY.killer_details(enemy)
@@ -2709,27 +2699,8 @@ func match_enemy_stats(enemy: Dictionary) -> Dictionary:
  return match_enemies[id]
 
 func setup_match_details_button() -> void:
- var heading := panel.get_child(0) as Label
- panel.remove_child(heading)
- var row := HBoxContainer.new()
- row.add_theme_constant_override("separation", 8)
- panel.add_child(row)
- panel.move_child(row, 0)
- var spacer := Control.new()
- spacer.custom_minimum_size.x = 24
- row.add_child(spacer)
- heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
- row.add_child(heading)
- match_details_button = Button.new()
- match_details_button.text = "?"
+ match_details_button = button("Estatísticas", show_match_details)
  match_details_button.tooltip_text = "Ver estatísticas da partida"
- match_details_button.custom_minimum_size = Vector2(24, 24)
- match_details_button.add_theme_font_size_override("font_size", 24)
- match_details_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
- match_details_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
- row.add_child(match_details_button)
- style_menu_button(match_details_button)
- match_details_button.pressed.connect(show_match_details)
 
 func show_match_details() -> void:
  state = "match_details"
