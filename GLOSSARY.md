@@ -31,6 +31,9 @@ Quantidade de vida perdida pelo jogador após um golpe, limitada pela vida dispo
 Consumível que aparece no chão após um abate e é ativado automaticamente ao ser coletado. Concede um benefício imediato ou temporário durante a partida.
 _Evitar_: Power-up como nome do recurso na interface.
 
+**Sequência de cartas iguais**:
+Conjunto de drops consecutivos da mesma carta durante uma partida. Conta cartas geradas por abates, mesmo sem coleta, e termina quando cai outra carta.
+
 ## Recordes
 
 **Versão competitiva**:

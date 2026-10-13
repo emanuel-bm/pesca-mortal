@@ -44,7 +44,7 @@ O usuário definiu **carta** como o nome dos power-ups do jogo. Ver `../GLOSSARY
 ## Decisões confirmadas — segunda rodada
 
 - Conjunto inicial: Ímã, Fúria, Intangível e Perfurante.
-- Cada carta tem 25% de chance quando um drop ocorre, inclusive em chefes. Esse sorteio é separado da chance de ocorrer um drop.
+- O primeiro drop tem 25% de chance por carta. O peso da última carta cai pela metade a cada repetição consecutiva (0,5; 0,25; 0,125...), com piso positivo de 0,000001. As outras mantêm peso 1. A chance de repetir após uma, duas e três cartas iguais é 14,29%, 7,69% e 4%. Outra carta encerra a sequência. O histórico conta cada carta natural gerada no chão, inclusive as duas do Pai do Mato, mesmo sem coleta; zera ao iniciar/reiniciar e ignora cartas manuais do treino. As duas cartas de cada Pai do Mato são sempre diferentes entre si: o segundo sorteio exclui a primeira carta. Esse sorteio é separado da chance de ocorrer um drop.
 - **Duração dos efeitos temporários: 6 s**. Substitui os 10 s originais da Fúria e os 8 s da Perfurante. **Ímã é instantâneo**, conforme a correção posterior do usuário.
 - Ímã inicia a atração de todo XP existente no mapa, sem conceder experiência imediatamente. Cada XP marcado segue a canoa até ser coletado, independentemente do raio normal, a 630 pixels/s (redução de 25% sobre 840). Novos XP não herdam a atração global. Todo nível ganho na chegada deve oferecer sua própria tela de melhoria, sequencialmente, preservando o XP excedente.
 - **Fúria:** +50% dano, +50% frequência de ataque e +20% velocidade.

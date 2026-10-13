@@ -34,7 +34,11 @@ as referências. As [regras das cartas](docs/cartas-em-discussao.md) estão impl
 piranhas começam com 1% de chance de drop e pintados com 5%. As chances diminuem
 linearmente pelo tempo ativo da partida até 0,25% e 1%, respectivamente, aos
 quatro minutos, e permanecem nesses valores depois. Chefões do infinito têm 100%.
-Cada drop sorteia igualmente Ímã, Fúria, Intangível ou Perfurante. Coletar ativa
+O primeiro drop sorteia igualmente Ímã, Fúria, Intangível ou Perfurante. Cada
+repetição consecutiva reduz pela metade o peso da última carta, sem impedir
+novas repetições. Outra carta encerra a sequência; uma nova partida zera o
+histórico. As duas cartas de cada Pai do Mato são sempre diferentes entre si.
+Cartas manuais do treino não contam. Coletar ativa
 a carta: Ímã atrai todos os XP existentes no mapa até a canoa, a 630 pixels/s;
 a experiência é recebida quando cada XP chega. As outras duram seis segundos.
 Fúria dá +50% dano, +50% frequência e +20% velocidade; Intangível protege de

@@ -1,6 +1,8 @@
 extends Node2D
 
 const IDS := ["ima", "furia", "intangivel", "perfurante"]
+const REPEAT_WEIGHT_FACTOR := 0.5
+const MIN_REPEAT_WEIGHT := 0.000001
 const NAMES := {"ima": "ÍMÃ", "furia": "FÚRIA", "intangivel": "INTANGÍVEL", "perfurante": "PERFURANTE"}
 const EFFECT_SECONDS := 6.0
 const FLOOR_SECONDS := 30.0
@@ -9,6 +11,8 @@ const SHINE = preload("res://assets/cards/shine.gdshader")
 
 var game: Node2D
 var pickups: Array[Dictionary] = []
+var last_drop_id := ""
+var drop_streak := 0
 var effects := {"furia": 0.0, "intangivel": 0.0, "perfurante": 0.0}
 var textures: Dictionary = {}
 var effect_layer: CanvasLayer
@@ -63,6 +67,8 @@ func _ready() -> void:
  refresh()
 
 func reset() -> void:
+ last_drop_id = ""
+ drop_streak = 0
  visual_age = 0.0
  magnet_visual_seconds = 0.0
  fury_burst_seconds = 0.0
@@ -92,9 +98,35 @@ func drop_chance(enemy: Dictionary) -> float:
 func drop(enemy: Dictionary) -> void:
  if game.rng.randf() < drop_chance(enemy):
   var count := 2 if enemy.get("species", "") == "pai_do_mato" else 1
+  var first_id := ""
   for index in count:
    var offset := Vector2((index - 0.5) * 36.0, 0) if count == 2 else Vector2.ZERO
-   spawn(IDS[game.rng.randi_range(0, IDS.size() - 1)], enemy.pos + offset)
+   var id := draw_drop_card(game.rng.randf(), first_id)
+   spawn(id, enemy.pos + offset)
+   first_id = id
+
+func drop_card_weight(id: String) -> float:
+ if id != last_drop_id: return 1.0
+ # A positive floor keeps even very long streaks possible.
+ return maxf(MIN_REPEAT_WEIGHT, pow(REPEAT_WEIGHT_FACTOR, drop_streak))
+
+func draw_drop_card(roll: float, excluded_id: String = "") -> String:
+ var total := 0.0
+ var selected := ""
+ for id in IDS:
+  if id == excluded_id: continue
+  total += drop_card_weight(id)
+  selected = id
+ var remaining := roll * total
+ for id in IDS:
+  if id == excluded_id: continue
+  remaining -= drop_card_weight(id)
+  if remaining < 0.0:
+   selected = id
+   break
+ drop_streak = drop_streak + 1 if selected == last_drop_id else 1
+ last_drop_id = selected
+ return selected
 
 func spawn(id: String, world_position: Vector2) -> void:
  var sprite := Sprite2D.new()
