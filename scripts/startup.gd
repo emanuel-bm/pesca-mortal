@@ -65,6 +65,10 @@ static func select_patch(data: Dictionary, repo: String, base_hash: String, full
  return {}
 
 func _ready() -> void:
+ if preload("res://scripts/festival.gd").enabled():
+  # This edition must never install a normal public release over itself.
+  get_tree().change_scene_to_file.call_deferred(GAME)
+  return
  get_window().title = "Pesca Mortal"
  var config := ConfigFile.new()
  if config.load("res://updates.cfg") == OK:

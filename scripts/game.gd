@@ -209,6 +209,10 @@ var dourado_particles: Array[Dictionary] = []
 var boat_particle_timer := 0.0
 var boat_particle_sequence := 0
 var online: Node
+var festival_result: Dictionary = {}
+var festival_name_edit: LineEdit
+var festival_save_button: Button
+var festival_message: Label
 var online_status_label: Label
 var nickname_edit: LineEdit
 var nickname_save_button: Button
@@ -265,6 +269,7 @@ func _ready() -> void:
  if automated_test:
   history_path = "user://test_boot_history_%d_%d.json" % [Time.get_ticks_usec(), get_instance_id()]
   test_artifact_paths.append(history_path)
+ if preload("res://scripts/festival.gd").enabled() and not automated_test: history_path = "user://festival_high_tech_mt_runs.json"
  run_history = RUN_HISTORY.load_records(history_path)
  online = preload("res://scripts/online_ranking.gd").new()
  online.disabled = automated_test
@@ -875,13 +880,15 @@ func show_menu() -> void:
  record_run("menu")
  run_active = false
  state = "menu"
- if online.nickname().is_empty() and not online.endpoint.is_empty() and not bool(get_tree().get_meta("offline_session", false)):
+ festival_result.clear()
+ if online.nickname().is_empty() and (online.festival_mode or (not online.endpoint.is_empty() and not bool(get_tree().get_meta("offline_session", false)))):
   show_nickname()
   return
  player_totals = RUN_HISTORY.totals(run_history)
  sounds.reset()
  clear_panel()
  title("PESCA MORTAL")
+ if online.festival_mode: title(preload("res://scripts/festival.gd").NAME, 22)
  if bool(get_tree().get_meta("offline_session", false)): title("Jogando offline", 18)
  title("WASD / setas: mover · Ataque automático\nColete ventrechas para evoluir · ESC: pausar", 18)
  button("Modo infinito", start_run.bind("endless"))
@@ -890,7 +897,7 @@ func show_menu() -> void:
  records_personal = {"endless": false, "bosses": false}
  show_records_panel()
  show_boss_records_panel()
- button("Histórico de partidas", show_history)
+ if not online.festival_mode: button("Histórico de partidas", show_history)
  button("Configurações", show_settings)
  button("Fechar jogo", quit_game)
  online.synchronize()
@@ -999,14 +1006,15 @@ func show_nickname() -> void:
  state = "nickname"
  clear_panel()
  title("NOME DE JOGADOR")
- title("Escolha um nome único para aparecer no ranking.\n3 a 20 letras sem acentos, números ou _.", 18)
+ title("Nome do perfil deste computador.\nOs participantes informam o nome no fim da partida." if online.festival_mode else "Escolha um nome único para aparecer no ranking.\n3 a 20 letras sem acentos, números ou _.", 18)
  online_status_label = Label.new()
  online_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
  online_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
  panel.add_child(online_status_label)
  nickname_edit = LineEdit.new()
- nickname_edit.max_length = 20
+ nickname_edit.max_length = 30 if online.festival_mode else 20
  nickname_edit.text = online.nickname()
+ if online.festival_mode and nickname_edit.text.is_empty(): nickname_edit.text = "Festival Hightech"
  nickname_edit.placeholder_text = "Seu nome de jogador"
  nickname_edit.custom_minimum_size.y = 48
  panel.add_child(nickname_edit)
@@ -1036,6 +1044,8 @@ func save_nickname() -> void:
  online.set_nickname(nickname_edit.text)
 
 func online_changed() -> void:
+ if online.festival_mode and state in ["lost", "won"] and is_instance_valid(festival_message):
+  festival_message.text = online.status
  if state == "nickname":
   if is_instance_valid(online_status_label):
    online_status_label.text = online.status
@@ -1091,8 +1101,10 @@ func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
  legends_button.add_theme_font_size_override("font_size", 24)
  legends_button.pressed.connect(show_legends.bind(mode))
  heading_row.add_child(legends_button)
+ legends_button.visible = not online.festival_mode
  var tabs := HBoxContainer.new()
  column.add_child(tabs)
+ tabs.visible = not online.festival_mode
  for personal in [false, true]:
   var tab := Button.new()
   tab.set_meta("keep_default_button_style", true)
@@ -1225,6 +1237,11 @@ func record_run(reason: String) -> void:
  var previous_rank: Array = RUN_HISTORY.ranked(RUN_HISTORY.for_version(run_history, online.competitive_version)) if run_mode == "endless" else RUN_HISTORY.boss_ranked(RUN_HISTORY.for_version(run_history, online.competitive_version))
  var previous: Dictionary = previous_rank[0] if not previous_rank.is_empty() else {}
  var record := {"seconds": elapsed, "kills": kills, "date": Time.get_datetime_string_from_system(), "reason": reason, "character": "Pescador", "level": level, "mode": run_mode, "competitive_version": online.competitive_version, "debug_run": OS.is_debug_build(), "record_valid": not OS.is_debug_build()}
+ if online.festival_mode:
+  festival_result.clear()
+  if reason in ["death", "won"] and run_mode in ["endless", "bosses"] and (run_mode == "endless" or reason == "won"):
+   record["run_id"] = Crypto.new().generate_random_bytes(16).hex_encode()
+   festival_result = record
  if reason == "death":
   record.merge(RUN_HISTORY.killer_details(fatal_hit.get("enemy", {})))
   record["fatal_attack"] = str(fatal_hit.get("attack", ""))
@@ -1234,7 +1251,7 @@ func record_run(reason: String) -> void:
  if RUN_HISTORY.save_records(run_history, history_path) != OK:
   push_warning("Não foi possível salvar o histórico local.")
   return
- if RUN_HISTORY.eligible(record) and (run_mode == "endless" or (run_mode == "bosses" and reason == "won")) and online.better(record, previous):
+ if not online.festival_mode and RUN_HISTORY.eligible(record) and (run_mode == "endless" or (run_mode == "bosses" and reason == "won")) and online.better(record, previous):
   online.queue_record(record)
 
 func quit_game() -> void:
@@ -1434,6 +1451,7 @@ func restart_run() -> void:
  start_run(run_mode)
 
 func start_run(mode: String = "bosses") -> void:
+ festival_result.clear()
  if mode not in ["endless", "bosses", "training"]: return
  incoming_damage_feed.clear()
  upgrade_selection_pending = false
@@ -1644,6 +1662,7 @@ func _process(delta: float) -> void:
   hud.position = Vector2(get_viewport_rect().size.x - hud.size.x - 22, 70)
   profile_name_label.text = online.nickname()
   profile_label.text = hud.text
+  if online.festival_mode: profile_label.text = "PARTIDAS JOGADAS %s\nELIMINAÇÕES TOTAIS %s\nTEMPO TOTAL %s" % [format_integer(run_history.size()), format_integer(int(player_totals.kills)), RUN_HISTORY.time_text(player_totals.seconds)]
   profile_panel.size = profile_panel.get_combined_minimum_size()
   var profile_scale := minf(1.0, (get_viewport_rect().size.x - 44) / profile_panel.size.x)
   if is_instance_valid(records_panel):
@@ -2755,6 +2774,7 @@ func finish(won: bool) -> void:
   panel.get_parent().add_theme_constant_override("margin_" + side, 8)
  title("Level: %s · Tempo: %02d:%02d · Eliminações: %s" % [format_integer(level), int(elapsed) / 60, int(elapsed) % 60, format_integer(kills)], 16)
  if not won: show_fatal_hit()
+ if online.festival_mode and not festival_result.is_empty(): show_festival_submission()
  var replay := button("Jogar novamente", restart_run)
  replay.custom_minimum_size.y = 44
  replay.add_theme_font_size_override("font_size", 24)
@@ -2772,6 +2792,34 @@ func finish(won: bool) -> void:
  if profile_panel: profile_panel.hide()
  layout_modals()
  queue_redraw()
+
+func show_festival_submission() -> void:
+ title("Entrar no ranking do festival (opcional)", 18)
+ festival_name_edit = LineEdit.new()
+ festival_name_edit.max_length = 30
+ festival_name_edit.placeholder_text = "Seu nome ou apelido"
+ festival_name_edit.custom_minimum_size.y = 44
+ panel.add_child(festival_name_edit)
+ festival_save_button = button("Salvar no ranking do festival", save_festival_result)
+ festival_name_edit.text_submitted.connect(func(_value: String): save_festival_result())
+ festival_message = Label.new()
+ festival_message.text = "Sem preencher e salvar, esta partida não fica no ranking."
+ festival_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+ festival_message.add_theme_font_size_override("font_size", 16)
+ panel.add_child(festival_message)
+
+func save_festival_result() -> void:
+ if festival_result.is_empty() or not is_instance_valid(festival_name_edit): return
+ if not preload("res://scripts/festival.gd").valid_name(festival_name_edit.text):
+  festival_message.text = "Digite até 30 letras, números, espaços, ponto, hífen ou _."
+  return
+ if not online.queue_festival_record(festival_result, festival_name_edit.text):
+  festival_message.text = "Não foi possível salvar. Tente novamente." if online.competitive_build else "Partidas de teste não entram no ranking."
+  return
+ festival_result.clear()
+ festival_name_edit.editable = false
+ festival_save_button.disabled = true
+ festival_message.text = "Resultado salvo para envio ao ranking do festival."
 
 func match_enemy_stats(enemy: Dictionary) -> Dictionary:
  var details := RUN_HISTORY.killer_details(enemy)

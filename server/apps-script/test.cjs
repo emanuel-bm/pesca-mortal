@@ -35,6 +35,27 @@ function backend() {
 }
 function tests() {
   const api = backend();
+  const event = {event_id: 'festival-high-tech-mt'};
+  assert.equal(api.call({...event, action: 'ranking'}).error, 'event_not_configured');
+  api.context.setupFestival();
+  const festivalRecord = {mode: 'endless', seconds: 60, kills: 10, level: 1, character: 'Pescador', reason: 'death', ruleset: 'pesca-1', run_id: 'e'.repeat(32), nickname: 'João Silva'};
+  const submitFestival = record => api.call({...event, action: 'submit', record});
+  assert.equal(submitFestival(festivalRecord).updated, true);
+  assert.equal(submitFestival(festivalRecord).updated, false, 'Lost replies cannot duplicate a festival run');
+  assert.equal(submitFestival({...festivalRecord, seconds: 30, run_id: 'd'.repeat(32)}).updated, true, 'A shared station accepts a lower score and repeated names');
+  for (const nickname of ['', '   ', '=IMPORTXML()', '+formula', 'a'.repeat(31)]) {
+    assert.equal(submitFestival({...festivalRecord, nickname}).error, 'invalid_nickname');
+  }
+  assert.equal(submitFestival({...festivalRecord, kills: 1000000}).error, 'invalid_record');
+  assert.equal(api.call({event_id: 'unknown', action: 'ranking'}).error, 'unknown_event');
+  assert.equal(api.call({...event, action: 'register'}).error, 'invalid_request');
+  assert.equal(api.sheets.get('Records').getLastRow(), 1, 'Festival scores never reach global records');
+  assert.equal(api.sheets.get('Players').getLastRow(), 1, 'Festival participants do not reserve account nicknames');
+  api.context.setupFestival();
+  assert.equal(api.sheets.get('Festival High Tech MT').getLastRow(), 3, 'Setup retries preserve scores');
+  assert.equal(api.call({...event, action: 'ranking', competitive_version: '0.4'}).rankings.endless[0].nickname, 'João Silva');
+  assert.equal(api.call({...event, action: 'ranking'}).rankings.endless.length, 2);
+  assert.equal(api.call({action: 'ranking'}).rankings.endless.length, 0);
   const token = 'a'.repeat(64), otherToken = 'b'.repeat(64);
   const account = api.call({action: 'register', nickname: 'Pescador', token});
   assert.equal(account.ok, true);
@@ -120,10 +141,13 @@ function tests() {
   api.properties.set('TRANSITION_VERSION', '1.0');
   api.context.activateCompetitiveVersion_('1.0');
   assert.equal(api.properties.has('TRANSITION_VERSION'), false);
+  assert.equal(api.call({...event, action: 'ranking'}).rankings.endless.length, 2, 'Global season changes preserve the festival');
+  assert.equal(submitFestival({...festivalRecord, run_id: 'c'.repeat(32)}).updated, true, 'Festival does not close with global seasons');
   console.log('BACKEND PASS: unique names, rename, credential ownership, record ordering, replayed requests, field/rules/XP validation, spawn bounds, public data');
 }
 if (process.argv.includes('--serve')) {
   const api = backend();
+  api.context.setupFestival();
   const responses = new Map();
   let submissions = 0;
   const server = http.createServer((req, res) => {

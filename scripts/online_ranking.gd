@@ -5,6 +5,8 @@ signal changed
 const HISTORY = preload("res://scripts/run_history.gd")
 const RULESET := "pesca-1"
 const DEFAULT_PATH := "user://online_ranking.json"
+const FESTIVAL = preload("res://scripts/festival.gd")
+var festival_mode := FESTIVAL.enabled()
 var storage_path := DEFAULT_PATH
 var endpoint := ""
 var profile: Dictionary = {}
@@ -29,6 +31,8 @@ var refresh_requested := false
 var response_redirects := 0
 
 func _ready() -> void:
+ if festival_mode and storage_path == DEFAULT_PATH:
+  storage_path = "user://festival_high_tech_mt.json"
  var config := ConfigFile.new()
  if config.load("res://online.cfg") == OK:
   endpoint = str(config.get_value("ranking", "url", "")).strip_edges()
@@ -51,7 +55,7 @@ func load_state() -> void:
    var record: Dictionary = data.pending[key]
    record["competitive_version"] = str(record.get("competitive_version", HISTORY.LEGACY_VERSION))
    pending[outbox_key(record)] = record
- if str(data.get("competitive_version", HISTORY.LEGACY_VERSION)) == competitive_version and data.get("rankings") is Dictionary:
+ if (festival_mode or str(data.get("competitive_version", HISTORY.LEGACY_VERSION)) == competitive_version) and data.get("rankings") is Dictionary:
   rankings = data.rankings
   fetched_at = str(data.get("fetched_at", ""))
  if data.get("legends") is Dictionary: legends = data.legends
@@ -89,6 +93,19 @@ static func better(candidate: Dictionary, previous: Dictionary) -> bool:
  return candidate.kills > previous.kills
 
 func set_nickname(value: String) -> void:
+ if festival_mode:
+  value = value.strip_edges()
+  if not FESTIVAL.valid_name(value):
+   status = "Use um nome de até 30 letras, números, espaços, ponto, hífen ou _."
+  else:
+   var previous := profile.duplicate(true)
+   profile = {"nickname": value}
+   if not save_state():
+    profile = previous
+    return
+   status = "Nome salvo."
+  changed.emit()
+  return
  if busy or disabled: return
  if network_disabled:
   status = "Conecte-se ao ranking para cadastrar ou alterar seu nome."
@@ -110,13 +127,33 @@ func set_nickname(value: String) -> void:
  _send("rename" if profile.has("player_id") else "register", {"nickname": value})
 
 static func outbox_key(record: Dictionary) -> String:
+ if record.has("event_id"): return str(record.run_id)
  return str(record.get("competitive_version", HISTORY.LEGACY_VERSION)) + ":" + str(record.mode)
 
+func queue_festival_record(record: Dictionary, name: String) -> bool:
+ if not festival_mode or not competitive_build or not HISTORY.eligible(record): return false
+ if not FESTIVAL.valid_name(name) or record.get("run_id", "").is_empty(): return false
+ if record.mode == "bosses" and record.reason != "won": return false
+ var entry := record.duplicate(true)
+ entry["event_id"] = FESTIVAL.ID
+ entry["nickname"] = name.strip_edges()
+ entry["ruleset"] = RULESET
+ var key := outbox_key(entry)
+ if pending.has(key): return true
+ pending[key] = entry
+ if not save_state():
+  pending.erase(key)
+  return false
+ if not busy and not disabled: _next()
+ return true
+
 func fetch_legends(version: String) -> void:
+ if festival_mode: return
  if version not in legends_requested: legends_requested.append(version)
  if not busy: _next()
 
 func queue_record(record: Dictionary) -> void:
+ if festival_mode: return
  if not competitive_build or not HISTORY.eligible(record): return
  if record.mode == "bosses" and record.reason != "won": return
  var mode: String = record.mode
@@ -141,6 +178,14 @@ func synchronize() -> void:
 
 func _next() -> void:
  if busy or disabled or network_disabled or endpoint.is_empty(): return
+ if festival_mode:
+  if competitive_build and not pending.is_empty():
+   sent_record = pending[pending.keys()[0]].duplicate(true)
+   _send("submit", {"record": sent_record})
+  elif refresh_requested:
+   refresh_requested = false
+   _send("ranking", {"competitive_version": competitive_version})
+  return
  # A saved name/token can outlive a lost registration response. Resume using
  # the same token so the server returns the existing account on a retry.
  if not profile.has("player_id") and valid_nickname(nickname()) and profile.has("token"):
@@ -164,6 +209,7 @@ func _send(operation: String, payload: Dictionary) -> void:
  action = operation
  response_redirects = 0
  payload["action"] = operation
+ if festival_mode: payload["event_id"] = FESTIVAL.ID
  if operation not in ["ranking", "legends"]:
   payload["token"] = profile.get("token", "")
   payload["player_id"] = profile.get("player_id", "")
@@ -196,10 +242,15 @@ func _completed(result: int, code: int, headers: PackedStringArray, body: Packed
  var data: Variant = null
  if result == HTTPRequest.RESULT_SUCCESS and code == 200 and parser.parse(body.get_string_from_utf8()) == OK:
   data = parser.data
+ if festival_mode and data is Dictionary and data.get("ok", false) and data.get("event_id", "") != FESTIVAL.ID:
+  status = "O serviço precisa ser atualizado para o ranking do festival."
+  changed.emit()
+  return
  if result != HTTPRequest.RESULT_SUCCESS or code != 200 or not data is Dictionary or not data.get("ok", false):
   var error_code := str(data.get("error", "")) if data is Dictionary else ""
   status = "Sem conexão. Seu recorde continua salvo neste computador."
-  if error_code == "nickname_taken": status = "Esse nome já está em uso. Escolha outro."
+  if festival_mode and error_code in ["unknown_event", "event_not_configured", "unauthorized"]: status = "O serviço do festival precisa ser configurado e atualizado."
+  elif error_code == "nickname_taken": status = "Esse nome já está em uso. Escolha outro."
   elif error_code == "invalid_nickname": status = "Use de 3 a 20 letras sem acentos, números ou _."
   elif error_code == "unauthorized": status = "Não foi possível autenticar esta conta."
   elif error_code == "unknown_version": status = "Esta versão ainda não tem classificação disponível."
@@ -231,6 +282,7 @@ func _completed(result: int, code: int, headers: PackedStringArray, body: Packed
   if pending.get(mode, {}).get("run_id", "") == sent_record.run_id: pending.erase(mode)
   if not save_state(): return
   status = "Recorde sincronizado."
+  if festival_mode: refresh_requested = true
  elif action in ["ranking", "legends"]:
   var expected_version := requested_version if action == "legends" else competitive_version
   var fallback_version := "" if action == "legends" else HISTORY.LEGACY_VERSION

@@ -5,6 +5,48 @@ const ARCHIVE = ['mode', 'position', 'nickname', 'seconds', 'kills', 'level', 'p
 const SEASONS = ['version', 'closed_at'];
 const PLAYERS = ['player_id', 'nickname', 'nickname_key', 'token_hash'];
 const RECORDS = ['player_id', 'mode', 'seconds', 'kills', 'level', 'character', 'reason', 'ruleset', 'run_id', 'updated_at', 'competitive_version'];
+const FESTIVAL_ID = 'festival-high-tech-mt';
+const FESTIVAL_SHEET = 'Festival High Tech MT';
+const FESTIVAL_RECORDS = ['run_id', 'nickname', 'mode', 'seconds', 'kills', 'level', 'character', 'reason', 'ruleset', 'submitted_at'];
+
+// Run once in the existing spreadsheet. Safe to retry; never clears scores.
+function setupFestival() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('SPREADSHEET_ID');
+  const book = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet();
+  if (!book) throw new Error('Abra o Apps Script a partir da planilha.');
+  props.setProperty('SPREADSHEET_ID', book.getId());
+  sheet_(book, FESTIVAL_SHEET, FESTIVAL_RECORDS);
+}
+
+function festivalRequest_(book, input) {
+  if (input.event_id !== FESTIVAL_ID) return fail_('unknown_event');
+  const sheet = book.getSheetByName(FESTIVAL_SHEET);
+  if (!sheet) return fail_('event_not_configured');
+  const records = rows_(sheet);
+  if (input.action === 'ranking') {
+    const rankings = {endless: [], bosses: []};
+    records.forEach(row => {
+      if (rankings[row[2]] && row[8] === RULESET) rankings[row[2]].push({nickname: row[1], seconds: row[3], kills: row[4], level: row[5], run_id: row[0]});
+    });
+    Object.keys(rankings).forEach(mode => {
+      rankings[mode].sort((a, b) => (mode === 'bosses' ? a.seconds - b.seconds : b.seconds - a.seconds) || b.kills - a.kills || a.nickname.localeCompare(b.nickname));
+      rankings[mode] = rankings[mode].slice(0, 100);
+    });
+    return {ok: true, event_id: FESTIVAL_ID, competitive_version: input.competitive_version || LEGACY_VERSION, rankings, seasons: []};
+  }
+  if (input.action !== 'submit') return fail_('invalid_request');
+  const validation = validateRecord_(input.record);
+  if (validation) return validation;
+  const r = input.record;
+  const name = typeof r.nickname === 'string' ? r.nickname.trim() : '';
+  if (!/^[\p{L}\p{N}][\p{L}\p{N} _.-]{0,29}$/u.test(name)) return fail_('invalid_nickname', 'Use até 30 letras, números, espaços, ponto, hífen ou _.');
+  // A submission belongs to a run, not a shared computer or a unique account.
+  if (records.some(row => row[0] === r.run_id)) return {ok: true, updated: false, event_id: FESTIVAL_ID};
+  sheet.appendRow([r.run_id, name, r.mode, r.seconds, r.kills, r.level, r.character, r.reason, RULESET, new Date().toISOString()]);
+  SpreadsheetApp.flush();
+  return {ok: true, updated: true, event_id: FESTIVAL_ID};
+}
 
 function setupRanking() {
   const book = SpreadsheetApp.getActiveSpreadsheet();
@@ -45,6 +87,7 @@ function doPost(e) {
     lock = LockService.getScriptLock();
     if (!lock.tryLock(10000)) return json_(fail_('busy'));
     const book = SpreadsheetApp.openById(id);
+    if (Object.prototype.hasOwnProperty.call(input, 'event_id')) return json_(festivalRequest_(book, input));
     const players = sheet_(book, 'Players', PLAYERS);
     const records = sheet_(book, 'Records', RECORDS);
     const accounts = rows_(players);
