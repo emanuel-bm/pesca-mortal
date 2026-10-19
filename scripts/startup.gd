@@ -65,6 +65,7 @@ static func select_patch(data: Dictionary, repo: String, base_hash: String, full
  return {}
 
 func _ready() -> void:
+ add_child(preload("res://scripts/controller_input.gd").new())
  get_window().title = "Pesca Mortal"
  var config := ConfigFile.new()
  if config.load("res://updates.cfg") == OK:
@@ -149,6 +150,7 @@ func _button(value: String, action: Callable) -> Button:
  control.custom_minimum_size.y = 44
  control.pressed.connect(action)
  actions.add_child(control)
+ if actions.get_child_count() == 1: control.grab_focus()
  return control
 
 func _check() -> void:

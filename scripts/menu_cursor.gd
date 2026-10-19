@@ -3,7 +3,7 @@ extends Node2D
 var game: Node2D
 
 func _process(_delta: float) -> void:
- visible = game.state != "playing"
+ visible = game.state != "playing" and not game.controller_input.using_controller
  position = get_viewport().get_mouse_position()
  queue_redraw()
 

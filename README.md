@@ -305,3 +305,12 @@ reflexos se deformam, e a canoa deixa ondulações; a pausa congela a superfíci
 As colisões de lanças usam uma grade espacial de células de 128 unidades, reconstruída após o movimento dos inimigos. Cada lança consulta apenas células vizinhas; a colisão de silhueta e a ordem dos alvos são preservadas. Inimigos fora da tela continuam sendo simulados e mostrados no minimapa, mas seus sprites não são desenhados. Cartas no chão aparecem no minimapa como pequenos cartões dourados, inclusive fora da tela; os marcadores desaparecem ao coletar ou expirar a carta. Lanças, XP e números fora da tela também são descartados no desenho.
 
 Benchmark reproduzível: `scripts/benchmark_late.gd`, seed 417, 501 inimigos incluindo chefe, 300 lanças, 30 atualizações. Na máquina de desenvolvimento, a atualização de CPU caiu de 158,91 ms para 12,79 ms. Esse teste isolado não mede FPS total nem custo da GPU. `scripts/test_performance.gd` compara mil consultas com a busca completa e verifica que volume geral zero ou efeito individual zero impede reprodução; zerar interrompe um som já em andamento.
+
+## Controle
+
+Controles reconhecidos pelo Godot são detectados ao abrir o jogo e ao conectar
+ou desconectar durante a sessão. O botão abaixo de Modo por chefões exibe Teclado ou Controle conforme o último dispositivo usado e abre a ajuda com abas para consultar ambos. A interface oculta
+o cursor e as teclas numéricas das melhorias enquanto o controle estiver em uso.
+O analógico esquerdo (com zona morta de 22%) e o direcional movem a canoa e
+navegam nos menus. Na seleção de melhorias, use somente o direcional; o analógico é ignorado. A / Cruz confirma; B / Círculo volta; Start pausa ou retoma.
+Os ataques continuam automáticos. Teclado e mouse continuam disponíveis.

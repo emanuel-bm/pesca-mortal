@@ -216,7 +216,13 @@ var nickname_attempted := false
 var records_personal := {"endless": false, "bosses": false}
 var test_artifact_paths: Array[String] = []
 
+var controls_help_controller := false
+var controls_help_button: Button
+var controller_input: Node
+
 func _ready() -> void:
+ controller_input = preload("res://scripts/controller_input.gd").new()
+ add_child(controller_input)
  var cursor_layer := CanvasLayer.new()
  cursor_layer.layer = 100
  add_child(cursor_layer)
@@ -633,6 +639,11 @@ func setup_menu_navigation() -> void:
   item.focus_neighbor_bottom = next
   item.focus_previous = previous
   item.focus_next = next
+ if state == "controls_help":
+  for item in menu_controls:
+   if item.has_meta("controls_help_tab") and bool(item.get_meta("controls_help_tab")) == controls_help_controller:
+    item.grab_focus()
+    return
  if state == "patch_notes" and not notes_focus_key.is_empty():
   for item: Control in menu_controls:
    if str(item.get_meta("notes_focus_key", "")) == notes_focus_key:
@@ -676,7 +687,6 @@ func clear_panel() -> void:
  setup_menu_navigation.call_deferred()
  overlay.custom_minimum_size.x = 620
  stats_panel.hide()
- stats_panel.get_child(0).get_child(0).get_child(-1).show()
  if records_panel: records_panel.hide()
  if boss_records_panel: boss_records_panel.hide()
  preview_upgrade = ""
@@ -719,10 +729,6 @@ func setup_stats_panel() -> void:
   value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
   row.add_child(value)
   stat_values[id] = value
- var hint := Label.new()
- hint.text = "Passe o mouse em uma melhoria\npara comparar os valores."
- hint.add_theme_font_size_override("font_size", 24)
- column.add_child(hint)
  stats_panel.hide()
 
 func layout_modals() -> void:
@@ -852,7 +858,7 @@ func setup_profile_panel() -> void:
  heading.add_theme_constant_override("separation", 12)
  column.add_child(heading)
  profile_name_label = Label.new()
- profile_name_label.add_theme_font_size_override("font_size", 24)
+ profile_name_label.add_theme_font_size_override("font_size", 20)
  profile_name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
  heading.add_child(profile_name_label)
  var edit := TextureButton.new()
@@ -865,7 +871,7 @@ func setup_profile_panel() -> void:
  edit.pressed.connect(show_nickname)
  heading.add_child(edit)
  profile_label = Label.new()
- profile_label.add_theme_font_size_override("font_size", 24)
+ profile_label.add_theme_font_size_override("font_size", 20)
  profile_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
  column.add_child(profile_label)
 
@@ -883,9 +889,10 @@ func show_menu() -> void:
  clear_panel()
  title("PESCA MORTAL")
  if bool(get_tree().get_meta("offline_session", false)): title("Jogando offline", 18)
- title("WASD / setas: mover · Ataque automático\nColete ventrechas para evoluir · ESC: pausar", 18)
+
  button("Modo infinito", start_run.bind("endless"))
  button("Modo por chefões", start_run.bind("bosses"))
+ controls_help_button = button("Controle" if controller_input.using_controller else "Teclado", open_controls_help)
  button("Sala de treino", start_run.bind("training"))
  records_personal = {"endless": false, "bosses": false}
  show_records_panel()
@@ -894,6 +901,42 @@ func show_menu() -> void:
  button("Configurações", show_settings)
  button("Fechar jogo", quit_game)
  online.synchronize()
+
+func update_controls_button() -> void:
+ if state == "menu" and is_instance_valid(controls_help_button):
+  controls_help_button.text = "Controle" if controller_input.using_controller else "Teclado"
+
+func open_controls_help() -> void:
+ show_controls_help(controller_input.using_controller)
+
+func show_controls_help(controller: bool) -> void:
+ controls_help_controller = controller
+ state = "controls_help"
+ clear_panel()
+ title("COMO JOGAR")
+ var tabs := HBoxContainer.new()
+ tabs.custom_minimum_size.x = 348
+ tabs.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+ panel.add_child(tabs)
+ for use_controller in [false, true]:
+  var tab := Button.new()
+  tab.text = "Controle" if use_controller else "Teclado"
+  tab.set_meta("keep_default_button_style", true)
+  tab.toggle_mode = true
+  tab.button_pressed = controller == use_controller
+  tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+  tab.set_meta("controls_help_tab", use_controller)
+  tab.pressed.connect(show_controls_help.bind(use_controller))
+  tabs.add_child(tab)
+ if controller:
+  panel.add_child(preload("res://scripts/controller_guide.gd").new())
+ else:
+  var guide := preload("res://scripts/keyboard_guide.gd").new()
+  guide.game = self
+  panel.add_child(guide)
+ title("Os ataques são automáticos.\nColete ventrechas para ganhar experiência e subir de nível.\nA cada nível, escolha uma melhoria para o pescador.", 18)
+ button("Voltar", show_menu)
+ setup_menu_navigation.call_deferred()
 
 func open_patch_notes() -> void:
  if not patch_notes.entries.is_empty(): patch_notes.select(str(patch_notes.entries[0].tag_name))
@@ -1556,7 +1599,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
    resume()
   elif state == "settings":
    leave_settings()
-  elif state in ["patch_notes", "legends", "history"]:
+  elif state in ["patch_notes", "legends", "history", "controls_help"]:
    show_menu()
   elif state == "match_details":
    finish(match_won)
@@ -1587,7 +1630,7 @@ func movement() -> Vector2:
  if Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT): direction.x += 1
  if Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP): direction.y -= 1
  if Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN): direction.y += 1
- return direction.normalized()
+ return (direction.normalized() + controller_input.movement()).limit_length()
 
 func update_cursor_visibility() -> void:
  var desired := Input.MOUSE_MODE_HIDDEN
@@ -1648,6 +1691,9 @@ func _process(delta: float) -> void:
   var profile_scale := minf(1.0, (get_viewport_rect().size.x - 44) / profile_panel.size.x)
   if is_instance_valid(records_panel):
    profile_scale = minf(profile_scale, records_panel.scale.x)
+   if records_panel.visible:
+    var available_height := maxf(1.0, records_panel.position.y - 22.0 - 12.0)
+    profile_scale = minf(profile_scale, available_height / profile_panel.size.y)
   profile_panel.scale = Vector2.ONE * profile_scale
   profile_panel.position = Vector2(22, 22)
  else:
@@ -2817,7 +2863,6 @@ func show_match_details() -> void:
  make_panel_body_scrollable()
  button("Voltar ao resultado", finish.bind(match_won))
  update_stats_preview()
- stats_panel.get_child(0).get_child(0).get_child(-1).hide()
  stats_panel.show()
  layout_modals()
 
