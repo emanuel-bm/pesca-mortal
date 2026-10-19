@@ -59,8 +59,39 @@ func run() -> void:
  game.run_history.clear()
  game.show_menu()
  assert(game.state == "menu")
+ assert(not game.records_personal.endless and not game.records_personal.bosses, "Both panels default to the festival")
+ var global_view: Node = game.festival_global
+ assert(global_view.read_only and not global_view.festival_mode)
+ assert(global_view.storage_path != game.online.storage_path, "Global and festival caches stay separate")
+ global_view.endpoint = "http://127.0.0.1:18745/exec"
+ global_view.competitive_version = ONLINE.HISTORY.LEGACY_VERSION
+ global_view.disabled = false
+ global_view.competitive_build = true
+ global_view.set_nickname("MustNotRegister")
+ global_view.queue_record(record)
+ assert(global_view.profile.is_empty() and global_view.pending.is_empty(), "Global viewer cannot register or submit results")
+ global_view.synchronize()
+ var view_started := Time.get_ticks_msec()
+ while global_view.busy:
+  assert(Time.get_ticks_msec() - view_started < 10000)
+  await process_frame
+ assert(global_view.fetched_at != "", global_view.status)
+ assert(global_view.rankings.endless.is_empty(), "Global query must not return the festival's two entries")
+ global_view.disabled = true
+ global_view.rankings = {"endless": [{"nickname": "GlobalChampion", "seconds": 9000.0, "kills": 100, "level": 10}], "bosses": []}
+ game.online.rankings = {"endless": [{"nickname": "FestivalParticipant", "seconds": 60.0, "kills": 10, "level": 1}], "bosses": []}
+ game.show_records_panel()
+ var labels: Array = game.records_panel.find_children("*", "Label", true, false)
+ assert(labels.any(func(label: Label): return label.text == "FestivalParticipant"))
+ assert(not labels.any(func(label: Label): return label.text == "GlobalChampion"))
+ game.select_records_tab("endless", true)
+ labels = game.records_panel.find_children("*", "Label", true, false)
+ assert(labels.any(func(label: Label): return label.text == "GlobalChampion"))
+ assert(not labels.any(func(label: Label): return label.text == "FestivalParticipant"))
+ assert(not game.records_personal.bosses, "Each panel can show a different leaderboard")
  game.show_nickname()
  assert(game.state == "menu", "Festival never opens the account registration screen")
+ assert(not game.records_personal.endless and not game.records_personal.bosses)
  game.start_run("endless")
  game.elapsed = 45.0
  game.kills = 7

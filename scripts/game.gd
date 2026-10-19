@@ -209,6 +209,7 @@ var dourado_particles: Array[Dictionary] = []
 var boat_particle_timer := 0.0
 var boat_particle_sequence := 0
 var online: Node
+var festival_global: Node
 var festival_result: Dictionary = {}
 var festival_name_edit: LineEdit
 var festival_name_draft := ""
@@ -286,6 +287,19 @@ func _ready() -> void:
  add_child(online)
  if bool(get_tree().get_meta("offline_session", false)): online.status = "Sessão offline. O ranking será sincronizado ao jogar online."
  online.changed.connect(online_changed)
+ if online.festival_mode:
+  festival_global = preload("res://scripts/online_ranking.gd").new()
+  festival_global.festival_mode = false
+  festival_global.read_only = true
+  festival_global.competitive_build = false
+  festival_global.storage_path = "user://festival_global_view.json"
+  festival_global.disabled = online.disabled
+  festival_global.network_disabled = online.network_disabled
+  if automated_test:
+   festival_global.storage_path = "user://test_boot_festival_global_%d_%d.json" % [Time.get_ticks_usec(), get_instance_id()]
+   test_artifact_paths.append(festival_global.storage_path)
+  add_child(festival_global)
+  festival_global.changed.connect(online_changed)
  var layer := CanvasLayer.new()
  add_child(layer)
  incoming_damage_feed = preload("res://scripts/incoming_damage_feed.gd").new()
@@ -914,6 +928,7 @@ func show_menu() -> void:
  button("Configurações", show_settings)
  button("Fechar jogo", quit_game)
  online.synchronize()
+ if is_instance_valid(festival_global): festival_global.synchronize()
 
 func update_controls_button() -> void:
  if state == "menu" and is_instance_valid(controls_help_button):
@@ -1154,18 +1169,19 @@ func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
  legends_button.visible = not online.festival_mode
  var tabs := HBoxContainer.new()
  column.add_child(tabs)
- tabs.visible = not online.festival_mode
  for personal in [false, true]:
   var tab := Button.new()
   tab.set_meta("keep_default_button_style", true)
   tab.text = "Pessoal" if personal else "Global"
+  if online.festival_mode: tab.text = "Global" if personal else "Festival"
   tab.toggle_mode = true
   tab.button_pressed = records_personal[mode] == personal
   tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
   tab.pressed.connect(select_records_tab.bind(mode, personal))
   tabs.add_child(tab)
- var personal: bool = records_personal[mode]
- var records: Array = (RUN_HISTORY.ranked(RUN_HISTORY.for_version(run_history, online.competitive_version)) if mode == "endless" else RUN_HISTORY.boss_ranked(RUN_HISTORY.for_version(run_history, online.competitive_version))) if personal else online.rankings.get(mode, [])
+ var personal: bool = records_personal[mode] and not online.festival_mode
+ var ranking_source: Node = festival_global if online.festival_mode and records_personal[mode] else online
+ var records: Array = (RUN_HISTORY.ranked(RUN_HISTORY.for_version(run_history, online.competitive_version)) if mode == "endless" else RUN_HISTORY.boss_ranked(RUN_HISTORY.for_version(run_history, online.competitive_version))) if personal else ranking_source.rankings.get(mode, [])
  var grid := GridContainer.new()
  grid.columns = 5
  grid.add_theme_constant_override("h_separation", 16)
@@ -1173,7 +1189,7 @@ func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
  column.add_child(grid)
  for column_name in ["#", "Jogador", "Level", "Tempo", "Eliminações"]: history_cell(grid, column_name)
  var ranked: Array = records
- var loading := not personal and ranking_loading(online.competitive_version)
+ var loading := not personal and ranking_loading(ranking_source.competitive_version, ranking_source)
  if loading:
   column.add_child(make_ranking_loading(100))
   ranked = []
@@ -1193,17 +1209,18 @@ func make_records_panel(heading_text: String, mode: String) -> PanelContainer:
      cell.add_theme_font_override("font", game_font_bold)
  if ranked.is_empty() and not loading:
   var empty := Label.new()
-  empty.text = "Nenhuma partida registrada." if personal else (online.status if not online.busy and not online.status.is_empty() and online.status != "Ranking atualizado." else "Nenhum recorde global recebido.")
+  empty.text = "Nenhuma partida registrada." if personal else (ranking_source.status if not ranking_source.busy and not ranking_source.status.is_empty() and ranking_source.status != "Ranking atualizado." else "Nenhum recorde recebido.")
   empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
   empty.add_theme_font_size_override("font_size", 24)
   column.add_child(empty)
  return target
 
-func ranking_loading(version: String) -> bool:
- if online.network_disabled or online.disabled: return false
- if version == online.competitive_version:
-  return online.refresh_requested or (online.busy and online.action != "legends")
- return version in online.legends_requested or (online.busy and online.action == "legends" and online.requested_version == version)
+func ranking_loading(version: String, source: Node = null) -> bool:
+ if source == null: source = online
+ if source.network_disabled or source.disabled: return false
+ if version == source.competitive_version:
+  return source.refresh_requested or (source.busy and source.action != "legends")
+ return version in source.legends_requested or (source.busy and source.action == "legends" and source.requested_version == version)
 
 func make_ranking_loading(height: float) -> CenterContainer:
  var center := CenterContainer.new()

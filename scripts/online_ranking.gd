@@ -7,6 +7,7 @@ const RULESET := "pesca-1"
 const DEFAULT_PATH := "user://online_ranking.json"
 const FESTIVAL = preload("res://scripts/festival.gd")
 var festival_mode := FESTIVAL.enabled()
+var read_only := false
 var storage_path := DEFAULT_PATH
 var endpoint := ""
 var profile: Dictionary = {}
@@ -50,8 +51,8 @@ func load_state() -> void:
  if not FileAccess.file_exists(storage_path): return
  var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(storage_path))
  if not data is Dictionary: return
- if data.get("profile") is Dictionary: profile = data.profile
- if data.get("pending") is Dictionary:
+ if not read_only and data.get("profile") is Dictionary: profile = data.profile
+ if not read_only and data.get("pending") is Dictionary:
   for key in data.pending:
    var record: Dictionary = data.pending[key]
    record["competitive_version"] = str(record.get("competitive_version", HISTORY.LEGACY_VERSION))
@@ -94,7 +95,7 @@ static func better(candidate: Dictionary, previous: Dictionary) -> bool:
  return candidate.kills > previous.kills
 
 func set_nickname(value: String) -> void:
- if festival_mode:
+ if festival_mode or read_only:
   return
  if busy or disabled: return
  if network_disabled:
@@ -121,7 +122,7 @@ static func outbox_key(record: Dictionary) -> String:
  return str(record.get("competitive_version", HISTORY.LEGACY_VERSION)) + ":" + str(record.mode)
 
 func queue_festival_record(record: Dictionary, name: String) -> bool:
- if not festival_mode or not competitive_build or not HISTORY.eligible(record): return false
+ if read_only or not festival_mode or not competitive_build or not HISTORY.eligible(record): return false
  if not FESTIVAL.valid_name(name) or record.get("run_id", "").is_empty(): return false
  if record.mode == "bosses" and record.reason != "won": return false
  var entry := record.duplicate(true)
@@ -143,7 +144,7 @@ func fetch_legends(version: String) -> void:
  if not busy: _next()
 
 func queue_record(record: Dictionary) -> void:
- if festival_mode: return
+ if festival_mode or read_only: return
  if not competitive_build or not HISTORY.eligible(record): return
  if record.mode == "bosses" and record.reason != "won": return
  var mode: String = record.mode
@@ -168,6 +169,11 @@ func synchronize() -> void:
 
 func _next() -> void:
  if busy or disabled or network_disabled or endpoint.is_empty(): return
+ if read_only:
+  if refresh_requested:
+   refresh_requested = false
+   _send("ranking", {"competitive_version": competitive_version})
+  return
  if festival_mode:
   if competitive_build and not pending.is_empty():
    sent_record = pending[pending.keys()[0]].duplicate(true)
@@ -301,8 +307,9 @@ func _completed(result: int, code: int, headers: PackedStringArray, body: Packed
    active_version = str(data.get("active_version", competitive_version))
    if data.get("seasons") is Array: seasons = data.seasons
    fetched_at = Time.get_datetime_string_from_system()
-   for version in seasons.slice(0, 3):
-    if not legends.has(version) and version not in legends_requested: legends_requested.append(version)
+   if not read_only:
+    for version in seasons.slice(0, 3):
+     if not legends.has(version) and version not in legends_requested: legends_requested.append(version)
   save_state()
   status = "Ranking atualizado."
   if competitive_version in seasons: status = "Versão encerrada. Atualize o jogo para competir no ranking atual."
