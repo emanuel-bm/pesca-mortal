@@ -211,7 +211,7 @@ var boat_particle_sequence := 0
 var online: Node
 var festival_result: Dictionary = {}
 var festival_name_edit: LineEdit
-var festival_save_button: Button
+var festival_name_draft := ""
 var festival_message: Label
 var online_status_label: Label
 var nickname_edit: LineEdit
@@ -882,6 +882,7 @@ func show_menu() -> void:
  run_active = false
  state = "menu"
  festival_result.clear()
+ festival_name_draft = ""
  if online.nickname().is_empty() and (online.festival_mode or (not online.endpoint.is_empty() and not bool(get_tree().get_meta("offline_session", false)))):
   show_nickname()
   return
@@ -1048,8 +1049,6 @@ func save_nickname() -> void:
  online.set_nickname(nickname_edit.text)
 
 func online_changed() -> void:
- if online.festival_mode and state in ["lost", "won"] and is_instance_valid(festival_message):
-  festival_message.text = online.status
  if state == "nickname":
   if is_instance_valid(online_status_label):
    online_status_label.text = online.status
@@ -1456,6 +1455,7 @@ func restart_run() -> void:
 
 func start_run(mode: String = "bosses") -> void:
  festival_result.clear()
+ festival_name_draft = ""
  if mode not in ["endless", "bosses", "training"]: return
  incoming_damage_feed.clear()
  upgrade_selection_pending = false
@@ -2779,14 +2779,15 @@ func finish(won: bool) -> void:
  title("Level: %s · Tempo: %02d:%02d · Eliminações: %s" % [format_integer(level), int(elapsed) / 60, int(elapsed) % 60, format_integer(kills)], 16)
  if not won: show_fatal_hit()
  if online.festival_mode and not festival_result.is_empty(): show_festival_submission()
- var replay := button("Jogar novamente", restart_run)
- replay.custom_minimum_size.y = 44
- replay.add_theme_font_size_override("font_size", 24)
+ if not online.festival_mode:
+  var replay := button("Jogar novamente", restart_run)
+  replay.custom_minimum_size.y = 44
+  replay.add_theme_font_size_override("font_size", 24)
  var actions := HBoxContainer.new()
  actions.add_theme_constant_override("separation", 12)
  panel.add_child(actions)
  setup_match_details_button()
- var exit_button := button("Sair", show_menu)
+ var exit_button := button("Sair", exit_festival_result if online.festival_mode else show_menu)
  for item in [match_details_button, exit_button]:
   panel.remove_child(item)
   actions.add_child(item)
@@ -2798,32 +2799,60 @@ func finish(won: bool) -> void:
  queue_redraw()
 
 func show_festival_submission() -> void:
- title("Entrar no ranking do festival (opcional)", 18)
  festival_name_edit = LineEdit.new()
  festival_name_edit.max_length = 30
- festival_name_edit.placeholder_text = "Seu nome ou apelido"
+ festival_name_edit.placeholder_text = "Seu nome ou apelido (opcional, salva no ranking)"
+ festival_name_edit.add_theme_font_size_override("font_size", 16)
+ festival_name_edit.text = festival_name_draft
  festival_name_edit.custom_minimum_size.y = 44
  panel.add_child(festival_name_edit)
- festival_save_button = button("Salvar no ranking do festival", save_festival_result)
- festival_name_edit.text_submitted.connect(func(_value: String): save_festival_result())
+ festival_name_edit.text_changed.connect(func(value: String): festival_name_draft = value)
  festival_message = Label.new()
- festival_message.text = "Sem preencher e salvar, esta partida não fica no ranking."
+ festival_message.hide()
  festival_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
  festival_message.add_theme_font_size_override("font_size", 16)
  panel.add_child(festival_message)
 
-func save_festival_result() -> void:
- if festival_result.is_empty() or not is_instance_valid(festival_name_edit): return
- if not preload("res://scripts/festival.gd").valid_name(festival_name_edit.text):
+func exit_festival_result() -> void:
+ if state == "festival_saving": return
+ if state in ["lost", "won"] and is_instance_valid(festival_name_edit): festival_name_draft = festival_name_edit.text
+ var name_value := festival_name_draft.strip_edges()
+ if festival_result.is_empty() or name_value.is_empty():
+  show_menu()
+  return
+ if not preload("res://scripts/festival.gd").valid_name(name_value):
   festival_message.text = "Digite até 30 letras, números, espaços, ponto, hífen ou _."
+  festival_message.show()
   return
- if not online.queue_festival_record(festival_result, festival_name_edit.text):
-  festival_message.text = "Não foi possível salvar. Tente novamente." if online.competitive_build else "Partidas de teste não entram no ranking."
+ state = "festival_saving"
+ clear_panel()
+ clear_fatal_hit_panel()
+ title("Salvando recorde de %s…" % name_value, 20)
+ var spinner := preload("res://scripts/loading_spinner.gd").new()
+ spinner.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+ panel.add_child(spinner)
+ layout_modals()
+ await get_tree().process_frame
+ # Debug previews follow the same screen flow without publishing test scores.
+ if not online.competitive_build:
+  show_menu()
   return
- festival_result.clear()
- festival_name_edit.editable = false
- festival_save_button.disabled = true
- festival_message.text = "Resultado salvo para envio ao ranking do festival."
+ while online.busy: await get_tree().process_frame
+ var queued: bool = online.queue_festival_record(festival_result, name_value)
+ if queued: online.synchronize()
+ while online.busy: await get_tree().process_frame
+ var key: String = str(festival_result.run_id)
+ if queued and not online.pending.has(key) and not online.status.begins_with("Recorde recusado"):
+  show_menu()
+  return
+ state = "festival_save_failed"
+ clear_panel()
+ title("Não foi possível publicar o recorde agora.", 20)
+ title("O resultado aguarda envio neste computador." if queued and online.pending.has(key) else online.status, 16)
+ button("Tentar novamente", exit_festival_result)
+ button("Voltar ao resultado", finish.bind(match_won))
+ button("Voltar ao menu", show_menu)
+ layout_modals()
 
 func match_enemy_stats(enemy: Dictionary) -> Dictionary:
  var details := RUN_HISTORY.killer_details(enemy)

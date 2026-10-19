@@ -66,10 +66,15 @@ func run() -> void:
  game.kills = 7
  game.finish(false)
  assert(game.festival_name_edit.text.is_empty(), "Never carry a previous participant's name")
+ assert(game.festival_name_edit.placeholder_text == "Seu nome ou apelido (opcional, salva no ranking)")
+ assert(game.festival_name_edit.get_theme_font_size("font_size") == 16)
+ assert(not game.festival_message.visible)
+ for control in game.panel.find_children("*", "Button", true, false):
+  assert(control.text not in ["Jogar novamente", "Salvar no ranking do festival"])
  assert(game.run_history.size() == 1 and game.player_totals.kills == 7)
  assert(game.player_totals.seconds == 45.0)
  assert(game.online.pending.is_empty(), "A finished run is not consent to publish")
- game.show_menu()
+ await game.exit_festival_result()
  assert(game.festival_result.is_empty() and game.online.pending.is_empty(), "Skipping the name discards the leaderboard entry")
  game._process(0.0)
  assert(game.profile_label.text.contains("PARTIDAS JOGADAS 1"))
@@ -80,13 +85,15 @@ func run() -> void:
  game.festival_result.debug_run = false
  game.festival_result.record_valid = true
  game.festival_name_edit.text = "Maria"
- game.save_festival_result()
+ await game.exit_festival_result()
  assert(game.online.pending.size() == 1)
- game.save_festival_result()
- assert(game.online.pending.size() == 1, "Double confirmation cannot duplicate a run")
+ assert(game.state == "festival_save_failed", "Offline exit preserves the result and offers retry")
+ game.online.endpoint = "http://127.0.0.1:18745/exec"
+ game.online.disabled = false
+ await game.exit_festival_result()
+ assert(game.online.pending.is_empty() and game.state == "menu", "Exit waits for synchronization before returning to menu")
  assert(game.online.nickname() == "Festival Hightech")
  assert(game.run_history.size() == 2 and game.player_totals.kills == 10 and game.player_totals.seconds == 75.0)
- game.show_menu()
  game.start_run("training")
  game.elapsed = 10.0
  game.record_run("menu")
