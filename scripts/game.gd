@@ -2788,6 +2788,9 @@ func finish(won: bool) -> void:
  panel.add_child(actions)
  setup_match_details_button()
  var exit_button := button("Sair", exit_festival_result if online.festival_mode else show_menu)
+ if online.festival_mode and not festival_result.is_empty():
+  exit_button.text = "Sair" if festival_name_draft.strip_edges().is_empty() else "Salvar e sair"
+  festival_name_edit.text_changed.connect(func(value: String): exit_button.text = "Sair" if value.strip_edges().is_empty() else "Salvar e sair")
  for item in [match_details_button, exit_button]:
   panel.remove_child(item)
   actions.add_child(item)
@@ -2801,6 +2804,7 @@ func finish(won: bool) -> void:
 func show_festival_submission() -> void:
  festival_name_edit = LineEdit.new()
  festival_name_edit.max_length = 30
+ festival_name_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
  festival_name_edit.placeholder_text = "Seu nome ou apelido (opcional, salva no ranking)"
  festival_name_edit.add_theme_font_size_override("font_size", 16)
  festival_name_edit.text = festival_name_draft
