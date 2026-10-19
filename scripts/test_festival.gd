@@ -24,8 +24,9 @@ func run() -> void:
  client.competitive_build = true
  root.add_child(client)
  client.endpoint = ""
- client.set_nickname("Festival Hightech")
  assert(client.nickname() == "Festival Hightech" and not client.profile.has("token"))
+ client.set_nickname("Nome que não deve substituir o perfil automático")
+ assert(client.nickname() == "Festival Hightech")
  var record := {"mode": "endless", "seconds": 60.0, "kills": 10, "level": 1, "character": "Pescador", "reason": "death", "run_id": "a".repeat(32), "record_valid": true, "competitive_version": "0.4"}
  client.queue_record(record)
  assert(client.pending.is_empty(), "Festival cannot publish through the global account flow")
@@ -53,11 +54,13 @@ func run() -> void:
  root.add_child(game)
  game.set_process(false)
  game.online.endpoint = ""
- game.online.set_nickname("Festival Hightech")
+ assert(game.online.nickname() == "Festival Hightech", "Festival starts with its automatic station profile")
  game.online.competitive_build = true
  game.run_history.clear()
  game.show_menu()
  assert(game.state == "menu")
+ game.show_nickname()
+ assert(game.state == "menu", "Festival never opens the account registration screen")
  game.start_run("endless")
  game.elapsed = 45.0
  game.kills = 7

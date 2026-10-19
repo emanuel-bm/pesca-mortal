@@ -2,6 +2,7 @@ extends RefCounted
 ## The export feature keeps the public build and its account storage unchanged.
 const ID := "festival-high-tech-mt"
 const NAME := "Festival High Tech MT"
+const PROFILE_NAME := "Festival Hightech"
 
 static func enabled() -> bool:
  return OS.has_feature("festival") or "--festival" in OS.get_cmdline_user_args()

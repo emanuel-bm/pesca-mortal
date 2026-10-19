@@ -2,7 +2,7 @@
 
 A edição usa o recurso de exportação `festival`. O preset **Windows Festival High Tech MT** gera `dist/pesca-mortal-festival-high-tech-mt.exe`. Para experimentar no editor, execute o projeto com `-- --festival`. A edição normal continua com o cadastro e ranking anteriores.
 
-Na primeira abertura, salve o nome do perfil da estação (sugestão: **Festival Hightech**). Ele é local e não publica resultados em seu nome. O painel desse perfil mostra partidas jogadas, tempo total e eliminações de todas as partidas, mesmo sem inscrição no ranking. Treino não entra nos totais. A contagem é de partidas, não de pessoas únicas, e os totais são por computador.
+Ao abrir o executável Windows, o perfil **Festival Hightech** já está ativo automaticamente, sem cadastro, digitação de nome ou login. Ele é local e não publica resultados em seu nome. O painel desse perfil mostra partidas jogadas, tempo total e eliminações de todas as partidas, mesmo sem inscrição no ranking. Treino não entra nos totais. A contagem é de partidas, não de pessoas únicas, e os totais são por computador.
 
 Ao morrer no infinito ou vencer no modo por chefões, o participante pode digitar nome ou apelido e clicar em **Salvar no ranking do festival**. Sair ou jogar novamente sem salvar mantém apenas os totais locais. Nomes não precisam ser únicos e cada partida confirmada tem sua própria entrada; resultados menores também podem ser publicados. No infinito, vence o maior tempo; no modo por chefões, o menor tempo de vitória. Eliminações desempatam. A tela inicial mostra somente os dez melhores resultados do festival em cada modo; o serviço retorna até cem.
 

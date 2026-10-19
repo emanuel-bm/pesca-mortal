@@ -37,6 +37,7 @@ func _ready() -> void:
  if config.load("res://online.cfg") == OK:
   endpoint = str(config.get_value("ranking", "url", "")).strip_edges()
  load_state()
+ if festival_mode: profile = {"nickname": FESTIVAL.PROFILE_NAME}
  request = HTTPRequest.new()
  request.timeout = 20.0
  # Google rejects a redirected GET that retains the original POST body.
@@ -94,17 +95,6 @@ static func better(candidate: Dictionary, previous: Dictionary) -> bool:
 
 func set_nickname(value: String) -> void:
  if festival_mode:
-  value = value.strip_edges()
-  if not FESTIVAL.valid_name(value):
-   status = "Use um nome de até 30 letras, números, espaços, ponto, hífen ou _."
-  else:
-   var previous := profile.duplicate(true)
-   profile = {"nickname": value}
-   if not save_state():
-    profile = previous
-    return
-   status = "Nome salvo."
-  changed.emit()
   return
  if busy or disabled: return
  if network_disabled:

@@ -866,6 +866,7 @@ func setup_profile_panel() -> void:
  edit.ignore_texture_size = true
  edit.stretch_mode = TextureButton.STRETCH_KEEP_CENTERED
  edit.tooltip_text = "Editar perfil"
+ edit.visible = not online.festival_mode
  edit.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
  edit.pressed.connect(show_nickname)
  heading.add_child(edit)
@@ -1002,6 +1003,9 @@ func show_patch_notes() -> void:
  notes_scroll.set_deferred("scroll_vertical", scroll_position)
 
 func show_nickname() -> void:
+ if online.festival_mode:
+  show_menu()
+  return
  nickname_attempted = false
  state = "nickname"
  clear_panel()
