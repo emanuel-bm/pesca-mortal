@@ -69,6 +69,7 @@ func _ready() -> void:
   # This edition must never install a normal public release over itself.
   get_tree().change_scene_to_file.call_deferred(GAME)
   return
+ add_child(preload("res://scripts/controller_input.gd").new())
  get_window().title = "Pesca Mortal"
  var config := ConfigFile.new()
  if config.load("res://updates.cfg") == OK:
@@ -153,6 +154,7 @@ func _button(value: String, action: Callable) -> Button:
  control.custom_minimum_size.y = 44
  control.pressed.connect(action)
  actions.add_child(control)
+ if actions.get_child_count() == 1: control.grab_focus()
  return control
 
 func _check() -> void:
