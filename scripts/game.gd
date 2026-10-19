@@ -647,6 +647,10 @@ func setup_menu_navigation() -> void:
    if str(item.get_meta("notes_focus_key", "")) == patch_notes.selected_tag:
     item.grab_focus()
     return
+ if online.festival_mode and state in ["lost", "won"]:
+  var focused := get_viewport().gui_get_focus_owner()
+  if is_instance_valid(focused): focused.release_focus()
+  return
  if not menu_controls.is_empty(): menu_controls[0].grab_focus()
 
 func move_menu_focus(direction: int) -> void:
@@ -2808,14 +2812,22 @@ func show_festival_submission() -> void:
  festival_name_edit.placeholder_text = "Seu nome ou apelido (opcional, salva no ranking)"
  festival_name_edit.add_theme_font_size_override("font_size", 16)
  festival_name_edit.text = festival_name_draft
+ update_festival_name(festival_name_draft)
  festival_name_edit.custom_minimum_size.y = 44
  panel.add_child(festival_name_edit)
- festival_name_edit.text_changed.connect(func(value: String): festival_name_draft = value)
+ festival_name_edit.text_changed.connect(update_festival_name)
  festival_message = Label.new()
  festival_message.hide()
  festival_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
  festival_message.add_theme_font_size_override("font_size", 16)
  panel.add_child(festival_message)
+
+func update_festival_name(value: String) -> void:
+ festival_name_draft = value
+ if value.is_empty():
+  festival_name_edit.add_theme_color_override("caret_color", Color.TRANSPARENT)
+ else:
+  festival_name_edit.remove_theme_color_override("caret_color")
 
 func exit_festival_result() -> void:
  if state == "festival_saving": return
@@ -2828,6 +2840,16 @@ func exit_festival_result() -> void:
   festival_message.text = "Digite até 30 letras, números, espaços, ponto, hífen ou _."
   festival_message.show()
   return
+ if not online.competitive_build:
+  state = "festival_debug_notice"
+  clear_panel()
+  clear_fatal_hit_panel()
+  title("Modo debug: resultado não enviado.", 20)
+  title("Use o executável Windows do festival para salvar no ranking.", 16)
+  button("Voltar ao resultado", finish.bind(match_won))
+  button("Voltar ao menu", show_menu)
+  layout_modals()
+  return
  state = "festival_saving"
  clear_panel()
  clear_fatal_hit_panel()
@@ -2837,10 +2859,6 @@ func exit_festival_result() -> void:
  panel.add_child(spinner)
  layout_modals()
  await get_tree().process_frame
- # Debug previews follow the same screen flow without publishing test scores.
- if not online.competitive_build:
-  show_menu()
-  return
  while online.busy: await get_tree().process_frame
  var queued: bool = online.queue_festival_record(festival_result, name_value)
  if queued: online.synchronize()

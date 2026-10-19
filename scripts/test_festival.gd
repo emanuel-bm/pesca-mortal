@@ -69,6 +69,15 @@ func run() -> void:
  assert(game.festival_name_edit.placeholder_text == "Seu nome ou apelido (opcional, salva no ranking)")
  assert(game.festival_name_edit.get_theme_font_size("font_size") == 16)
  assert(not game.festival_message.visible)
+ await process_frame
+ assert(not game.festival_name_edit.has_focus(), "No automatic focus on the name field after a run")
+ game.festival_name_edit.grab_focus()
+ assert(game.festival_name_edit.get_theme_color("caret_color").a == 0.0, "An empty field keeps its focus border but hides the caret")
+ game.festival_name_edit.text = "Maria"
+ game.festival_name_edit.text_changed.emit("Maria")
+ assert(not game.festival_name_edit.has_theme_color_override("caret_color"), "Typing restores the normal caret")
+ game.festival_name_edit.text = ""
+ game.festival_name_edit.text_changed.emit("")
  for control in game.panel.find_children("*", "Button", true, false):
   assert(control.text not in ["Jogar novamente", "Salvar no ranking do festival"])
  assert(game.run_history.size() == 1 and game.player_totals.kills == 7)
@@ -98,6 +107,15 @@ func run() -> void:
  game.elapsed = 10.0
  game.record_run("menu")
  assert(game.run_history.size() == 2, "Training does not inflate festival totals")
+ game.start_run("endless")
+ game.elapsed = 20.0
+ game.kills = 2
+ game.finish(false)
+ game.online.competitive_build = false
+ game.festival_name_edit.text = "Teste debug"
+ await game.exit_festival_result()
+ assert(game.state == "festival_debug_notice", "Debug must explain that it did not publish, rather than silently imitate saving")
+ assert(game.online.pending.is_empty())
  game.queue_free()
  DirAccess.remove_absolute(client.storage_path)
  client.queue_free()
