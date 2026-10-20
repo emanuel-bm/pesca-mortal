@@ -44,7 +44,7 @@ func run() -> void:
   assert(not game.stats_panel.visible)
  game.speed = 250.0
  game.update_stats_preview("speed")
- assert(game.stat_values.speed.text == "250 > 275")
+ assert(game.stat_values.speed.text == "250 > 270")
  game.start_run()
  game.show_upgrades()
  for child in game.panel.get_children():
@@ -56,7 +56,9 @@ func run() -> void:
  game.show_upgrades()
  assert(game.selected_upgrade == 0 and game.preview_upgrade == game.choices[0])
  assert(game.upgrade_buttons[0].has_focus())
- assert(game.format_stat("rate", 1.53846) == "1,54")
+ assert(game.format_stat("rate", 1.0) == "1")
+ assert(game.format_stat("rate", 1.5) == "1,5")
+ assert(game.format_stat("rate", 2.0) == "2")
  var navigation := InputEventKey.new()
  navigation.pressed = true
  for movement_key in [KEY_W, KEY_A, KEY_S, KEY_D]:
@@ -84,7 +86,7 @@ func run() -> void:
  game.speed = 250.0
  game.show_upgrades()
  assert(game.state == "upgrade" and game.choices.size() == 3)
- assert(is_equal_approx(game.projected_stats("speed").speed, 275.0))
+ assert(is_equal_approx(game.projected_stats("speed").speed, 270.0))
  var prior: float = game.damage
  while "damage" not in game.choices: game.show_upgrades()
  game.choose_upgrade("damage")
@@ -93,6 +95,10 @@ func run() -> void:
  game._process(0)
  assert(game.xp_bar.value == 4 and game.xp_bar.max_value == game.xp_needed())
  assert(game.xp_bar.size.x == game.get_viewport_rect().size.x)
+ if "--balance-only" in OS.get_cmdline_user_args():
+  print("BALANCE PREVIEW PASS: geometry, additive previews, application, navigation and XP bar")
+  quit(0)
+  return
  var saved_volumes: Dictionary = game.sounds.volumes.duplicate()
  game.sounds.volumes.master = 0.5
  game.sounds.volumes.shot = 0.2

@@ -1,9 +1,9 @@
 extends RefCounted
 
-const BASE_HEALTH := 32000.0 * 20.0
-const HAND_DAMAGE := 280.0
-const LOG_DAMAGE := 200.0
-const LOG_HEALTH := 200000.0
+const BASE_HEALTH := 150000.0
+const HAND_DAMAGE := 150.0
+const LOG_DAMAGE := 100.0
+const LOG_HEALTH := 75000.0
 const LOG_SPEED := 600.0 / 0.325
 const LOG_OVERSHOOT := 1.5
 const LOG_RANGE_MULTIPLIER := 1.5

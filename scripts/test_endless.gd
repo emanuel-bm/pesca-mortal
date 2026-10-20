@@ -48,18 +48,18 @@ func run() -> void:
  game.enemies[0].hp = 0
  game.update_game(0)
  assert(game.state == "playing" and game.bosses_defeated == 1, "Boss death must not end endless run")
- assert(is_equal_approx(fish.hp, 105) and is_equal_approx(fish.max_hp, 210))
- assert(is_equal_approx(fish.speed, 105) and is_equal_approx(fish.contact, 10.5))
- assert(is_equal_approx(surviving_boss.max_hp, 32000 * 1.10))
+ assert(is_equal_approx(fish.hp, 100) and is_equal_approx(fish.max_hp, 200))
+ assert(is_equal_approx(fish.speed, 100) and is_equal_approx(fish.contact, 10))
+ assert(is_equal_approx(surviving_boss.max_hp, 20000 * 2.1))
  game.spawn_enemy(false)
  var fresh: Dictionary = game.enemies.back()
- var base_hp: float = 200.0 if fresh.tank else 21.0
+ var base_hp: float = 100.0 if fresh.tank else 10.0
  if fresh.get("species", "") == "dourado": base_hp = game.DOURADO.BASE_HEALTH
- if fresh.get("species", "") == "pacu": base_hp = 80.0
+ if fresh.get("species", "") == "pacu": base_hp = 40.0
  assert(is_equal_approx(fresh.max_hp, base_hp * game.fish_stat_multiplier(fresh.get("species", ""))), "New enemies inherit buffs")
  surviving_boss.hp = 0
  game.update_game(0)
- assert(game.bosses_defeated == 2 and is_equal_approx(fish.max_hp, 200 * pow(1.05, 2)))
+ assert(game.bosses_defeated == 2 and is_equal_approx(fish.max_hp, 200))
  game.state = "paused"
  var before: float = game.elapsed
  game._process(0.5)
@@ -165,7 +165,7 @@ func run() -> void:
  var before_test_finish: int = game.run_history.size()
  game.finish(false)
  assert(game.run_history.size() == before_test_finish)
- print("ENDLESS PASS: milestones, simultaneous bosses, compounding buffs, continuing runs, pause, persistence, ranking, no duplicates or test records")
+ print("ENDLESS PASS: milestones, simultaneous bosses, additive buffs, continuing runs, pause, persistence, ranking, no duplicates or test records")
  if "--capture" in OS.get_cmdline_user_args():
   game.run_history = ranked
   game.show_menu()

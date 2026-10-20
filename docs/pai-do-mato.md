@@ -15,23 +15,23 @@ vivo, o segundo chefe não aparece. Derrotar o Pai do Mato encerra a partida com
 
 ## Atributos e ataques
 
-640.000 HP base: vinte vezes os 32.000 do Minhocão. Contato base: 60 de dano.
-No normal, recebe os buffs de 5% por chefe derrotado, como os demais chefes.
-Não recebe os buffs de minuto reservados aos peixes. Pode ser atingido em
-qualquer fase. Deslocamento base: 140 pixels/s, com a mesma fórmula de teto da piranha:
-140 × 1,08^10 (aproximadamente 302,25 pixels/s). O teto vale ao nascer e ao
-receber novos buffs por chefões derrotados.
+150.000 HP base: 7,5 vezes os 20.000 do Minhocão. Contato base: 60 de dano.
+Vida, velocidade normal e dano recebem +20%, +20%, +10% e depois +6% da
+base por minuto completo, em todos os modos, sem composição. Vida atual preserva a fração restante.
+Nasce com os bônus do tempo da partida.
+Derrotar chefões não aumenta atributos. Pode ser atingido em qualquer fase.
+Deslocamento base: 120 pixels/s, sem teto; aos 20 minutos chega a 302,4 pixels/s.
 
 Escolhe o ataque pela distância, sem sorteio ou alternância: mãozona a até 260 pixels do centro do chefe; acima disso, tronco somente quando o centro do chefe está dentro da tela. Fora da tela, continua se aproximando.
 
 - **Mãozona:** aviso de 1,2 segundo, com marca a no máximo 160 pixels do corpo. O deslocamento relativo e o ângulo são fixados no início do preparo; o chefe continua perseguindo durante o preparo e o impacto, levando a marca junto sem girá-la. A mão foi reduzida à metade do tamanho anterior.
-  Um único impacto de 120 de dano base, respeitando invulnerabilidade e
+  Um único impacto de 150 de dano base, respeitando invulnerabilidade e
   Intangível. A palma, o polegar, os quatro dedos e os espaços entre eles
   formam um polígono único, compartilhado pelo desenho e pela colisão.
 - **Tronco:** aviso de meio segundo, seguido por arremesso a velocidade constante de aproximadamente 1.846 pixels/s. A duração é a distância até o pouso dividida pela velocidade; 600 pixels levam 0,325 segundo
   em linha reta na direção marcada. Para 30% além da posição do pescador
   travada no preparo; perto das bordas, o trajeto é encurtado sem mudar a direção.
-  Em voo, causa 200 de dano base (com os buffs do chefe), apenas uma vez por arremesso. Não causa dano depois do
+  Em voo, causa 100 de dano base (com os buffs do chefe), apenas uma vez por arremesso. Não causa dano depois do
   pouso. Ao cair sobre a canoa, desloca-a para fora do obstáculo; a colisão de voo respeita invulnerabilidade.
 
 O chefe só para de perseguir durante o preparo do tronco. Continua andando durante a mãozona, os impactos e a recuperação. Cada impacto é mostrado por 0,35 segundo; intervalo de recuperação de 1,4 segundo e
@@ -40,7 +40,7 @@ aproximação de dois segundos antes de preparar o próximo ataque.
 ## Troncos persistentes
 
 Cada tronco nasce com metade da vida máxima do chefe no instante do arremesso:
-320.000 HP sem buffs. Não recebe buffs posteriores e não expira. Continua no
+75.000 HP sem buffs. Não recebe buffs posteriores e não expira. Continua no
 mapa mesmo após a morte do chefe, até ser destruído por lanças ou a partida
 ser reiniciada. Não concede XP, cartas ou eliminações ao ser destruído.
 

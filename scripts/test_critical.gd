@@ -8,6 +8,12 @@ func run() -> void:
  game.start_run()
  game.set_process(false)
  assert(game.crit_chance == 1)
+ for expected in range(10, 101, 10):
+  assert(game.projected_stats("crit_chance").crit_chance == expected)
+  game._apply_upgrade("crit_chance")
+  assert(game.crit_chance == expected)
+ game.start_run()
+ game.set_process(false)
  game.crit_chance = 0
  game.spawn_enemy(false)
  var enemy = game.enemies.back()
@@ -53,7 +59,7 @@ func run() -> void:
   spear.pos = target.pos
   game.crit_chance = 0 if index == 1 else 100
   game.update_game(0.0)
-  var expected = [40.0, 14.0, 20.0][index]
+  var expected = [20.0, 7.0, 10.0][index]
   assert(is_equal_approx(1000.0 - target.hp, expected))
   game.update_game(0.0)
   assert(is_equal_approx(1000.0 - target.hp, expected))

@@ -12,7 +12,7 @@ func run() -> void:
  for count in 5:
   game._apply_upgrade("luck")
   game._apply_upgrade("persistence")
- assert(game.luck == 50 and game.persistence == 25)
+ assert(game.luck == 50 and game.persistence == 50)
  for elapsed in [0.0, 120.0, 240.0, 400.0]:
   game.elapsed = elapsed
   for tank in [false, true]:
@@ -24,10 +24,10 @@ func run() -> void:
  assert(game.cards.drop_chance({"boss": true}) == 1.0)
  for id in ["furia", "intangivel", "perfurante"]:
   game.cards.activate(id)
-  assert(is_equal_approx(game.cards.effects[id], 7.5))
+  assert(is_equal_approx(game.cards.effects[id], 4.5 if id == "intangivel" else 9.0))
   game.cards.tick_effects(1.0)
   game.cards.activate(id)
-  assert(is_equal_approx(game.cards.effects[id], 7.5))
+  assert(is_equal_approx(game.cards.effects[id], 4.5 if id == "intangivel" else 9.0))
  game.gems.append({"magnetized": false})
  game.cards.activate("ima")
  assert(game.gems.back().magnetized)

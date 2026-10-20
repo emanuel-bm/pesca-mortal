@@ -5,6 +5,7 @@ const REPEAT_WEIGHT_FACTOR := 0.5
 const MIN_REPEAT_WEIGHT := 0.000001
 const NAMES := {"ima": "ÍMÃ", "furia": "FÚRIA", "intangivel": "INTANGÍVEL", "perfurante": "PERFURANTE"}
 const EFFECT_SECONDS := 6.0
+const INTANGIBLE_SECONDS := 3.0
 const FLOOR_SECONDS := 30.0
 const PICKUP_SIZE := Vector2(32, 48)
 const SHINE = preload("res://assets/cards/shine.gdshader")
@@ -151,7 +152,7 @@ func activate(id: String) -> void:
   for gem in game.gems: gem["magnetized"] = true
  else:
   if not active(id): effect_row.move_child(indicators[id].item, effect_row.get_child_count() - 1)
-  effects[id] = EFFECT_SECONDS * (1.0 + game.persistence / 100.0)
+  effects[id] = (INTANGIBLE_SECONDS if id == "intangivel" else EFFECT_SECONDS) * (1.0 + game.persistence / 100.0)
   if id == "furia": game.attack_timer = minf(game.attack_timer, game.effective_attack_delay())
  refresh()
 
@@ -172,6 +173,7 @@ func attack_feedback() -> void:
 func shield_feedback(source: Vector2) -> void:
  # Sustained contact must not restart the animation every simulation frame.
  if shield_impact_seconds > 0.0: return
+ game.sounds.play_effect("shield_block")
  shield_impact_seconds = 0.32
  shield_impact_direction = (source - game.player).normalized()
  if shield_impact_direction.is_zero_approx(): shield_impact_direction = Vector2.UP

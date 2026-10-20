@@ -1,7 +1,9 @@
 extends RefCounted
 
-const CAP_MINUTE := 10
-const MAX_MULTIPLIER := pow(1.08, CAP_MINUTE)
+const GROWTH = preload("res://scripts/enemy_growth.gd")
+
+static func minute_multiplier(minute: int) -> float:
+ return GROWTH.multiplier(minute)
 
 static func capped_speed(base_speed: float, multiplier: float) -> float:
- return base_speed * minf(multiplier, MAX_MULTIPLIER)
+ return base_speed * multiplier

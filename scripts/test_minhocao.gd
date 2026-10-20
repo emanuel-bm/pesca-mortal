@@ -18,9 +18,9 @@ func run() -> void:
  await process_frame
  game.start_run()
  for i in 5: game._apply_upgrade("speed")
- assert(is_equal_approx(game.speed, 190.0 * pow(1.10, 5)))
+ assert(is_equal_approx(game.speed, 280.0))
  game.start_run()
- assert(is_equal_approx(game.speed, 190.0))
+ assert(is_equal_approx(game.speed, 180.0))
  game.elapsed = 300
  game.update_game(0.01)
  assert(game.boss_spawned and game.enemies.size() > 1, "Boss must spawn alongside the current horde")
@@ -31,12 +31,12 @@ func run() -> void:
  for enemy in game.enemies:
   if not enemy.boss:
    var expected_speed: float = 80.0 if enemy.tank else 125.0
-   assert(is_equal_approx(enemy.speed, expected_speed * game.fish_stat_multiplier()))
+   assert(is_equal_approx(enemy.speed, expected_speed * game.fish_speed_multiplier()))
  game.start_run()
  game.enemies.clear()
  game.spawn_enemy(true)
  var boss: Dictionary = game.enemies[0]
- assert(boss.hp == 32000)
+ assert(boss.hp == 20000)
  assert(not game.MINHOCAO.vulnerable(boss))
  game.fire()
  assert(game.bullets.is_empty(), "Do not aim at buried boss")

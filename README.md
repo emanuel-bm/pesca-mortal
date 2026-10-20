@@ -13,12 +13,12 @@ a oitava três, e assim por diante. Minhocões de ondas anteriores continuam viv
 até serem derrotados; novas ondas não geram Minhocões depois da quinta.
 No normal, o primeiro chefão aparece aos três minutos. Depois, novas ondas
 aparecem a cada dois minutos, com dois chefões na segunda, três na terceira
-e assim por diante, sem remover chefões ainda vivos. Cada chefão abatido
-multiplica HP, dano e velocidade dos inimigos por 1,05, de forma acumulativa,
-atingindo os atuais e os próximos. Tamanho e XP dos peixes não mudam com o buff.
+e assim por diante, sem remover chefões ainda vivos. Os atributos dos inimigos
+escalam apenas com o tempo; derrotar chefões não concede buffs aos sobreviventes
+ou aos próximos inimigos. Tamanho e XP não mudam com os buffs.
 O contador de eliminações inclui chefões no modo normal.
-Cada chefão deixa uma ventrecha gigante de 112 pixels (8 vezes a comum),
-com 100 XP base, sujeitos ao bônus de experiência. No modo Boss Rush,
+O Minhocão deixa uma ventrecha de 250 XP base; o Pai do Mato deixa uma
+folha cristalizada de 5.000 XP base, sujeitos ao bônus de experiência. No modo Boss Rush,
 a partida continua após derrotar o Minhocão e permite coletar seu drop.
 As ventrechas usam contorno marrom com espessura de 1,5 pixel.
 
@@ -136,7 +136,7 @@ perda de foco e botões de telas anteriores com níveis acumulados. O teste
 os modos de janela e verifica áudio, Voltar e Continuar.
 
 O pacu voltou como inimigo separado do dourado: usa `assets/pacu-v4.png`,
-tem 80 HP base escalados pelo tempo, 30 de dano, 10 XP e velocidade de 80 pixels/s,
+tem 40 HP base escalados pelo tempo, 20 de dano, 10 XP e velocidade de 125 pixels/s,
 sem arrancada. Compartilha a liberação do dourado. **F11** invoca 10 pacus no treino.
 Um dano de pacu bloqueia novas ativações de cartas por cinco segundos de jogo;
 outro dano renova o tempo. Cartas no chão e ícones dos efeitos ficam cinza durante
@@ -150,12 +150,12 @@ colisão pelo contorno. Aproxima-se a 100 pixels/s, anuncia por 1,1 segundo uma
 arrancada em direção fixa, mirando a posição prevista da canoa após 0,5 segundo
 com sua velocidade atual (incluindo melhorias). A previsão é calculada uma vez
 no início do aviso e limitada à arena. Avança a 1.400 pixels/s por 159,705 pixels
-antes dos buffs por minuto e por chefão. Emite partículas de água durante o preparo
+antes dos buffs por minuto. Emite partículas de água durante o preparo
 e ao longo de todo o percurso. Inicia o preparo a até 70% do alcance
 atual da arrancada; esse limite cresce junto com os buffs. Descansa
 por 0,75 segundo. Depois do descanso, pode preparar outra arrancada assim que
-estiver dentro do alcance de preparo, sem cooldown adicional. Tem 200 de vida base, 15 de dano e dá
-20 XP; recebe +8% de vida, velocidade de nado e alcance da arrancada por minuto, +4% de dano, além de +5% por chefão no normal. A velocidade da arrancada permanece fixa.
+estiver dentro do alcance de preparo, sem cooldown adicional. Tem 100 de vida base, 30 de dano e dá
+20 XP; vida, nado, alcance e velocidade da arrancada usam a curva aditiva de bônus decrescentes por minuto. Dano usa a mesma curva, limitado a 3× da base.
 Na sala de treino, **F10** invoca 10 dourados ao redor da canoa.
 
 Distribuição por surgimento automático (um único sorteio):
@@ -199,43 +199,45 @@ durante a luta. Derrotar o chefe encerra a partida com vitória.
 Uma arena delimitada, quatro tipos de peixes, um chefe perseguidor,
 cinco melhorias (sem limite de escolhas; velocidade sem teto), dano com invulnerabilidade
 temporária e knockback para longe do atacante, pausa, derrota, vitória e reinício.
-Vida máxima inicial de 100; dano base de piranha 10, pintado 20, pacu 30,
-dourado 15 e Minhocão 40 (contato), 60 (emergência) e 80 (investida).
-Pintados têm 200 HP base, antes dos buffs por minuto e por chefão derrotado.
-Minhocão com 32.000 de vida; somente o chefe exibe barra de vida.
+Vida máxima inicial de 100; dano base de piranha 10, pintado 20, pacu 20,
+dourado 30 e Minhocão 40 (contato), 60 (emergência) e 80 (investida).
+Piranhas têm 10 HP base; pintados têm 100 HP base, antes dos buffs por minuto.
+Minhocão com 20.000 de vida base; Pai do Mato com 150.000, 7,5 vezes mais. Somente chefes exibem barra de vida.
 Alterna mergulho de 0,5 s e aviso de emergência de 0,75 s,
 emergência, exposição por 3 s e investida em linha anunciada por 0,9 s.
 A investida atravessa o trajeto em 0,5 s; movimento à superfície de 54.
 Enterrado, não recebe dano nem atrai disparos. Emergência causa 60 de dano
 na área anunciada; contato mantém a invulnerabilidade de 0,8 s do jogador.
-Velocidade inicial do jogador: 190; melhorias de 10%, sem teto.
+Velocidade inicial do jogador: 180; cada melhoria soma 20, sem teto.
 Peixes usam sua própria velocidade, sem limite baseado na velocidade do jogador.
 Piranhas e pacus se movem a 125 pixels/s, pintados a 80 pixels/s e dourados
-a 100 pixels/s. A cada minuto completo de jogo, os peixes vivos recebem
-+8% de vida atual, vida máxima e velocidade, e +4% de dano, de forma multiplicativa.
-Novos peixes herdam todos os minutos completos: vida e velocidade base × 1,08 elevado
-ao número de minutos; dano base × 1,04 elevado ao número de minutos.
-A arrancada do dourado mantém 1.400 pixels/s; seu alcance cresce +8% por minuto,
-sem teto. A investida avança a cada frame até esgotar a distância restante,
-sem calcular duração; dobrar o alcance naturalmente dobra o tempo do percurso.
-No normal, os +5% por chefão morto se multiplicam com esses bônus. Chefões
-não recebem o bônus por minuto. XP, tamanho e tempos de aviso não aumentam.
-O deslocamento normal de todos os inimigos tem teto de velocidade base × 1,08^10.
+a 100 pixels/s. Atributos crescem a cada minuto completo:
++20%, +20%, +10% e depois +6% por minuto, sempre somados sobre a base.
+Inimigos vivos recebem os bônus e preservam a proporção de vida restante.
+Novos peixes recebem os totais do momento do spawn: 1,2× no minuto 1, 1,62× no minuto 5,
+1,68× no minuto 6 e 2,52× no minuto 20. Dano de peixes comuns tem teto de 3×.
+A arrancada do dourado começa em 1.400 pixels/s; seu alcance e velocidade crescem
+com a mesma curva, sem teto. A investida avança até esgotar a distância restante.
+Peixes e chefões escalam apenas com os minutos completos da partida, em todos os modos.
+Derrotar chefões não aumenta atributos. XP, tamanho e tempos de aviso não aumentam.
+O deslocamento normal de todos os inimigos segue a nova curva sem teto de velocidade.
 Minhocão: base de 100 pixels/s na superfície; Pai do Mato: base de 120 pixels/s.
 O jogador continua sem teto. Ataques especiais usam regras próprias: arrancada do
-dourado com velocidade fixa e alcance sem teto, investida do Minhocão a 1.400 pixels/s e
+dourado com velocidade e alcance escalados, investida do Minhocão a 1.400 pixels/s e
 tronco do Pai do Mato com velocidade fixa. Tempos de aviso não escalam com buffs.
-No normal, vida atual e máxima do Minhocão crescem 10% por chefão derrotado;
-novos Minhocões herdam 32.000 × 1,10 elevado ao total de chefões derrotados.
+Minhocão e Pai do Mato recebem a mesma curva na vida, velocidade normal e dano,
+incluindo dano dos ataques especiais. Chefes não têm o teto de dano dos peixes comuns.
 O Minhocão aguarda submerso por 0,5 segundo antes de mostrar o aviso, sem fase
 oculta de rastreamento. Avisos mantêm sua variação de ±30%; a investida percorre
 até 500 pixels, encurtados nas bordas, controlada por distância restante.
 Emergência produz ondas e partículas; investida deixa rastro e onda no ponto final.
-Melhorias de vida máxima e dano de ataque aumentam o valor atual em 20% por escolha, sem teto de evolução.
+Melhorias usam incrementos fixos: dano inicial de 10 e Impacto soma 10 de dano por escolha; Vitalidade soma 20 de vida
+máxima (+20% de 100). Frequência inicial: 1 ataque/s; Ritmo soma 0,5 ataque/s por escolha, sem teto.
+Dez escolhas de Impacto levam o dano de 10 a 110; dez de Vitalidade levam a vida de 100 a 300.
 Valores exibidos são arredondados para inteiros; cálculos mantêm a precisão.
 O alcance de coleta de XP é fixo em 180, sem melhoria e oculto nos atributos do pescador.
 Aprendizado aumenta o bônus de ganho de XP em 20 pontos percentuais por escolha, sem limite máximo.
-Experiência base: piranha 1 XP, pintado 5 XP, pacu 10 XP, dourado 20 XP e chefão 100 XP.
+Experiência base: piranha 1 XP, pintado 5 XP, pacu 10 XP, dourado 20 XP, Minhocão 250 XP e Pai do Mato 5.000 XP.
 Cristais de maior valor aparecem maiores e concedem todo o XP ao serem coletados.
 Projéteis são lanças orientadas pelo disparo. Personagem, canoa, Minhocão,
 piranhas, pintados e água usam pixel art gerada com ImageGen.
