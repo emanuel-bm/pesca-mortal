@@ -16,7 +16,7 @@ var drop_streak := 0
 var effects := {"furia": 0.0, "intangivel": 0.0, "perfurante": 0.0}
 var textures: Dictionary = {}
 var effect_layer: CanvasLayer
-var effect_row: HBoxContainer
+var effect_row: BoxContainer
 var indicators: Dictionary = {}
 var blocked_seconds := 0.0
 var block_label: Label
@@ -33,7 +33,7 @@ func _ready() -> void:
  for id in IDS: textures[id] = load("res://assets/cards/%s.png" % id)
  effect_layer = CanvasLayer.new()
  add_child(effect_layer)
- effect_row = HBoxContainer.new()
+ effect_row = BoxContainer.new()
  effect_row.position = Vector2(22, 186)
  effect_row.add_theme_constant_override("separation", 18)
  effect_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -150,6 +150,7 @@ func activate(id: String) -> void:
   magnet_visual_seconds = 1.0
   for gem in game.gems: gem["magnetized"] = true
  else:
+  if not active(id): effect_row.move_child(indicators[id].item, effect_row.get_child_count() - 1)
   effects[id] = EFFECT_SECONDS * (1.0 + game.persistence / 100.0)
   if id == "furia": game.attack_timer = minf(game.attack_timer, game.effective_attack_delay())
  refresh()
@@ -229,6 +230,8 @@ func refresh() -> void:
  for pickup in pickups: refresh_pickup(pickup)
  if not effect_row: return
  effect_row.visible = game.run_active
+ effect_row.vertical = game.run_mode == "bosses"
+ effect_row.add_theme_constant_override("separation", 8 if effect_row.vertical else 18)
  for id in effects:
   indicators[id].icon.material.set_shader_parameter("blocked", blocked_seconds > 0)
   indicators[id].item.visible = active(id)
@@ -239,3 +242,7 @@ func refresh() -> void:
  block_label.text = "CARTAS BLOQUEADAS · %s s" % game.NUMBER_FORMAT.decimal(blocked_seconds, 1, false)
  block_label.position = Vector2((viewport.x - block_label.get_minimum_size().x) / 2, viewport.y - 82)
  effect_row.position = Vector2(maxf(22, (viewport.x - effect_row.size.x) / 2), viewport.y - 56)
+ if game.run_mode == "bosses":
+  var hud_bottom: float = game.hud.position.y + game.hud.get_combined_minimum_size().y
+  effect_row.position = Vector2(game.hud.position.x, hud_bottom + 12)
+  block_label.position = Vector2(effect_row.position.x, effect_row.position.y + effect_row.size.y + 8)

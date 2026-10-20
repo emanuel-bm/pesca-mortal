@@ -41,7 +41,7 @@ Posições iniciais fixas, mistura de piranhas/pintados após 420 segundos, 60 a
 
 Resultados variam com hardware e distribuição. O caso de 520 ainda tem custo relevante; não é promessa de 60 FPS da cena completa.
 
-Testes: bloqueio, retomada de movimento, contorno de inimigo parado, ausência de atravessamento no segmento, combate e modo infinito.
+Testes: bloqueio, retomada de movimento, contorno de inimigo parado, ausência de atravessamento no segmento, combate e modo normal.
 
 
 ## Revisão: separação por forças
@@ -59,7 +59,7 @@ Implementação atual para peixes: sem bloqueio rígido entre peixes, atração 
 
 Benchmark posterior: 40 peixes 0,445 ms, 200 peixes 3,313 ms, 520 peixes 9,714 ms por atualização. Mede apenas simulação de movimento, sem promessa de FPS da cena inteira. A distribuição final dos peixes varia conforme algoritmo, portanto comparação de desempenho é aproximada.
 
-Testes adicionais: limite de velocidade e aceleração por frame, fluxo lateral ao redor de peixe parado, limite de deslocamento com 100 peixes coincidentes, combate e infinito.
+Testes adicionais: limite de velocidade e aceleração por frame, fluxo lateral ao redor de peixe parado, limite de deslocamento com 100 peixes coincidentes, combate e normal.
 
 
 ## Arrays compartilhados e Teste de hordas
@@ -96,7 +96,7 @@ O Teste de hordas agora informa PEIXES VISÍVEIS usando a mesma condição de vi
 
 Benchmark movimento + grades, seed 417: 520 peixes 4,770 → 3,491 ms. Inclui reconstrução de grade de projéteis nos dois casos; não inclui desenho e não garante aumento equivalente de FPS. Distribuição espacial resultante difere após modificar a repulsão.
 
-Passaram testes de separação suave/limites de deslocamento, combate, hordas e infinito.
+Passaram testes de separação suave/limites de deslocamento, combate, hordas e normal.
 
 
 ## Distribuição dos picos de repulsão
@@ -107,7 +107,7 @@ Causa observada: temporizadores independentes não garantiam distribuição dos 
 
 Benchmark scripts/benchmark_crowd_spikes.gd: 458 peixes, seed 417, posições iniciais fixas, 180 atualizações de 10 ms, apenas snapshot de repulsão e perseguição. Antes: média 2,150 ms, p95 5,898 ms, máximo 9,365 ms. Depois: média 1,959 ms, p95 3,519 ms, máximo 7,488 ms. Valores aproximados de uma execução local; não inclui renderização nem garante FPS total. Trajetórias podem diferir com a nova distribuição temporal.
 
-Teste scripts/test_crowd_budget.gd valida teto de 48, atendimento a todos os peixes em rodízio, remoção de entidades e reset da run. Também passaram combate, infinito e suavidade do movimento.
+Teste scripts/test_crowd_budget.gd valida teto de 48, atendimento a todos os peixes em rodízio, remoção de entidades e reset da run. Também passaram combate, normal e suavidade do movimento.
 
 
 ### Qualidade dos personagens e desenho em lotes

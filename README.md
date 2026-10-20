@@ -4,36 +4,36 @@ Beta atual: **0.4.5**. Código, arte, áudio, scripts de servidor e testes estã
 incluídos no projeto. Ferramentas locais, caches e builds exportadas ficam
 fora do Git; pacotes para jogar são distribuídos pelas Releases.
 
-O menu oferece **Modo infinito** e **Modo por chefões**. O modo por chefões
-traz um Minhocão aos três minutos e um Pai do Mato aos seis minutos.
+O menu oferece **Jogar** e **Boss Rush**. O modo Boss Rush
+traz um Minhocão aos dois minutos e um Pai do Mato 30 segundos após derrotá-lo.
 A partida termina em vitória ao derrotar o Pai do Mato.
-No infinito, as cinco primeiras ondas trazem apenas Minhocões, em quantidades
+No normal, as cinco primeiras ondas trazem apenas Minhocões, em quantidades
 de um a cinco. A sexta reinicia a contagem com um Pai do Mato; a sétima tem dois,
 a oitava três, e assim por diante. Minhocões de ondas anteriores continuam vivos
 até serem derrotados; novas ondas não geram Minhocões depois da quinta.
-No infinito, o primeiro chefão aparece aos três minutos. Depois, novas ondas
+No normal, o primeiro chefão aparece aos três minutos. Depois, novas ondas
 aparecem a cada dois minutos, com dois chefões na segunda, três na terceira
 e assim por diante, sem remover chefões ainda vivos. Cada chefão abatido
 multiplica HP, dano e velocidade dos inimigos por 1,05, de forma acumulativa,
 atingindo os atuais e os próximos. Tamanho e XP dos peixes não mudam com o buff.
-O contador de eliminações inclui chefões no modo infinito.
+O contador de eliminações inclui chefões no modo normal.
 Cada chefão deixa uma ventrecha gigante de 112 pixels (8 vezes a comum),
-com 100 XP base, sujeitos ao bônus de experiência. No modo por chefões,
+com 100 XP base, sujeitos ao bônus de experiência. No modo Boss Rush,
 a partida continua após derrotar o Minhocão e permite coletar seu drop.
 As ventrechas usam contorno marrom com espessura de 1,5 pixel.
 
-O histórico do infinito é local, em `user://endless_runs.json`. O ranking ordena
+O histórico do normal é local, em `user://endless_runs.json`. O ranking ordena
 por tempo ativo de sobrevivência, depois por eliminações. Pausas, configurações
 e escolhas de melhorias não contam como sobrevivência. Morte, volta ao menu,
 reinício e fechamento encerram a run e a registram uma única vez; partidas do
-modo por chefões e testes de nível 30 não entram no ranking. O recorde aparece
+modo Boss Rush e testes de nível 30 não entram no ranking. O recorde aparece
 no menu e o botão Histórico abre a lista completa.
 
 A [pesquisa sobre habilidades e cartas](docs/pesquisa-habilidades.md) descreve
 as referências. As [regras das cartas](docs/cartas-em-discussao.md) estão implementadas:
 piranhas começam com 1% de chance de drop e pintados com 5%. As chances diminuem
 linearmente pelo tempo ativo da partida até 0,25% e 1%, respectivamente, aos
-quatro minutos, e permanecem nesses valores depois. Chefões do infinito têm 100%.
+quatro minutos, e permanecem nesses valores depois. Chefões do normal têm 100%.
 O primeiro drop sorteia igualmente Ímã, Fúria, Intangível ou Perfurante. Cada
 repetição consecutiva reduz pela metade o peso da última carta, sem impedir
 novas repetições. Outra carta encerra a sequência; uma nova partida zera o
@@ -155,7 +155,7 @@ e ao longo de todo o percurso. Inicia o preparo a até 70% do alcance
 atual da arrancada; esse limite cresce junto com os buffs. Descansa
 por 0,75 segundo. Depois do descanso, pode preparar outra arrancada assim que
 estiver dentro do alcance de preparo, sem cooldown adicional. Tem 200 de vida base, 15 de dano e dá
-20 XP; recebe +8% de vida, velocidade de nado e alcance da arrancada por minuto, +4% de dano, além de +5% por chefão no infinito. A velocidade da arrancada permanece fixa.
+20 XP; recebe +8% de vida, velocidade de nado e alcance da arrancada por minuto, +4% de dano, além de +5% por chefão no normal. A velocidade da arrancada permanece fixa.
 Na sala de treino, **F10** invoca 10 dourados ao redor da canoa.
 
 Distribuição por surgimento automático (um único sorteio):
@@ -165,7 +165,7 @@ Distribuição por surgimento automático (um único sorteio):
 | Antes de 1 minuto | 100% | 0% | 0% | 0% |
 | A partir de 1 minuto | 80% | 20% | 0% | 0% |
 | Primeiro chefão apareceu | 70% | 30% | 0% | 0% |
-| Segunda horda no infinito | 50% | 15% | 25% | 10% |
+| Segunda horda no normal | 50% | 15% | 25% | 10% |
 
 A última distribuição permanece até o fim da partida. Invocações manuais no
 treino continuam gerando somente o tipo solicitado.
@@ -218,14 +218,14 @@ ao número de minutos; dano base × 1,04 elevado ao número de minutos.
 A arrancada do dourado mantém 1.400 pixels/s; seu alcance cresce +8% por minuto,
 sem teto. A investida avança a cada frame até esgotar a distância restante,
 sem calcular duração; dobrar o alcance naturalmente dobra o tempo do percurso.
-No infinito, os +5% por chefão morto se multiplicam com esses bônus. Chefões
+No normal, os +5% por chefão morto se multiplicam com esses bônus. Chefões
 não recebem o bônus por minuto. XP, tamanho e tempos de aviso não aumentam.
 O deslocamento normal de todos os inimigos tem teto de velocidade base × 1,08^10.
 Minhocão: base de 100 pixels/s na superfície; Pai do Mato: base de 120 pixels/s.
 O jogador continua sem teto. Ataques especiais usam regras próprias: arrancada do
 dourado com velocidade fixa e alcance sem teto, investida do Minhocão a 1.400 pixels/s e
 tronco do Pai do Mato com velocidade fixa. Tempos de aviso não escalam com buffs.
-No infinito, vida atual e máxima do Minhocão crescem 10% por chefão derrotado;
+No normal, vida atual e máxima do Minhocão crescem 10% por chefão derrotado;
 novos Minhocões herdam 32.000 × 1,10 elevado ao total de chefões derrotados.
 O Minhocão aguarda submerso por 0,5 segundo antes de mostrar o aviso, sem fase
 oculta de rastreamento. Avisos mantêm sua variação de ±30%; a investida percorre
@@ -309,7 +309,7 @@ Benchmark reproduzível: `scripts/benchmark_late.gd`, seed 417, 501 inimigos inc
 ## Controle
 
 Controles reconhecidos pelo Godot são detectados ao abrir o jogo e ao conectar
-ou desconectar durante a sessão. O botão abaixo de Modo por chefões exibe Teclado ou Controle conforme o último dispositivo usado e abre a ajuda com abas para consultar ambos. A interface oculta
+ou desconectar durante a sessão. O botão abaixo de Boss Rush exibe Teclado ou Controle conforme o último dispositivo usado e abre a ajuda com abas para consultar ambos. A interface oculta
 o cursor e as teclas numéricas das melhorias enquanto o controle estiver em uso.
 O analógico esquerdo (com zona morta de 22%) e o direcional movem a canoa e
 navegam nos menus. Na seleção de melhorias, use somente o direcional; o analógico é ignorado. A / Cruz confirma; B / Círculo volta; Start pausa ou retoma.

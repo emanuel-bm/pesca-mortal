@@ -187,6 +187,8 @@ func _process(_dt: float) -> void:
  development_debug_frame.visible = development_debug_available() and game.state in ["playing", "paused"]
  development_debug_frame.scale = Vector2.ONE * 0.5
  development_debug_frame.position = Vector2(16, 140)
+ if game.run_mode == "bosses":
+  development_debug_frame.position = Vector2(16, get_viewport().get_visible_rect().size.y - development_debug_frame.get_combined_minimum_size().y * development_debug_frame.scale.y - 16)
  var active: bool = game.run_active and game.run_mode == "training"
  var paused: bool = active and game.state == "paused"
  update_interaction(paused)

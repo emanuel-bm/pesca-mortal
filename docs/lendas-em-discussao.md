@@ -11,16 +11,16 @@
 - Os recordes existentes sem versão serão atribuídos a 0.3; não será tentada a reconstrução de versões anteriores.
 - A classificação global encerrada fica congelada. Clientes antigos e envios offline atrasados não podem alterá-la; partidas pessoais continuam guardadas na versão em que foram jogadas.
 - Os nomes globais históricos serão preservados como estavam no encerramento.
-- Cada versão tem um campeão por modo: Infinito e Chefões. Lendas permite escolher o modo e Global/Pessoal.
+- Cada versão tem um campeão por modo: Normal e Boss Rush. Lendas permite escolher o modo e Global/Pessoal.
 - O histórico global continuará na mesma planilha Google Sheets, com uma aba por versão competitiva encerrada, como Lendas_0_3. Cada linha identifica o modo.
-- Cada aba histórica preserva somente os 100 melhores colocados por modo: até 100 de Infinito e até 100 de Chefões. Não será preservada a classificação global além desse limite.
+- Cada aba histórica preserva somente os 100 melhores colocados por modo: até 100 de Normal e até 100 de Boss Rush. Não será preservada a classificação global além desse limite.
 - Records continua recebendo os recordes da versão competitiva ativa.
 - Uma função administrativa no Apps Script será executada ao publicar uma nova versão X.Y para arquivar a classificação anterior e ativar a nova. Alterações apenas de Z dispensam essa operação.
 
 ## Fatos encontrados
 
 - O jogo está em 0.3.3. Os registros existentes não identificam sua versão competitiva.
-- Há classificações separadas de Infinito e Chefões, com critérios distintos.
+- Há classificações separadas de Normal e Boss Rush, com critérios distintos.
 - O backend guarda um melhor resultado por jogador e modo, substituindo o anterior.
 - O nome mostrado no ranking vem do perfil atual do jogador.
 - A fila de envios offline também não identifica versão competitiva.

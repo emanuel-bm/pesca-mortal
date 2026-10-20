@@ -5,19 +5,18 @@ Implementação em `scripts/pai_do_mato.gd`, integrada ao combate, aos projétei
 
 ## Ondas
 
-Nos modos por chefões e infinito, ondas 1–5: 1, 2, 3, 4 e 5 Minhocões.
+No modo normal (Jogar), ondas 1–5: 1, 2, 3, 4 e 5 Minhocões.
 Onda 6: um Pai do Mato. Onda 7: dois. Onda 8: três, crescendo um por onda.
-Chefes antigos não desaparecem. Primeiro confronto aos cinco minutos no modo
-por chefões e aos três no infinito; intervalo de dois minutos nos dois modos.
+O primeiro confronto ocorre aos três minutos, com intervalo de dois minutos.
 
-O modo por chefões continua após a morte do primeiro Minhocão. Seu ranking
-de vitórias mantém o contrato existente; esta implementação não altera o
-backend nem cria uma nova condição de vitória para a sequência de ondas.
+Na edição especial Boss Rush, há somente duas hordas: um Minhocão aos 2:00
+e um Pai do Mato 30 segundos após a morte do Minhocão. Enquanto o Minhocão estiver
+vivo, o segundo chefe não aparece. Derrotar o Pai do Mato encerra a partida com vitória.
 
 ## Atributos e ataques
 
 640.000 HP base: vinte vezes os 32.000 do Minhocão. Contato base: 60 de dano.
-No infinito, recebe os buffs de 5% por chefe derrotado, como os demais chefes.
+No normal, recebe os buffs de 5% por chefe derrotado, como os demais chefes.
 Não recebe os buffs de minuto reservados aos peixes. Pode ser atingido em
 qualquer fase. Deslocamento base: 140 pixels/s, com a mesma fórmula de teto da piranha:
 140 × 1,08^10 (aproximadamente 302,25 pixels/s). O teto vale ao nascer e ao
@@ -62,8 +61,8 @@ Teste principal: `scripts/test_pai_do_mato.gd`. Use `-- --capture` com
 renderização real para salvar a prévia em `.tools/pai-do-mato-preview.png`.
 
 O sprite do Pai do Mato é espelhado apenas ao caminhar para a esquerda.
-No infinito e no treino, cada chefe mostra barra e HP atual/máximo sob o sprite.
-No modo por chefões, a barra fica na parte inferior da tela. Troncos não exibem barra de vida.
+No normal e no treino, cada chefe mostra barra e HP atual/máximo sob o sprite.
+No modo Boss Rush, a barra fica na parte inferior da tela, com vida atual e máxima. Troncos não exibem barra de vida.
 
 ## Áudio
 

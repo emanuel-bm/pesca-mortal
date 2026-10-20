@@ -11,7 +11,7 @@ func run() -> void:
  var found := {}
  for item in game.find_children("*", "Button", true, false):
   if item.is_visible_in_tree(): found[item.text] = true
- for label in ["Modo infinito", "Modo por chefões", "Sala de treino", "Configurações"]:
+ for label in ["Jogar", "Boss Rush", "Sala de treino", "Configurações"]:
   if not found.has(label):
    push_error("Startup menu has no selectable option: " + label)
    game.free()

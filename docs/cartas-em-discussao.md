@@ -30,14 +30,14 @@ O usuário definiu **carta** como o nome dos power-ups do jogo. Ver `../GLOSSARY
 - Antes desta implementação, havia apenas melhorias de nível e cristais de XP, sem cartas.
 - Depois de 30 s, a chance de spawn de pintado é 25%. Se os abates seguirem essa proporção, 1%/5% representam 2% em média, aproximadamente uma carta a cada 50 abates. A proporção real de abates pode diferir.
 - Com essa mistura hipotética: 100 abates/min → 2 cartas/min; 300 → 6; 600 → 12. Valores esperados, não garantias.
-- No modo por chefões, a morte do chefe encerra a partida: uma carta temporária posterior não teria uso no combate atual.
+- No modo Boss Rush, a morte do chefe encerra a partida: uma carta temporária posterior não teria uso no combate atual.
 
 ## Decisões confirmadas — primeira rodada
 
 - Cartas são consumíveis com efeito imediato ou temporário. Melhorias de nível continuam compondo a build.
 - Coleta ativa automaticamente a carta, sem inventário ou botão de uso.
 - O objetivo são benefícios ocasionais; a meta inicial discutida é 2–4 coletas por minuto, sujeita a teste.
-- Chefões garantem uma carta no infinito; no modo por chefões, o abate final encerra a partida.
+- Chefões garantem uma carta no normal; no modo Boss Rush, o abate final encerra a partida.
 - Chances de drop por abate começam em **piranha 1%** e **pintado 5%**, diminuindo linearmente pelo tempo ativo da partida até **0,25%** e **1%**, respectivamente, aos quatro minutos. Depois disso, permanecem na base. Mantida a garantia de chefe conforme a decisão anterior.
 - Com 75% de abates de piranha e 25% de pintado, a chance média por abate vai de **2%** no início a **0,4375%** a partir dos quatro minutos. A composição é ilustrativa; a frequência por minuto depende dos abates. Não há acumulador por falhas nem garantia de drop dos peixes.
 
@@ -77,7 +77,7 @@ Quatro sprites em pixel art inspirados em cartas de baralho foram criados em `as
 - Perfurante marca apenas novas lanças, que conservam a perfuração mesmo após o efeito terminar. Colisão amostra o trajeto em intervalos de até oito pixels e registra os inimigos já atingidos. A regra de saldo de dano foi substituída por percentuais do dano base: 100%, 70%, 50%, depois 20% para cada alvo restante. Com 100 de dano base, os acertos causam 100, 70, 50, 20, 20 e assim por diante, independentemente da vida do alvo. Alvos mortos ou chefes invulneráveis são ignorados sem avançar a contagem. Colisões no mesmo quadro são resolvidas em sequência; cada lança mantém sua própria contagem. O dano exibido corresponde ao dano aplicado naquele acerto.
 - Intangível respeita a invulnerabilidade pós-dano já existente; uma não apaga a outra.
 - Na sala de treino, F9 invoca as quatro cartas próximas à canoa.
-- `scripts/test_cards.gd` verifica drops, contato, bônus, XP de múltiplos níveis, frações de XP, perfuração, vulnerabilidade do chefe, piscadas, pausas, reinício e F9. Testes de combate, prévia, velocidade, treino, infinito, Minhocão e grade de colisões também passaram. A renderização foi conferida no Godot com OpenGL.
+- `scripts/test_cards.gd` verifica drops, contato, bônus, XP de múltiplos níveis, frações de XP, perfuração, vulnerabilidade do chefe, piscadas, pausas, reinício e F9. Testes de combate, prévia, velocidade, treino, normal, Minhocão e grade de colisões também passaram. A renderização foi conferida no Godot com OpenGL.
 
 ## Verificação das mudanças de velocidade e XP
 

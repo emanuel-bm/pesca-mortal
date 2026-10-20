@@ -53,15 +53,15 @@ function tests() {
     assert.equal(send({...record, ...invalid}).error, 'invalid_record', JSON.stringify(invalid));
   }
   assert.equal(send({...record, ruleset: 'unknown'}).error, 'unsupported_ruleset');
-  assert.equal(send({...record, mode: 'bosses', reason: 'won', seconds: 299}).error, 'invalid_record');
+  assert.equal(send({...record, mode: 'bosses', reason: 'won', seconds: 149}).error, 'invalid_record');
   assert.equal(send({...record, mode: 'bosses', reason: 'won', seconds: 400}).updated, true);
   assert.equal(send({...record, mode: 'bosses', reason: 'won', seconds: 450}).updated, false);
-  assert.equal(send({...record, mode: 'bosses', reason: 'won', seconds: 350}).updated, true);
+  assert.equal(send({...record, mode: 'bosses', reason: 'won', seconds: 150}).updated, true);
   assert.equal(api.call({action: 'rename', player_id: account.player_id, token, nickname: 'NovoNome'}).ok, true);
   assert.equal(api.call({action: 'register', nickname: 'Pescador', token: otherToken}).ok, true, 'Old nickname is released');
   const ranking = api.call({action: 'ranking'});
   assert.equal(ranking.rankings.endless[0].nickname, 'NovoNome');
-  assert.equal(ranking.rankings.bosses[0].seconds, 350);
+  assert.equal(ranking.rankings.bosses[0].seconds, 150);
   assert(!JSON.stringify(ranking).includes('token_hash'));
   assert(!JSON.stringify(ranking).includes(token));
   // Independently accumulate increasing spawn rates using frame jitter and carry.

@@ -6,9 +6,9 @@ func _initialize() -> void:
 func check_menu(game: Node) -> bool:
  var visible_area: Rect2 = game.get_viewport_rect()
  var rect: Rect2 = game.overlay.get_global_rect()
- if game.state == "lost":
+ if game.state in ["won", "lost"]:
   if absf(rect.get_center().x - visible_area.get_center().x) > 2 or absf(rect.end.y - (visible_area.end.y - 20)) > 2 or rect.position.y <= visible_area.get_center().y:
-   push_error("Tela de morte deve ficar centralizada no rodapé, liberando o personagem")
+   push_error("Tela de resultado deve ficar centralizada no rodapé, liberando o personagem")
    return false
  elif rect.get_center().distance_to(visible_area.get_center()) > 2:
   push_error("Painel principal deve ficar no centro da tela")
@@ -21,7 +21,7 @@ func check_menu(game: Node) -> bool:
  if game.boss_records_panel and game.boss_records_panel.visible:
   var boss_records: Rect2 = game.boss_records_panel.get_global_rect()
   if boss_records.intersects(rect) or boss_records.position.x <= rect.end.x or not visible_area.encloses(boss_records):
-   push_error("Ranking de chefões deve ficar à direita, separado e dentro da tela")
+   push_error("Ranking de Boss Rush deve ficar à direita, separado e dentro da tela")
    return false
  if game.state == "paused" and not game.stats_panel.visible:
   push_error("Pausa deve mostrar atributos")
@@ -95,7 +95,7 @@ func run() -> void:
  for frame in 5: await process_frame
  var started := false
  for child in game.panel.get_children():
-  if child is Button and child.text == "Modo por chefões":
+  if child is Button and child.text == "Boss Rush":
    child.pressed.emit()
    started = game.state == "playing" and not game.overlay.visible
  if not started:

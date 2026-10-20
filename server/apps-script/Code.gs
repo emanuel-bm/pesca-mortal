@@ -113,7 +113,7 @@ function maximumKills_(seconds, mode) {
   const fish = Math.floor(2 * early + (8 / 300) * (early * (early - 1) / 2 + 0.051 * early)
     + 10 * late + (late * (late - 1) / 2 + 0.051 * late) / 30) + 2;
   const waves = Math.floor(t / 90);
-  const bosses = mode === 'endless' ? waves * (waves + 1) / 2 : (t >= 300 ? 1 : 0);
+  const bosses = mode === 'endless' ? waves * (waves + 1) / 2 : ((t >= 120 ? 1 : 0) + (t >= 150 ? 1 : 0));
   // Simultaneous population cap only reduces possible spawns.
   return fish + bosses;
 }
@@ -125,7 +125,7 @@ function validateRecord_(r) {
   if (typeof r.seconds !== 'number' || !Number.isFinite(r.seconds) || r.seconds <= 0 || r.seconds > Number.MAX_SAFE_INTEGER / 1000) return fail_('invalid_record', 'Tempo inválido.');
   if (!Number.isSafeInteger(r.kills) || r.kills < 0 || !Number.isSafeInteger(r.level) || r.level < 1) return fail_('invalid_record', 'Eliminações ou nível inválidos.');
   if (typeof r.run_id !== 'string' || !/^[a-f0-9]{32}$/.test(r.run_id)) return fail_('invalid_record', 'Identificador de partida inválido.');
-  if (r.mode === 'bosses' && (r.reason !== 'won' || r.seconds + 0.001 < 300)) return fail_('invalid_record', 'Vitória antes do surgimento do chefão.');
+  if (r.mode === 'bosses' && (r.reason !== 'won' || r.seconds + 0.001 < 150)) return fail_('invalid_record', 'Vitória antes do surgimento do chefão.');
   if (r.mode === 'endless' && !['death', 'menu', 'restart', 'quit'].includes(r.reason)) return fail_('invalid_record', 'Encerramento inválido.');
   if (r.kills > maximumKills_(r.seconds, r.mode)) return fail_('invalid_record', 'Eliminações acima do máximo possível nesse tempo.');
   // Preserve the 9-XP allowance for ordinary kills; endless bosses yield 100.

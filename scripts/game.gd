@@ -1,7 +1,7 @@
 extends Node2D
 
-const RUN_SECONDS := 180.0
-const FINAL_BOSS_TIME := 360.0
+const RUN_SECONDS := 120.0
+const FINAL_BOSS_DELAY := 30.0
 const ENDLESS_FIRST_BOSS_TIME := 180.0
 const ENDLESS_BOSS_INTERVAL := 120.0
 const ARENA := Vector2(2400, 1800)
@@ -791,9 +791,9 @@ func layout_modals() -> void:
   boss_records_panel.position = Vector2(viewport.x - 24 - boss_records_panel.size.x * factor, (viewport.y - boss_records_panel.size.y * factor) / 2)
  overlay.scale = Vector2.ONE * factor
  overlay.position = (viewport - overlay.size * factor) / 2
- if state == "lost":
+ if state in ["won", "lost"]:
   overlay.position.y = viewport.y - overlay.size.y * factor - 20
-  if is_instance_valid(fatal_hit_panel):
+  if state == "lost" and is_instance_valid(fatal_hit_panel):
    fatal_hit_panel.scale = Vector2.ONE * factor
    var bars_bottom := maxf(health_bar.position.y + health_bar.size.y, xp_bar.position.y + xp_bar.size.y)
    fatal_hit_panel.position = Vector2((viewport.x - fatal_hit_panel.size.x * factor) / 2, bars_bottom + 8)
@@ -890,8 +890,8 @@ func show_menu() -> void:
  title("PESCA MORTAL")
  if bool(get_tree().get_meta("offline_session", false)): title("Jogando offline", 18)
 
- button("Modo infinito", start_run.bind("endless"))
- button("Modo por chefões", start_run.bind("bosses"))
+ button("Jogar", start_run.bind("endless"))
+ button("Boss Rush", start_run.bind("bosses"))
  controls_help_button = button("Controle" if controller_input.using_controller else "Teclado", open_controls_help)
  button("Sala de treino", start_run.bind("training"))
  records_personal = {"endless": false, "bosses": false}
@@ -1097,13 +1097,13 @@ func show_records_panel() -> void:
  if records_panel:
   modal_row.remove_child(records_panel)
   records_panel.queue_free()
- records_panel = make_records_panel("RECORDES · INFINITO", "endless")
+ records_panel = make_records_panel("RECORDES · NORMAL", "endless")
 
 func show_boss_records_panel() -> void:
  if boss_records_panel:
   modal_row.remove_child(boss_records_panel)
   boss_records_panel.queue_free()
- boss_records_panel = make_records_panel("RECORDES · CHEFÕES", "bosses")
+ boss_records_panel = make_records_panel("RECORDES · BOSS RUSH", "bosses")
 
 func select_records_tab(mode: String, personal: bool) -> void:
  records_personal[mode] = personal
@@ -1248,7 +1248,7 @@ func show_history() -> void:
   if date_parts.size() > 1: date += " " + date_parts[1].left(5)
   history_cell(grid, date)
   history_cell(grid, RUN_HISTORY.character_text(record))
-  var mode_label := "Infinito" if record.mode == "endless" else "Chefão"
+  var mode_label := "Normal" if record.mode == "endless" else "Boss Rush"
   if not RUN_HISTORY.eligible(record): mode_label += " (debug)"
   history_cell(grid, mode_label)
   history_cell(grid, "%02d:%02d" % [maxi(0, int(record.seconds)) / 60, maxi(0, int(record.seconds)) % 60])
@@ -1648,7 +1648,6 @@ func _process(delta: float) -> void:
  if state == "playing":
   update_game(minf(delta, 0.05))
  incoming_damage_feed.refresh(delta, self)
- cards.refresh()
  update_water(minf(delta, 0.05))
  var show_player_bars := run_active or state in ["won", "lost"]
  for item in [health_bar, health_label, xp_bar, xp_label, xp_current_level_label, xp_next_level_label]:
@@ -1673,8 +1672,8 @@ func _process(delta: float) -> void:
  hud.text = "%02d:%02d    ELIMINAÇÕES %s" % [int(elapsed) / 60, int(elapsed) % 60, format_integer(kills)]
  if run_mode == "endless" and state in ["playing", "upgrade", "paused"]:
   var remaining := maxi(0, ceili(next_boss_time - elapsed))
-  hud.text += "\nINFINITO · ONDA %s EM %02d:%02d" % [format_integer(endless_wave + 1), floori(remaining / 60.0), remaining % 60]
- elif run_mode == "bosses" and state in ["playing", "upgrade", "paused"] and boss_stage < 2:
+  hud.text += "\nNORMAL · ONDA %s EM %02d:%02d" % [format_integer(endless_wave + 1), floori(remaining / 60.0), remaining % 60]
+ elif run_mode == "bosses" and state in ["playing", "upgrade", "paused"] and boss_stage < 2 and is_finite(next_boss_time):
   var remaining := maxi(0, ceili(next_boss_time - elapsed))
   hud.text += "\n%s EM %02d:%02d" % ["MINHOCÃO" if boss_stage == 0 else "PAI DO MATO", floori(remaining / 60.0), remaining % 60]
  if not profile_panel: setup_profile_panel()
@@ -1728,6 +1727,7 @@ func _process(delta: float) -> void:
     boss_name = "PAI DO MATO" if enemies.all(func(enemy: Dictionary): return not enemy.boss or enemy.get("species", "") == "pai_do_mato") else "CHEFÕES"
    hud.text += "\n%s x%s" % [boss_name, format_integer(count)]
    if run_mode == "bosses": hud.text += " · " + action
+ cards.refresh()
  queue_redraw()
 
 func update_game(dt: float) -> void:
@@ -1861,6 +1861,8 @@ func update_game(dt: float) -> void:
     if run_mode == "bosses":
      bosses_defeated += 1
      if enemy.get("species", "") == "pai_do_mato": final_boss_defeated = true
+     elif boss_stage == 1 and not is_finite(next_boss_time):
+      next_boss_time = elapsed + FINAL_BOSS_DELAY
     elif run_mode == "endless": buff_endless_enemies()
    cards.drop(enemy)
    kills += 1
@@ -2009,8 +2011,8 @@ func spawn_boss_mode_bosses() -> void:
   spawn_enemy(true)
   boss_spawned = true
   boss_stage = 1
-  next_boss_time = FINAL_BOSS_TIME
- if boss_stage == 1 and elapsed >= FINAL_BOSS_TIME:
+  next_boss_time = INF
+ if boss_stage == 1 and elapsed >= next_boss_time:
   spawn_enemy(true, "pai_do_mato")
   boss_stage = 2
   next_boss_time = INF
@@ -3074,6 +3076,12 @@ func _draw() -> void:
   draw_string(game_font, boss_title_position, boss_title, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_title_size, boss_bar_color)
   draw_rect(Rect2(Vector2(230, viewport.y - 35), Vector2(viewport.x - 460, 14)), Color(0.2, 0.1, 0.25))
   draw_rect(Rect2(Vector2(230, viewport.y - 35), Vector2((viewport.x - 460) * boss_health / boss_max_health, 14)), boss_bar_color)
+  var boss_hp_text := "%s / %s HP" % [format_integer(ceili(boss_health)), format_integer(roundi(boss_max_health))]
+  var boss_hp_size := 20
+  var boss_hp_width := game_font.get_string_size(boss_hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_hp_size).x
+  var boss_hp_position := Vector2((viewport.x - boss_hp_width) / 2, viewport.y - 20).round()
+  draw_string_outline(game_font, boss_hp_position, boss_hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_hp_size, 4, Color(0.05, 0.02, 0.08))
+  draw_string(game_font, boss_hp_position, boss_hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_hp_size, Color.WHITE)
  var number_font: Font = game_font
  for number in damage_numbers:
   if not visible_world.grow(80).has_point(number.pos): continue
@@ -3168,8 +3176,8 @@ func render_legends() -> void:
  version_picker.item_selected.connect(choose_legends_version.bind(versions))
  choices_row.add_child(version_picker)
  var mode_picker := OptionButton.new()
- mode_picker.add_item("Infinito")
- mode_picker.add_item("Chefões")
+ mode_picker.add_item("Normal")
+ mode_picker.add_item("Boss Rush")
  mode_picker.select(0 if legends_mode == "endless" else 1)
  mode_picker.item_selected.connect(choose_legends_mode)
  choices_row.add_child(mode_picker)
