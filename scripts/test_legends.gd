@@ -31,6 +31,8 @@ func run() -> void:
  client.competitive_version = "0.4"
  client.network_disabled = true
  root.add_child(client)
+ client.competitive_build = true
+ client.pending.clear()
  # A deployed pre-seasons backend returns rankings without version metadata.
  var notifications := [0]
  client.changed.connect(func() -> void: notifications[0] += 1)
@@ -86,11 +88,19 @@ func run() -> void:
  game.elapsed = 60.0
  game.kills = 10
  game.record_run("death")
- assert(game.online.pending["0.4:endless"].seconds == 60.0, "Previous season's best must not prevent a new submission")
+ if OS.is_debug_build():
+  assert(game.online.pending.is_empty(), "Debug runs must not enter a competitive season")
+ else:
+  assert(game.online.pending["0.4:endless"].seconds == 60.0, "Previous season's best must not prevent a new submission")
  var loaded := HISTORY.load_records(game.history_path)
  assert(loaded.size() == 2)
  assert(HISTORY.for_version(loaded, "0.3")[0].seconds == 500.0)
  assert(HISTORY.for_version(loaded, "0.4")[0].seconds == 60.0)
+ # Seed a valid release result to exercise personal-ranking UI in debug tests.
+ for record in loaded:
+  record.debug_run = false
+  record.record_valid = true
+ game.run_history = loaded
  game.online.seasons = ["0.3", "0.2", "0.1"]
  game.online.profile = {"nickname": "Pescador"}
  var archived: Array = []

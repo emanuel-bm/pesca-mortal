@@ -143,6 +143,32 @@ function tests() {
   assert.equal(api.properties.has('TRANSITION_VERSION'), false);
   assert.equal(api.call({...event, action: 'ranking'}).rankings.endless.length, 2, 'Global season changes preserve the festival');
   assert.equal(submitFestival({...festivalRecord, run_id: 'c'.repeat(32)}).updated, true, 'Festival does not close with global seasons');
+  // Release 0.5: use current spawn/XP rules and the real administrative entry point.
+  const season = backend();
+  season.context.activateCompetitiveVersion_('0.4');
+  const player = season.call({action: 'register', nickname: 'Temporada', token});
+  const submit = result => season.call({action: 'submit', player_id: player.player_id, token, record: result});
+  assert.equal(submit({...record, competitive_version: '0.4'}).updated, true);
+  season.context.iniciarNovaVersaoCompetitiva();
+  assert.equal(season.properties.get('ACTIVE_VERSION'), '0.5');
+  assert.equal(season.call({action: 'legends', competitive_version: '0.4'}).rankings.endless.length, 1);
+  assert.equal(season.call({action: 'ranking', competitive_version: '0.5'}).rankings.endless.length, 0);
+  const current = {...record, competitive_version: '0.5', ruleset: 'pesca-2'};
+  assert.equal(submit({...record, competitive_version: '0.4'}).error, 'version_closed');
+  assert.equal(submit({...current, ruleset: 'pesca-1'}).error, 'unsupported_ruleset');
+  assert.equal(submit({...current, seconds: 30, kills: 1, level: 4}).updated, true, '20-XP fish can grant several levels');
+  assert.equal(season.context.validateRecord_({...current, seconds: 180, kills: 1, level: 10}), null, 'Current boss XP must be accepted');
+  assert.equal(season.context.validateRecord_({...current, seconds: 60, kills: 190}).error, 'invalid_record');
+  for (const dt of [1 / 60, 0.05, 0.017]) {
+    let time = 0, timer = 0, spawned = 0;
+    while (time < 1800) {
+      time += dt; timer -= dt;
+      if (timer <= 0) { timer += 1; spawned += Math.floor(Math.max(2, time / 60) * 1.5); }
+      assert(spawned <= season.context.maximumKills_(time, 'endless', 'pesca-2'));
+    }
+  }
+  season.context.iniciarNovaVersaoCompetitiva();
+  assert.equal(season.call({action: 'ranking', competitive_version: '0.5'}).rankings.endless.length, 1, 'Retry preserves new season scores');
   console.log('BACKEND PASS: unique names, rename, credential ownership, record ordering, replayed requests, field/rules/XP validation, spawn bounds, public data');
 }
 if (process.argv.includes('--serve')) {
