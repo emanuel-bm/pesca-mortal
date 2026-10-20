@@ -124,15 +124,15 @@ func run() -> void:
   assert(game.sounds.volume_group(sound_id) == "cards")
   assert(not game.sounds.effect_enabled(sound_id), "Master mute must mute card sounds")
  fresh()
- for sample in [[0.0, 0.01, 0.05], [60.0, 0.008125, 0.04], [120.0, 0.00625, 0.03], [240.0, 0.0025, 0.01], [600.0, 0.0025, 0.01]]:
+ for sample in [[0.0, 0.005, 0.025], [59.9, 0.005, 0.025], [60.0, 0.0045, 0.0225], [120.0, 0.00405, 0.02025], [240.0, 0.0032805, 0.0164025], [3600.0, 0.00000898505149957217, 0.00004492525749786085]]:
   game.elapsed = sample[0]
-  assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": false}), sample[1]), "Piranha drop must decrease linearly and stop at its base")
-  assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": true}), sample[2]), "Pintado drop must decrease linearly and stop at its base")
+  assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": false}), sample[1]), "Piranha drop must decrease by 10% each complete minute without a floor")
+  assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": true}), sample[2]), "Pintado drop must decrease by 10% each complete minute without a floor")
   for species in ["pacu", "dourado"]:
    var enemy := {"boss": false, "tank": false, "species": species}
-   var progress: float = clampf(sample[0] / 240.0, 0.0, 1.0)
-   var expected: float = lerpf(0.05, 0.02, progress) if species == "pacu" else lerpf(0.10, 0.05, progress)
-   assert(is_equal_approx(game.cards.drop_chance(enemy), expected), "Pacu and Dourado drops must decrease to 2% and 5% at four minutes")
+   var decay: float = pow(0.9, floorf(sample[0] / 60.0))
+   var expected: float = (0.025 if species == "pacu" else 0.05) * decay
+   assert(is_equal_approx(game.cards.drop_chance(enemy), expected), "Pacu and Dourado drops must start at half the original base and decay every minute")
    game.luck = 100.0
    assert(is_equal_approx(game.cards.drop_chance(enemy), expected * 2.0), "Luck must multiply species drop rates")
    game.luck = 0.0
@@ -307,8 +307,8 @@ func run() -> void:
  assert(game.cards.drop_chance({"boss": true}) == 0.0)
  game.training.cards_toggle.button_pressed = true
  assert(game.training.cards_enabled)
- assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": false}), 0.01))
- assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": true}), 0.05))
+ assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": false}), 0.005))
+ assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": true}), 0.025))
  game.spawn_enemy(true)
  game.enemies.back().hp = 0.0
  game.update_game(0.0)

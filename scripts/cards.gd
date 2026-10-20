@@ -88,12 +88,12 @@ func active(id: String) -> bool:
 func drop_chance(enemy: Dictionary) -> float:
  if game.run_mode == "training" and not game.training.cards_enabled: return 0.0
  if enemy.boss: return 1.0 if game.run_mode in ["endless", "training"] else 0.0
- var progress := clampf(game.elapsed / 240.0, 0.0, 1.0)
+ var decay := pow(0.9, floorf(maxf(game.elapsed, 0.0) / 60.0))
  var species: String = enemy.get("species", "")
- var base := lerpf(0.05, 0.01, progress) if enemy.tank else lerpf(0.01, 0.0025, progress)
- if species == "pacu": base = lerpf(0.05, 0.02, progress)
- if species == "dourado": base = lerpf(0.10, 0.05, progress)
- return minf(1.0, base * (1.0 + game.luck / 100.0))
+ var base := 0.025 if enemy.tank else 0.005
+ if species == "pacu": base = 0.025
+ if species == "dourado": base = 0.05
+ return minf(1.0, base * decay * (1.0 + game.luck / 100.0))
 
 func drop(enemy: Dictionary) -> void:
  if game.rng.randf() < drop_chance(enemy):
