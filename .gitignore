@@ -9,3 +9,5 @@ dist/
 !.env.example
 *.pem
 *.key
+outputs/
+node_modules/

@@ -1,5 +1,5 @@
 /** Private Sheets backend. Deploy as owner; public web-app access. */
-const RULESET = 'pesca-1';
+const RULESET = 'pesca-2';
 const LEGACY_VERSION = '0.3';
 const ARCHIVE = ['mode', 'position', 'nickname', 'seconds', 'kills', 'level', 'player_id'];
 const SEASONS = ['version', 'closed_at'];
@@ -85,7 +85,7 @@ function doPost(e) {
     const existing = rows_(records);
     const index = existing.findIndex(row => row[0] === input.player_id && row[1] === result.mode && (row[10] || LEGACY_VERSION) === active);
     if (index >= 0 && !better_(result, {seconds: existing[index][2], kills: existing[index][3]})) return json_({ok: true, updated: false});
-    const row = [input.player_id, result.mode, result.seconds, result.kills, result.level, result.character, result.reason, RULESET, result.run_id, new Date().toISOString(), active];
+    const row = [input.player_id, result.mode, result.seconds, result.kills, result.level, result.character, result.reason, result.ruleset, result.run_id, new Date().toISOString(), active];
     if (index < 0) records.appendRow(row);
     else records.getRange(index + 2, 1, 1, row.length).setValues([row]);
     SpreadsheetApp.flush();
@@ -103,7 +103,19 @@ function better_(next, previous) {
   return next.kills > previous.kills;
 }
 
-function maximumKills_(seconds, mode) {
+function maximumKills_(seconds, mode, ruleset = 'pesca-1') {
+  if (ruleset === RULESET) {
+    // Current rate: floor(max(2, elapsed / 60) * 1.5), one batch per second.
+    const n = Math.floor(seconds + 0.051);
+    const blocks = Math.floor(n / 40);
+    const fish = blocks < 4 ? 3 * (n + 1)
+      : 480 + 40 * ((blocks - 1) * blocks / 2 - 6) + blocks * (n % 40 + 1);
+    const waves = Math.max(0, Math.floor((seconds + 0.001 - 180) / 120) + 1);
+    const early = Math.min(waves, 5), late = Math.max(0, waves - 5);
+    const bosses = mode === 'endless' ? early * (early + 1) / 2 + late * (late + 1) / 2
+      : ((seconds + 0.001 >= 120 ? 1 : 0) + (seconds + 0.001 >= 150 ? 1 : 0));
+    return fish + bosses + 2;
+  }
   // Game ticks clamp dt to 0.05s; spawn batches occur at 0,1,2,... seconds.
   // Sum increasing rates at tick+0.051s, conservatively allowing rounding drift.
   const t = seconds + 0.001;
@@ -120,23 +132,27 @@ function maximumKills_(seconds, mode) {
 
 function validateRecord_(r) {
   if (!r || typeof r !== 'object' || Array.isArray(r)) return fail_('invalid_record', 'Resultado inválido.');
-  if (r.ruleset !== RULESET) return fail_('unsupported_ruleset', 'Versão das regras não suportada.');
+  if (r.competitive_version !== undefined && !validVersion_(r.competitive_version)) return fail_('invalid_record', 'Versão competitiva inválida.');
+  if (![RULESET, 'pesca-1'].includes(r.ruleset)) return fail_('unsupported_ruleset', 'Versão das regras não suportada.');
+  if (compareVersions_(r.competitive_version || LEGACY_VERSION, '0.5') >= 0 && r.ruleset !== RULESET) return fail_('unsupported_ruleset', 'Versão das regras não suportada.');
   if (!['endless', 'bosses'].includes(r.mode) || r.character !== 'Pescador') return fail_('invalid_record', 'Modo ou personagem inválido.');
   if (typeof r.seconds !== 'number' || !Number.isFinite(r.seconds) || r.seconds <= 0 || r.seconds > Number.MAX_SAFE_INTEGER / 1000) return fail_('invalid_record', 'Tempo inválido.');
   if (!Number.isSafeInteger(r.kills) || r.kills < 0 || !Number.isSafeInteger(r.level) || r.level < 1) return fail_('invalid_record', 'Eliminações ou nível inválidos.');
   if (typeof r.run_id !== 'string' || !/^[a-f0-9]{32}$/.test(r.run_id)) return fail_('invalid_record', 'Identificador de partida inválido.');
   if (r.mode === 'bosses' && (r.reason !== 'won' || r.seconds + 0.001 < 150)) return fail_('invalid_record', 'Vitória antes do surgimento do chefão.');
   if (r.mode === 'endless' && !['death', 'menu', 'restart', 'quit'].includes(r.reason)) return fail_('invalid_record', 'Encerramento inválido.');
-  if (r.kills > maximumKills_(r.seconds, r.mode)) return fail_('invalid_record', 'Eliminações acima do máximo possível nesse tempo.');
+  if (r.kills > maximumKills_(r.seconds, r.mode, r.ruleset)) return fail_('invalid_record', 'Eliminações acima do máximo possível nesse tempo.');
   // Preserve the 9-XP allowance for ordinary kills; endless bosses yield 100.
   // Allow +20 percentage points per level-up, with no XP bonus cap.
   const waves = r.mode === 'endless' ? Math.max(0, Math.floor((r.seconds + 0.001 - 180) / 120) + 1) : 0;
   const bossKills = Math.min(r.kills, waves * (waves + 1) / 2);
   const xpMultiplier = Math.max(2, 1 + 0.2 * Math.max(0, r.level - 2));
-  const budget = ((r.kills - bossKills) * 9 + bossKills * 100) * xpMultiplier;
+  const current = r.ruleset === RULESET;
+  const bossAllowance = r.mode === 'bosses' && current ? Math.min(r.kills, 2) : bossKills;
+  const budget = ((r.kills - bossAllowance) * (current ? 20 : 9) + bossAllowance * (current ? 5000 : 100)) * xpMultiplier;
   let required = 0;
   for (let level = 1; level < r.level; level++) {
-    required += Math.ceil((5 + (level - 1) * 3) * 1.4 * Math.pow(1.05, level - 1));
+    required += Math.ceil((5 + (level - 1) * 3) * (current ? 1 : 1.4) * Math.pow(current ? 1.06 : 1.05, level - 1));
     if (required > budget) return fail_('invalid_record', 'Nível incompatível com as eliminações.');
   }
   return null;
@@ -146,7 +162,7 @@ function publicRanking_(accounts, records) {
   const names = new Map(accounts.map(row => [row[0], row[1]]));
   const rankings = {endless: [], bosses: []};
   records.forEach(row => {
-    if (!names.has(row[0]) || !rankings[row[1]] || row[7] !== RULESET) return;
+    if (!names.has(row[0]) || !rankings[row[1]] || ![RULESET, 'pesca-1'].includes(row[7])) return;
     rankings[row[1]].push({player_id: row[0], nickname: names.get(row[0]), seconds: row[2], kills: row[3], level: row[4]});
   });
   Object.keys(rankings).forEach(mode => {
@@ -175,7 +191,7 @@ function archiveRanking_(book, version) {
   return {ok: true, competitive_version: version, rankings};
 }
 // Altere o destino para X.Y da nova publicação e execute pelo editor.
-function iniciarNovaVersaoCompetitiva() { activateCompetitiveVersion_('0.4'); }
+function iniciarNovaVersaoCompetitiva() { activateCompetitiveVersion_('0.5'); }
 function activateCompetitiveVersion_(next) {
   if (!validVersion_(next)) throw new Error('Use X.Y, sem patch.');
   const props = PropertiesService.getScriptProperties();

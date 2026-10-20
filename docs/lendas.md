@@ -22,9 +22,9 @@ Se as consultas de 0.3 e 0.4 retornarem os mesmos recordes sem os campos `compet
 
 ## Publicar uma nova versão competitiva
 
-Ao publicar 0.4.0, execute `iniciarNovaVersaoCompetitiva` pelo editor do Apps Script. O destino inicial no código é `0.4`; nas publicações seguintes, altere esse destino para o novo X.Y e salve antes de executar. A função administrativa não é exposta pela API pública do jogo.
+Ao publicar 0.5.0, execute `iniciarNovaVersaoCompetitiva` pelo editor do Apps Script. O destino no código é `0.5`; nas publicações seguintes, altere esse destino para o novo X.Y e salve antes de executar. A função administrativa não é exposta pela API pública do jogo.
 
-A operação bloqueia envios durante a mudança, ordena os recordes globais, salva os 100 melhores de cada modo na aba `Lendas_0_3` com posição e nome do encerramento, registra 0.3 em Seasons, limpa Records e ativa 0.4. As abas Players e os arquivos anteriores são preservados. Patches como 0.4.1 não precisam dessa operação.
+A operação bloqueia envios durante a mudança, ordena os recordes globais, salva os 100 melhores de cada modo na aba `Lendas_0_4` com posição e nome do encerramento, registra 0.4 em Seasons, limpa Records e ativa 0.5. As abas Players e os arquivos anteriores são preservados. Patches como 0.5.1 não precisam dessa operação. Atualize também a implantação web para a nova versão do script, mantendo a URL existente.
 
 O nome do arquivo segue `Lendas_X_Y`. Seus campos são modo, posição, nickname, tempo, eliminações, nível e identificador público do jogador. Esse identificador permite reconhecer o jogador na classificação histórica mesmo após uma mudança de nome; arquivos antigos sem identificador usam o nickname como compatibilidade. Seasons guarda a versão encerrada e a data do encerramento. Records contém apenas os melhores resultados da versão ativa. Atualize a implantação do Apps Script para disponibilizar os identificadores nas consultas e nos novos arquivos.
 

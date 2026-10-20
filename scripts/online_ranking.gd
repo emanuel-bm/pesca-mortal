@@ -3,7 +3,7 @@ extends Node
 signal changed
 
 const HISTORY = preload("res://scripts/run_history.gd")
-const RULESET := "pesca-1"
+const RULESET := "pesca-2"
 const DEFAULT_PATH := "user://online_ranking.json"
 var storage_path := DEFAULT_PATH
 var endpoint := ""
