@@ -1739,7 +1739,6 @@ func update_game(dt: float) -> void:
  cards.tick_effects(dt)
  update_damage_numbers(dt)
  elapsed += dt
- update_minute_buffs()
  if not boss_spawned and run_mode in ["bosses", "endless"]:
   var first_boss_time: float = RUN_SECONDS if run_mode == "bosses" else next_boss_time
   sounds.prepare_boss_music(first_boss_time - elapsed)
@@ -2043,24 +2042,6 @@ func fish_damage_multiplier(boss: bool = false) -> float:
 
 func fish_speed_multiplier() -> float:
  return ENEMY_SPEED_LIMITS.minute_multiplier(floori(elapsed / 60.0))
-
-func update_minute_buffs() -> void:
- var minute := floori(elapsed / 60.0)
- for enemy in enemies:
-  if enemy.hp <= 0 or enemy.get("obstacle", false): continue
-  var previous := int(enemy.get("buff_minute", minute))
-  if minute <= previous: continue
-  var multiplier := ENEMY_GROWTH.multiplier(minute) / ENEMY_GROWTH.multiplier(previous)
-  var speed_multiplier := ENEMY_SPEED_LIMITS.minute_multiplier(minute) / ENEMY_SPEED_LIMITS.minute_multiplier(previous)
-  var is_boss := bool(enemy.get("boss", false))
-  var damage_multiplier := ENEMY_GROWTH.damage_multiplier(minute, is_boss) / ENEMY_GROWTH.damage_multiplier(previous, is_boss)
-  for stat in ["hp", "max_hp"]: enemy[stat] *= multiplier
-  enemy.speed *= speed_multiplier
-  enemy.contact *= damage_multiplier
-  enemy["damage_multiplier"] = fish_damage_multiplier(is_boss)
-  enemy["stat_multiplier"] = fish_stat_multiplier()
-  enemy["speed_multiplier"] = fish_speed_multiplier()
-  enemy.buff_minute = minute
 
 func separation_radius(enemy: Dictionary) -> float:
  # Forest boss sprite is 220 px wide; worm is 140 px; fish use radius * 2.
@@ -2538,7 +2519,7 @@ func spawn_enemy(boss: bool, species: String = "", arrival_count: int = 1) -> vo
   enemy.speed = 125.0
   enemy.contact = 20.0
  var multiplier := fish_stat_multiplier(species)
- enemy.buff_minute = floori(elapsed / 60.0)
+ # Snapshot growth at spawn; living enemies keep these attributes.
  enemy["stat_multiplier"] = multiplier
  enemy["speed_multiplier"] = fish_speed_multiplier()
  enemy["damage_multiplier"] = fish_damage_multiplier(boss)

@@ -211,9 +211,9 @@ na área anunciada; contato mantém a invulnerabilidade de 0,8 s do jogador.
 Velocidade inicial do jogador: 180; cada melhoria soma 20, sem teto.
 Peixes usam sua própria velocidade, sem limite baseado na velocidade do jogador.
 Piranhas e pacus se movem a 125 pixels/s, pintados a 80 pixels/s e dourados
-a 100 pixels/s. Atributos crescem a cada minuto completo:
+a 100 pixels/s. Atributos são definidos no nascimento, usando os minutos completos:
 +20%, +20%, +10% e depois +6% por minuto, sempre somados sobre a base.
-Inimigos vivos recebem os bônus e preservam a proporção de vida restante.
+Inimigos vivos mantêm vida atual, vida máxima, velocidade, dano e multiplicadores.
 Novos peixes recebem os totais do momento do spawn: 1,2× no minuto 1, 1,62× no minuto 5,
 1,68× no minuto 6 e 2,52× no minuto 20. Dano de peixes comuns tem teto de 3×.
 A arrancada do dourado começa em 1.400 pixels/s; seu alcance e velocidade crescem

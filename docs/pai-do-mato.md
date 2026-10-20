@@ -17,8 +17,8 @@ vivo, o segundo chefe não aparece. Derrotar o Pai do Mato encerra a partida com
 
 150.000 HP base: 7,5 vezes os 20.000 do Minhocão. Contato base: 60 de dano.
 Vida, velocidade normal e dano recebem +20%, +20%, +10% e depois +6% da
-base por minuto completo, em todos os modos, sem composição. Vida atual preserva a fração restante.
-Nasce com os bônus do tempo da partida.
+base por minuto completo, em todos os modos, sem composição.
+Nasce com os bônus do tempo da partida e mantém esses atributos enquanto estiver vivo.
 Derrotar chefões não aumenta atributos. Pode ser atingido em qualquer fase.
 Deslocamento base: 120 pixels/s, sem teto; aos 20 minutos chega a 302,4 pixels/s.
 

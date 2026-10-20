@@ -32,8 +32,8 @@ As prévias e a aplicação de melhorias usam a mesma fórmula.
 Inimigos usam minutos completos: +20%, +20%, +10% e depois +6% por minuto,
 sempre sobre a base inicial. Vida e velocidade não têm teto; dano dos peixes comuns
 tem teto de 3× da base, atingido no minuto 28. Dano dos chefes segue a curva sem esse teto.
-Inimigos vivos e recém-criados recebem os mesmos totais. Ao aumentar a vida máxima
-de um inimigo ferido, sua porcentagem de vida restante é preservada.
+Os totais são aplicados apenas no nascimento. Inimigos vivos, incluindo chefões,
+mantêm vida atual, vida máxima, velocidade, dano e multiplicadores de quando nasceram.
 Chefes usam a mesma progressão temporal. Alcance e velocidade da arrancada do dourado
 também usam essa curva; velocidade inicial da arrancada: 1.400 pixels/s.
 

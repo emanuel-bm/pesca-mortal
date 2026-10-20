@@ -40,15 +40,15 @@ func run() -> void:
   game.elapsed = 1800
   game.update_game(0.0)
   game.bosses_defeated += 1
-  assert(is_equal_approx(capped.speed, initial_speed * 3.12 / 2.52))
-  assert(is_equal_approx(capped.damage_multiplier, 3.0))
+  assert(is_equal_approx(capped.speed, initial_speed))
+  assert(is_equal_approx(capped.damage_multiplier, 2.52))
   game.spawn_enemy(false, species)
-  assert(is_equal_approx(game.enemies.back().speed, capped.speed))
-  assert(is_equal_approx(game.enemies.back().contact, capped.contact))
+  assert(game.enemies.back().speed > capped.speed)
+  assert(game.enemies.back().contact > capped.contact)
   assert(game.enemies.back().max_hp > initial_health)
-  assert(is_equal_approx(capped.max_hp, initial_health * 3.12 / 2.52))
+  assert(is_equal_approx(capped.max_hp, initial_health))
   if species == "dourado":
-   assert(is_equal_approx(game.DOURADO.dash_speed(capped), game.DOURADO.DASH_SPEED * 3.12))
+   assert(is_equal_approx(game.DOURADO.dash_speed(capped), game.DOURADO.DASH_SPEED * 2.52))
    assert(is_equal_approx(game.DOURADO.dash_range(capped), game.DOURADO.DASH_BASE_DISTANCE * capped.stat_multiplier))
  game.start_run("endless")
  game.bosses_defeated = 15
@@ -57,10 +57,10 @@ func run() -> void:
  assert(is_equal_approx(forest_boss.speed, game.PAI_DO_MATO.MOVE_SPEED))
  game.elapsed = 1200
  game.update_game(0.0)
- assert(is_equal_approx(forest_boss.speed_multiplier, 2.52))
- assert(is_equal_approx(forest_boss.speed, game.PAI_DO_MATO.MOVE_SPEED * 2.52))
+ assert(is_equal_approx(forest_boss.speed_multiplier, 1.0))
+ assert(is_equal_approx(forest_boss.speed, game.PAI_DO_MATO.MOVE_SPEED))
  game.spawn_enemy(true, "pai_do_mato")
- assert(is_equal_approx(game.enemies.back().speed, forest_boss.speed))
+ assert(is_equal_approx(game.enemies.back().speed, forest_boss.speed * 2.52))
  game.spawn_enemy(true)
  var worm: Dictionary = game.enemies.back()
  assert(is_equal_approx(worm.speed, 100.0 * 2.52))
