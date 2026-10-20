@@ -13,9 +13,9 @@ func run() -> void:
  game._apply_upgrade("magnet")
  assert(game.magnet == 180.0)
  game.speed = 249.0
- assert(is_equal_approx(game.projected_stats("speed").speed, 249.0 * 1.10))
+ assert(is_equal_approx(game.projected_stats("speed").speed, 249.0 + 20.0))
  game._apply_upgrade("speed")
- assert(is_equal_approx(game.speed, 249.0 * 1.10))
+ assert(is_equal_approx(game.speed, 249.0 + 20.0))
  game.speed = 1000.0
  assert(not game.format_stat("speed", game.speed).contains("MAX"))
  assert(not game.format_stat("speed", game.speed - 1).contains("MAX"))

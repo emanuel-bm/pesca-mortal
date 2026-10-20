@@ -15,7 +15,7 @@ func run() -> void:
   if item is Button:
    modes.append(item.text)
    assert(not item.text.begins_with("Testar") and item.text != "Teste de hordas")
- assert("Sala de treino" in modes and "Modo infinito" in modes and "Modo por chefões" in modes, str(modes))
+ assert("Sala de treino" in modes and "Jogar" in modes and "Boss Rush" in modes, str(modes))
  game.show_settings()
  for item in game.panel.get_children():
   if item is BaseButton: assert(not item.text.to_lower().contains("teste"))
@@ -71,5 +71,5 @@ func run() -> void:
  assert(game.elapsed == 0.0)
  game.run_recorded = true
  game.free()
- print("GAME MODES PASS: somente treino, infinito e chefões; configurações sem testes; modos antigos removidos")
+ print("GAME MODES PASS: somente treino, normal e Boss Rush; configurações sem testes; modos antigos removidos")
  quit()

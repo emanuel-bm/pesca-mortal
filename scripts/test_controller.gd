@@ -50,7 +50,7 @@ func run() -> void:
  adapter.set_input_mode(true)
  adapter.send_key(KEY_DOWN)
  await process_frame
- assert(root.gui_get_focus_owner().text == "Modo por chefões")
+ assert(root.gui_get_focus_owner().text == "Boss Rush")
  press(adapter, JOY_BUTTON_A)
  await process_frame
  assert(game.state == "playing")

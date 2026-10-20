@@ -187,6 +187,8 @@ func _process(_dt: float) -> void:
  development_debug_frame.visible = development_debug_available() and game.state in ["playing", "paused"]
  development_debug_frame.scale = Vector2.ONE * 0.5
  development_debug_frame.position = Vector2(16, 140)
+ if game.run_mode == "bosses":
+  development_debug_frame.position = Vector2(16, get_viewport().get_visible_rect().size.y - development_debug_frame.get_combined_minimum_size().y * development_debug_frame.scale.y - 16)
  var active: bool = game.run_active and game.run_mode == "training"
  var paused: bool = active and game.state == "paused"
  update_interaction(paused)
@@ -315,15 +317,7 @@ func act(action: String) -> void:
   "piranha", "pintado", "boss":
    for index in (1 if action == "boss" else 100):
     game.spawn_enemy(action == "boss", "" if action == "boss" else action)
-    var enemy: Dictionary = game.enemies.back()
-    if action != "boss":
-     enemy.tank = action == "pintado"
-     enemy.radius = 44.0 if enemy.tank else 13.0
-     enemy.hp = (200.0 if enemy.tank else 30.0) * game.fish_stat_multiplier()
-     enemy.max_hp = enemy.hp
-     enemy.speed = (80.0 if enemy.tank else 125.0) * game.fish_speed_multiplier()
-     enemy.contact = (20.0 if enemy.tank else 10.0) * game.fish_stat_multiplier()
-    else: game.boss_spawned = true
+    if action == "boss": game.boss_spawned = true
   "fish_clear", "clear":
    for index in range(game.enemies.size() - 1, -1, -1):
     if action == "clear" or (not game.enemies[index].boss and not game.enemies[index].get("obstacle", false)):

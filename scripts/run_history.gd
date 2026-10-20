@@ -1,5 +1,5 @@
 extends RefCounted
-## Histórico geral por data; ranking exclusivo do infinito por tempo e eliminações.
+## Histórico geral por data; ranking exclusivo do normal por tempo e eliminações.
 
 const LEGACY_VERSION := "0.3"
 

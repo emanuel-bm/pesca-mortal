@@ -1,6 +1,7 @@
 extends RefCounted
 
 const SPEED_LIMITS = preload("res://scripts/enemy_speed_limits.gd")
+const BASE_HEALTH := 20000.0
 
 const EMERGENCE_RADIUS := 90.0
 const DASH_WIDTH := 42.0
@@ -10,7 +11,6 @@ const EMERGENCE_WARNING_TIME := 1.0 / ATTACK_RATE
 const DASH_WARNING_TIME := 1.2 / ATTACK_RATE
 const DASH_SPEED := 1400.0
 const CONTACT_DAMAGE := 40.0
-const ENDLESS_HEALTH_GROWTH := 1.10
 const EMERGENCE_DAMAGE := 60.0
 const DASH_DAMAGE := 80.0
 const EXPOSED_TIME := 3.0
@@ -32,7 +32,7 @@ static func vulnerable(enemy: Dictionary) -> bool:
  return enemy.phase in ["exposed", "dash"]
 
 static func update(enemy: Dictionary, dt: float, player: Vector2, arena: Vector2) -> bool:
- var movement_multiplier := float(enemy.get("stat_multiplier", 1.0))
+ var movement_multiplier := float(enemy.get("speed_multiplier", enemy.get("stat_multiplier", 1.0)))
  if enemy.phase != "dash": enemy.timer -= dt
  match enemy.phase:
   "burrow":

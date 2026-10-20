@@ -27,7 +27,7 @@ Ao editar o backend, atualize a implantação para uma nova versão pelo gerenci
 
 ## Validação `pesca-1`
 
-O backend verifica tipos, valores finitos/não negativos, modo, personagem, motivo de encerramento, vitória dos chefões somente após 300 segundos, nível compatível com um teto conservador de XP e eliminações abaixo do máximo acumulado de surgimentos. No infinito, chefões aparecem a cada 90 segundos em ondas de 1, 2, 3…; peixes surgem em lotes a cada segundo, com taxa crescente. A fórmula inclui o primeiro lote e a margem de frame/precisão (o jogo limita `dt` a 0,05 s). O teto simultâneo de 1.000 inimigos só pode reduzir surgimentos; não é usado como teto de eliminações acumuladas.
+O backend verifica tipos, valores finitos/não negativos, modo, personagem, motivo de encerramento, vitória do Boss Rush somente após 150 segundos (limite mínimo: Minhocão aos 120 s e intervalo de 30 s após seu abate), nível compatível com um teto conservador de XP e eliminações abaixo do máximo acumulado de surgimentos. No normal, chefões aparecem a cada 90 segundos em ondas de 1, 2, 3…; peixes surgem em lotes a cada segundo, com taxa crescente. A fórmula inclui o primeiro lote e a margem de frame/precisão (o jogo limita `dt` a 0,05 s). O teto simultâneo de 1.000 inimigos só pode reduzir surgimentos; não é usado como teto de eliminações acumuladas.
 
 Não há mínimo positivo universal de eliminações. O chefão derrotado no modo de vitória encerra a partida antes de incrementar `kills` no código atual. Testes de nível avançado não são publicados. Os limites são verificações de plausibilidade e não uma comprovação da legitimidade da partida.
 

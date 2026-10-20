@@ -25,12 +25,12 @@ func run() -> void:
    assert(game.boss_arrival_label.text == expected_arrival)
    for boss in game.enemies:
     assert(boss.get("species", "") == ("pai_do_mato" if wave >= 6 else ""))
-    assert(boss.max_hp == (640000 if wave >= 6 else 32000))
+    assert(is_equal_approx(boss.max_hp, (150000 if wave >= 6 else 20000) * game.fish_stat_multiplier()))
  game.start_run("training")
  game.training.act("pai_do_mato")
  var boss: Dictionary = game.enemies[0]
  assert(game.RUN_HISTORY.killer_details(boss).killer_id == "pai_do_mato")
- assert(boss.max_hp == 640000 and game.enemy_vulnerable(boss))
+ assert(boss.max_hp == 150000 and game.enemy_vulnerable(boss))
  assert(not game.pai_do_mato_art.is_empty() and not game.log_art.is_empty())
  var facing_boss := boss.duplicate(true)
  facing_boss.pos = Vector2(1000, 900)
@@ -105,14 +105,14 @@ func run() -> void:
  assert(attack == "hand")
  game.player = boss.target
  game.execute_forest_attack(boss, attack)
- assert(game.health == hp - 280)
+ assert(game.health == hp - 150)
  assert(game.PAI_DO_MATO.update(boss, 0, game.player, game.ARENA) == "", "Impact only fires once")
  boss.max_hp = 800000
  boss.pos = Vector2(800, 600)
  boss.target = Vector2(1200, 900)
  game.execute_forest_attack(boss, "log")
  var log: Dictionary = game.enemies.back()
- assert(log.hp == 200000 and log.contact == 0 and not log.landed)
+ assert(log.hp == 75000 and log.contact == 0 and not log.landed)
  hp = game.health
  game.update_log(log, 0.65)
  assert(log.landed and game.health == hp)
@@ -127,16 +127,16 @@ func run() -> void:
  var sliding: Vector2 = game.move_player_around_logs(stopped, side)
  assert((sliding - stopped).dot(side) > 0, "Movement must remain possible along the obstacle")
  game.elapsed = 120
- game.update_minute_buffs()
- game.buff_endless_enemies()
- assert(log.hp == 200000 and log.max_hp == 200000, "Log health stays at 200000 regardless of boss health and buffs")
+ game.update_game(0.0)
+ game.bosses_defeated += 1
+ assert(log.hp == 75000 and log.max_hp == 75000, "Log health stays at 75000 regardless of boss health and buffs")
  boss.hp = 0
  game.spawn_timer = 10000
  game.attack_timer = 10000
  game.update_game(0)
  assert(game.enemies.has(log), "Log must outlive its parent boss")
  var reward_count: int = game.gems.size()
- game.hit_with_spear(log, 200000)
+ game.hit_with_spear(log, 75000)
  game.spawn_timer = 10000
  game.attack_timer = 10000
  game.enemies.erase(boss)
@@ -173,7 +173,7 @@ func run() -> void:
  log = game.enemies.back()
  hp = game.health
  game.update_log(log, 0.65)
- assert(game.health == hp - 200, "Swept flight must hit even across a whole frame")
+ assert(game.health == hp - 100, "Swept flight must hit even across a whole frame")
  game.invulnerability = 0
  game.player = log.pos
  hp = game.health

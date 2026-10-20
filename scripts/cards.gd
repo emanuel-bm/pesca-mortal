@@ -5,6 +5,7 @@ const REPEAT_WEIGHT_FACTOR := 0.5
 const MIN_REPEAT_WEIGHT := 0.000001
 const NAMES := {"ima": "ÍMÃ", "furia": "FÚRIA", "intangivel": "INTANGÍVEL", "perfurante": "PERFURANTE"}
 const EFFECT_SECONDS := 6.0
+const INTANGIBLE_SECONDS := 3.0
 const FLOOR_SECONDS := 30.0
 const PICKUP_SIZE := Vector2(32, 48)
 const SHINE = preload("res://assets/cards/shine.gdshader")
@@ -16,7 +17,7 @@ var drop_streak := 0
 var effects := {"furia": 0.0, "intangivel": 0.0, "perfurante": 0.0}
 var textures: Dictionary = {}
 var effect_layer: CanvasLayer
-var effect_row: HBoxContainer
+var effect_row: BoxContainer
 var indicators: Dictionary = {}
 var blocked_seconds := 0.0
 var block_label: Label
@@ -33,7 +34,7 @@ func _ready() -> void:
  for id in IDS: textures[id] = load("res://assets/cards/%s.png" % id)
  effect_layer = CanvasLayer.new()
  add_child(effect_layer)
- effect_row = HBoxContainer.new()
+ effect_row = BoxContainer.new()
  effect_row.position = Vector2(22, 186)
  effect_row.add_theme_constant_override("separation", 18)
  effect_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -88,12 +89,12 @@ func active(id: String) -> bool:
 func drop_chance(enemy: Dictionary) -> float:
  if game.run_mode == "training" and not game.training.cards_enabled: return 0.0
  if enemy.boss: return 1.0 if game.run_mode in ["endless", "training"] else 0.0
- var progress := clampf(game.elapsed / 240.0, 0.0, 1.0)
+ var decay := pow(0.9, floorf(maxf(game.elapsed, 0.0) / 60.0))
  var species: String = enemy.get("species", "")
- var base := lerpf(0.05, 0.01, progress) if enemy.tank else lerpf(0.01, 0.0025, progress)
- if species == "pacu": base = lerpf(0.05, 0.02, progress)
- if species == "dourado": base = lerpf(0.10, 0.05, progress)
- return minf(1.0, base * (1.0 + game.luck / 100.0))
+ var base := 0.025 if enemy.tank else 0.005
+ if species == "pacu": base = 0.025
+ if species == "dourado": base = 0.05
+ return minf(1.0, base * decay * (1.0 + game.luck / 100.0))
 
 func drop(enemy: Dictionary) -> void:
  if game.rng.randf() < drop_chance(enemy):
@@ -150,7 +151,8 @@ func activate(id: String) -> void:
   magnet_visual_seconds = 1.0
   for gem in game.gems: gem["magnetized"] = true
  else:
-  effects[id] = EFFECT_SECONDS * (1.0 + game.persistence / 100.0)
+  if not active(id): effect_row.move_child(indicators[id].item, effect_row.get_child_count() - 1)
+  effects[id] = (INTANGIBLE_SECONDS if id == "intangivel" else EFFECT_SECONDS) * (1.0 + game.persistence / 100.0)
   if id == "furia": game.attack_timer = minf(game.attack_timer, game.effective_attack_delay())
  refresh()
 
@@ -171,6 +173,7 @@ func attack_feedback() -> void:
 func shield_feedback(source: Vector2) -> void:
  # Sustained contact must not restart the animation every simulation frame.
  if shield_impact_seconds > 0.0: return
+ game.sounds.play_effect("shield_block")
  shield_impact_seconds = 0.32
  shield_impact_direction = (source - game.player).normalized()
  if shield_impact_direction.is_zero_approx(): shield_impact_direction = Vector2.UP
@@ -229,6 +232,8 @@ func refresh() -> void:
  for pickup in pickups: refresh_pickup(pickup)
  if not effect_row: return
  effect_row.visible = game.run_active
+ effect_row.vertical = game.run_mode == "bosses"
+ effect_row.add_theme_constant_override("separation", 8 if effect_row.vertical else 18)
  for id in effects:
   indicators[id].icon.material.set_shader_parameter("blocked", blocked_seconds > 0)
   indicators[id].item.visible = active(id)
@@ -239,3 +244,7 @@ func refresh() -> void:
  block_label.text = "CARTAS BLOQUEADAS · %s s" % game.NUMBER_FORMAT.decimal(blocked_seconds, 1, false)
  block_label.position = Vector2((viewport.x - block_label.get_minimum_size().x) / 2, viewport.y - 82)
  effect_row.position = Vector2(maxf(22, (viewport.x - effect_row.size.x) / 2), viewport.y - 56)
+ if game.run_mode == "bosses":
+  var hud_bottom: float = game.hud.position.y + game.hud.get_combined_minimum_size().y
+  effect_row.position = Vector2(game.hud.position.x, hud_bottom + 12)
+  block_label.position = Vector2(effect_row.position.x, effect_row.position.y + effect_row.size.y + 8)

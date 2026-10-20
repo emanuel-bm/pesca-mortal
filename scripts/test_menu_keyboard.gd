@@ -35,11 +35,11 @@ func run() -> void:
  game.online.profile = {"nickname": "Teste"}
  game.show_menu()
  for frame in 5: await process_frame
- check(root.gui_get_focus_owner().text == "Modo infinito", "Menu deve selecionar a primeira opção")
+ check(root.gui_get_focus_owner().text == "Jogar", "Menu deve selecionar a primeira opção")
  var highlight: StyleBoxFlat = root.gui_get_focus_owner().get_theme_stylebox("focus")
  check(highlight.border_color == Color(0.3, 1.0, 0.45), "Foco deve usar o destaque verde do menu de nível")
  await key(KEY_DOWN)
- check(root.gui_get_focus_owner().text == "Modo por chefões", "Seta para baixo deve selecionar a próxima opção")
+ check(root.gui_get_focus_owner().text == "Boss Rush", "Seta para baixo deve selecionar a próxima opção")
  await key(KEY_UP)
  await key(KEY_UP)
  check(root.gui_get_focus_owner().text == "?", "Seta para cima deve alcançar as notas no fim do menu")
@@ -49,7 +49,7 @@ func run() -> void:
  check(game.state == "menu", "Esc deve fechar as notas")
  await key(KEY_UP)
  await key(KEY_DOWN)
- check(root.gui_get_focus_owner().text == "Modo infinito", "Seta para baixo deve voltar ao início")
+ check(root.gui_get_focus_owner().text == "Jogar", "Seta para baixo deve voltar ao início")
  focus_button(game, "Configurações")
  await key(KEY_ENTER)
  check(game.state == "settings", "Enter deve abrir configurações")

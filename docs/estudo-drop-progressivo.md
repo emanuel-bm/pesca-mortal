@@ -119,7 +119,7 @@ não uma medição da distribuição de abates do jogo.
 - Manter a escolha do tipo de carta separada do sorteio de ocorrência.
 
 As regras de chefes e treino acima são recomendações de design, não decisões
-já implementadas. Atualmente o chefe tem chance 100% em infinito/treino e
+já implementadas. Atualmente o chefe tem chance 100% em normal/treino e
 0% nos demais modos, com a opção de desativar cartas no treino prevalecendo.
 O sorteio usa `game.rng.randf()` e a escolha da carta ocorre depois do sucesso.
 Fonte local: `scripts/cards.gd`, funções `reset`, `drop_chance`, `drop` e `spawn`.

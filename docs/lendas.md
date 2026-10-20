@@ -6,7 +6,7 @@ Lendas abre com a versão competitiva atual selecionada e seus recordes atuais, 
 
 O top 3 aparece em cards horizontais alinhados às colunas posição, nickname, level, tempo e eliminações. O recorde do jogador aparece sempre em uma linha com as mesmas colunas abaixo da lista, fora da área de rolagem e sem título ou versão repetida. Se o jogador estiver no top 100, essa linha repete seu resultado e sua posição; fora dele, mostra o melhor recorde local com um traço na posição. Sem recorde, os valores também mostram traços. Não há abas Global/Pessoal nem lista de partidas pessoais em Lendas.
 
-Cada versão encerrada guarda até 100 jogadores por modo: 100 de Infinito e 100 de Chefões. A lista global tem rolagem para consultar todos os resultados arquivados. Os campeões são os primeiros colocados de cada modo, seguindo os critérios de classificação atuais. O histórico pessoal preserva todas as partidas locais, separadas pela versão em que foram jogadas.
+Cada versão encerrada guarda até 100 jogadores por modo: 100 de Normal e 100 de Boss Rush. A lista global tem rolagem para consultar todos os resultados arquivados. Os campeões são os primeiros colocados de cada modo, seguindo os critérios de classificação atuais. O histórico pessoal preserva todas as partidas locais, separadas pela versão em que foram jogadas.
 
 ## Atualizar a implantação existente
 

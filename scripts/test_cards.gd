@@ -8,6 +8,7 @@ func _initialize() -> void:
 func fresh(mode: String = "bosses") -> void:
  game.start_run(mode)
  game.test_run = true
+ game.crit_chance = 0
  game.spawn_timer = 1000.0
  game.attack_timer = 1000.0
 
@@ -101,7 +102,7 @@ func test_piercing_through_boss() -> void:
  spear.pos = boss.pos
  spear.velocity = Vector2.ZERO
  game.update_game(0.0)
- assert(boss.hp == 32000.0 and spear.hit_enemies.is_empty(), "An immune boss must not consume a hit tier")
+ assert(boss.hp == 20000.0 and spear.hit_enemies.is_empty(), "An immune boss must not consume a hit tier")
  spear.pos = behind.pos
  game.update_game(0.0)
  assert(behind.hp == 900.0)
@@ -121,18 +122,18 @@ func run() -> void:
   var stream: AudioStreamWAV = game.sounds.players[sound_id].stream
   assert(is_equal_approx(stream.get_length(), 1.0))
   assert(stream.loop_mode == AudioStreamWAV.LOOP_DISABLED)
-  assert(game.sounds.volume_group(sound_id) == "cards")
+  assert(game.sounds.volume_group(sound_id) == "character")
   assert(not game.sounds.effect_enabled(sound_id), "Master mute must mute card sounds")
  fresh()
- for sample in [[0.0, 0.01, 0.05], [60.0, 0.008125, 0.04], [120.0, 0.00625, 0.03], [240.0, 0.0025, 0.01], [600.0, 0.0025, 0.01]]:
+ for sample in [[0.0, 0.005, 0.025], [59.9, 0.005, 0.025], [60.0, 0.0045, 0.0225], [120.0, 0.00405, 0.02025], [240.0, 0.0032805, 0.0164025], [3600.0, 0.00000898505149957217, 0.00004492525749786085]]:
   game.elapsed = sample[0]
-  assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": false}), sample[1]), "Piranha drop must decrease linearly and stop at its base")
-  assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": true}), sample[2]), "Pintado drop must decrease linearly and stop at its base")
+  assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": false}), sample[1]), "Piranha drop must decrease by 10% each complete minute without a floor")
+  assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": true}), sample[2]), "Pintado drop must decrease by 10% each complete minute without a floor")
   for species in ["pacu", "dourado"]:
    var enemy := {"boss": false, "tank": false, "species": species}
-   var progress: float = clampf(sample[0] / 240.0, 0.0, 1.0)
-   var expected: float = lerpf(0.05, 0.02, progress) if species == "pacu" else lerpf(0.10, 0.05, progress)
-   assert(is_equal_approx(game.cards.drop_chance(enemy), expected), "Pacu and Dourado drops must decrease to 2% and 5% at four minutes")
+   var decay: float = pow(0.9, floorf(sample[0] / 60.0))
+   var expected: float = (0.025 if species == "pacu" else 0.05) * decay
+   assert(is_equal_approx(game.cards.drop_chance(enemy), expected), "Pacu and Dourado drops must start at half the original base and decay every minute")
    game.luck = 100.0
    assert(is_equal_approx(game.cards.drop_chance(enemy), expected * 2.0), "Luck must multiply species drop rates")
    game.luck = 0.0
@@ -157,10 +158,10 @@ func run() -> void:
  game.player = floor_position
  game.update_game(0.0)
  assert(game.cards.pickups.is_empty() and game.cards.active("furia"))
- assert(game.speed == 190.0 and game.damage == 20.0 and game.attack_delay == 0.65)
- assert(is_equal_approx(game.effective_speed(), 228.0))
- assert(is_equal_approx(game.effective_damage(), 30.0))
- assert(is_equal_approx(game.effective_attack_delay(), 0.65 / 1.5))
+ assert(game.speed == 180.0 and game.damage == 10.0 and game.attack_delay == 1.0)
+ assert(is_equal_approx(game.effective_speed(), 216.0))
+ assert(is_equal_approx(game.effective_damage(), 15.0))
+ assert(is_equal_approx(game.effective_attack_delay(), 1.0 / 1.5))
  game.cards.activate("perfurante")
  game.cards.activate("intangivel")
  game.receive_hit(25.0, game.player + Vector2.RIGHT)
@@ -169,7 +170,7 @@ func run() -> void:
  game.cards.activate("furia")
  assert(game.cards.effects.furia == 6.0, "Repeat refreshes duration without stacking")
  game._apply_upgrade("speed")
- assert(is_equal_approx(game.effective_speed(), 190.0 * 1.10 * 1.2))
+ assert(is_equal_approx(game.effective_speed(), 200.0 * 1.2))
  game.update_game(1.0)
  assert(not game.cards.active("intangivel") and not game.cards.active("perfurante"))
  game.invulnerability = 0.4
@@ -230,9 +231,9 @@ func run() -> void:
  game.attack_timer = 1000.0
  game.bullets[0].pos = game.player + Vector2(50, 0)
  game.update_game(0.1)
- assert(one.hp == -20.0 and two.hp == -11.0, "Piercing applies full tier damage even to low-health targets")
+ assert(one.hp == -5.0 and two.hp == -0.5, "Piercing applies full tier damage even to low-health targets")
  assert(game.bullets.size() == 1)
- assert(game.bullets[0].base_damage == 30.0 and game.bullets[0].hit_enemies.size() == 2)
+ assert(game.bullets[0].base_damage == 15.0 and game.bullets[0].hit_enemies.size() == 2)
  game.bullets[0].velocity = Vector2.ZERO
  game.update_game(0.01)
  assert(game.bullets[0].hit_enemies.size() == 2, "Repeated overlap must not advance damage tiers")
@@ -277,7 +278,7 @@ func run() -> void:
  game.rebuild_projectile_grid()
  assert(game.projectile_target(boss.pos) == 0)
  game.hit_with_spear(boss)
- assert(boss.hp == 31970.0)
+ assert(boss.hp == 19985.0)
  fresh()
  game.cards.spawn("ima", game.player + Vector2(200, 0))
  game.cards.activate("furia")
@@ -307,8 +308,8 @@ func run() -> void:
  assert(game.cards.drop_chance({"boss": true}) == 0.0)
  game.training.cards_toggle.button_pressed = true
  assert(game.training.cards_enabled)
- assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": false}), 0.01))
- assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": true}), 0.05))
+ assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": false}), 0.005))
+ assert(is_equal_approx(game.cards.drop_chance({"boss": false, "tank": true}), 0.025))
  game.spawn_enemy(true)
  game.enemies.back().hp = 0.0
  game.update_game(0.0)
@@ -338,7 +339,7 @@ func run() -> void:
  for entry in [[KEY_2, "furia"], [KEY_3, "intangivel"], [KEY_4, "perfurante"]]:
   key.keycode = entry[0]
   game.training._input(key)
-  assert(game.cards.effects[entry[1]] == 6.0)
+  assert(game.cards.effects[entry[1]] == (3.0 if entry[1] == "intangivel" else 6.0))
  game.cards.effects.furia = 2.0
  key.keycode = KEY_2
  key.echo = true

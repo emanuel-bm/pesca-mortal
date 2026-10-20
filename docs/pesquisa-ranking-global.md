@@ -77,8 +77,8 @@ Oferecer um código de recuperação separado ou exportação da credencial. Par
 
 Leitura de `scripts/run_history.gd`:
 
-- Infinito: maior tempo; empate decidido pelo maior número de eliminações.
-- Chefões: somente partidas com motivo `won`; menor tempo; empate pelo maior número de eliminações.
+- Normal: maior tempo; empate decidido pelo maior número de eliminações.
+- Boss Rush: somente partidas com motivo `won`; menor tempo; empate pelo maior número de eliminações.
 - O histórico local continua útil; ranking global deve manter o melhor resultado de cada jogador por modo.
 
 Padronizar a precisão do tempo enviado (por exemplo milissegundos inteiros) e incluir versão/temporada do ranking, pois mudanças de equilíbrio podem alterar o significado de um recorde. Não misturar automaticamente resultados de modos diferentes.

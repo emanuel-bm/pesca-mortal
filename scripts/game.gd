@@ -1,15 +1,20 @@
 extends Node2D
 
-const RUN_SECONDS := 180.0
-const FINAL_BOSS_TIME := 360.0
+const RUN_SECONDS := 120.0
+const FINAL_BOSS_DELAY := 30.0
 const ENDLESS_FIRST_BOSS_TIME := 180.0
 const ENDLESS_BOSS_INTERVAL := 120.0
 const ARENA := Vector2(2400, 1800)
 const ENEMY_SEPARATION_SCALE := 0.3
 const ENEMY_SPEED_LIMITS = preload("res://scripts/enemy_speed_limits.gd")
-const FISH_SPEED_CAP_MINUTE := ENEMY_SPEED_LIMITS.CAP_MINUTE
+const ENEMY_GROWTH = preload("res://scripts/enemy_growth.gd")
 const ENEMY_SPAWN_DISTANCE := 680.0
 const MAX_HEALTH := 100.0
+const BASE_PLAYER_DAMAGE := 10.0
+const DAMAGE_UPGRADE_AMOUNT := 10.0
+const BASE_ATTACK_RATE := 1.0
+const ATTACK_RATE_UPGRADE_AMOUNT := 0.5
+const BASE_ATTACK_DELAY := 1.0 / BASE_ATTACK_RATE
 const XP_GROWTH_PER_LEVEL := 1.06
 const XP_COLOR := Color(0.25, 0.65, 1.0)
 const CRITICAL_COLOR := Color(1.0, 0.5, 0.1)
@@ -20,7 +25,7 @@ const KNOCKBACK_SPEED_PER_DAMAGE := 5.0
 const KNOCKBACK_DECELERATION := 1800.0
 const MOVEMENT_MULTIPLIER := 1.2
 const FASTEST_ENEMY_SPEED := 125.0
-const BASE_PLAYER_SPEED := 190.0
+const BASE_PLAYER_SPEED := 180.0
 const MINHOCAO = preload("res://scripts/minhocao.gd")
 const PAI_DO_MATO = preload("res://scripts/pai_do_mato.gd")
 const DOURADO = preload("res://scripts/dourado.gd")
@@ -30,15 +35,15 @@ const NUMBER_FORMAT = preload("res://scripts/number_format.gd")
 const BASE_COLLECTION_RANGE := 180.0
 const UPGRADES := ["damage", "rate", "shots", "speed", "max_health", "xp_bonus", "luck", "persistence", "crit_chance"]
 const LABELS := {
- "damage": ["Impacto", "+20% de dano"],
- "rate": ["Ritmo", "+20% de frequência de ataque"],
+ "damage": ["Impacto", "+10 de dano"],
+ "rate": ["Ritmo", "+0,5 ataque por segundo"],
  "shots": ["Rajada", "+1 projétil por disparo"],
- "speed": ["Velocidade", "+10% de velocidade"],
- "max_health": ["Vitalidade", "+20% de vida máxima"],
+ "speed": ["Velocidade", "+20 de velocidade"],
+ "max_health": ["Vitalidade", "+20% da vida máxima base"],
  "xp_bonus": ["Aprendizado", "+20% de ganho de XP"],
  "luck": ["Sorte", "+10% de drop de cartas"],
- "persistence": ["Persistência", "+5% de duração das cartas"],
- "crit_chance": ["Crítico", "+5% de chance de crítico"]
+ "persistence": ["Persistência", "+10% de duração das cartas"],
+ "crit_chance": ["Crítico", "Chance de crítico sobe para o próximo múltiplo de 10%"]
 }
 
 var rng := RandomNumberGenerator.new()
@@ -82,7 +87,7 @@ var level := 1
 var level_healing := 0
 var xp := 0
 var kills := 0
-var damage := 20.0
+var damage := BASE_PLAYER_DAMAGE
 var match_damage_dealt := 0.0
 var match_damage_taken := 0.0
 var match_card_uses: Dictionary = {}
@@ -93,7 +98,7 @@ var match_details_button: Button
 var fatal_hit: Dictionary = {}
 var fatal_hit_panel: PanelContainer
 var incoming_damage_feed: Control
-var attack_delay := 0.65
+var attack_delay := BASE_ATTACK_DELAY
 var shot_count := 1
 var speed := BASE_PLAYER_SPEED
 var magnet := BASE_COLLECTION_RANGE
@@ -814,9 +819,9 @@ func layout_modals() -> void:
   boss_records_panel.position = Vector2(viewport.x - 24 - boss_records_panel.size.x * factor, (viewport.y - boss_records_panel.size.y * factor) / 2)
  overlay.scale = Vector2.ONE * factor
  overlay.position = (viewport - overlay.size * factor) / 2
- if state == "lost":
+ if state in ["won", "lost"]:
   overlay.position.y = viewport.y - overlay.size.y * factor - 20
-  if is_instance_valid(fatal_hit_panel):
+  if state == "lost" and is_instance_valid(fatal_hit_panel):
    fatal_hit_panel.scale = Vector2.ONE * factor
    var bars_bottom := maxf(health_bar.position.y + health_bar.size.y, xp_bar.position.y + xp_bar.size.y)
    fatal_hit_panel.position = Vector2((viewport.x - fatal_hit_panel.size.x * factor) / 2, bars_bottom + 8)
@@ -828,19 +833,19 @@ func layout_modals() -> void:
 func projected_stats(id: String = "") -> Dictionary:
  var values := {"damage": damage, "rate": 1.0 / attack_delay, "shots": shot_count, "speed": speed, "max_health": max_health, "xp_bonus": xp_bonus, "luck": luck, "persistence": persistence, "crit_chance": crit_chance}
  match id:
-  "damage": values.damage = damage * 1.20
-  "rate": values.rate = 1.2 / attack_delay
+  "damage": values.damage = damage + DAMAGE_UPGRADE_AMOUNT
+  "rate": values.rate = 1.0 / attack_delay + ATTACK_RATE_UPGRADE_AMOUNT
   "shots": values.shots = shot_count + 1
-  "speed": values.speed = speed * 1.10
-  "max_health": values.max_health = max_health * 1.20
+  "speed": values.speed = speed + 20.0
+  "max_health": values.max_health = max_health + MAX_HEALTH * 0.20
   "xp_bonus": values.xp_bonus = xp_bonus + 20
   "luck": values.luck = luck + 10
-  "persistence": values.persistence = persistence + 5
-  "crit_chance": values.crit_chance = mini(100, crit_chance + 5)
+  "persistence": values.persistence = persistence + 10
+  "crit_chance": values.crit_chance = mini(100, (floori(crit_chance / 10.0) + 1) * 10)
  return values
 
 func format_stat(id: String, value: float) -> String:
- if id == "rate": return NUMBER_FORMAT.decimal(value, 2, false)
+ if id == "rate": return NUMBER_FORMAT.decimal(value, 1)
  if id == "crit_chance": return "%d%%" % roundi(value) + (" (MAX)" if value >= 100 else "")
  var text := ("+%s%%" % format_integer(roundi(value))) if id in ["xp_bonus", "luck", "persistence"] else format_integer(roundi(value))
  return text
@@ -917,8 +922,8 @@ func show_menu() -> void:
  if online.festival_mode: title(preload("res://scripts/festival.gd").NAME, 22)
  if bool(get_tree().get_meta("offline_session", false)): title("Jogando offline", 18)
 
- button("Modo infinito", start_run.bind("endless"))
- button("Modo por chefões", start_run.bind("bosses"))
+ button("Jogar", start_run.bind("endless"))
+ button("Boss Rush", start_run.bind("bosses"))
  controls_help_button = button("Controle" if controller_input.using_controller else "Teclado", open_controls_help)
  button("Sala de treino", start_run.bind("training"))
  records_personal = {"endless": false, "bosses": false}
@@ -1129,13 +1134,13 @@ func show_records_panel() -> void:
  if records_panel:
   modal_row.remove_child(records_panel)
   records_panel.queue_free()
- records_panel = make_records_panel("RECORDES · INFINITO", "endless")
+ records_panel = make_records_panel("RECORDES · NORMAL", "endless")
 
 func show_boss_records_panel() -> void:
  if boss_records_panel:
   modal_row.remove_child(boss_records_panel)
   boss_records_panel.queue_free()
- boss_records_panel = make_records_panel("RECORDES · CHEFÕES", "bosses")
+ boss_records_panel = make_records_panel("RECORDES · BOSS RUSH", "bosses")
 
 func select_records_tab(mode: String, personal: bool) -> void:
  records_personal[mode] = personal
@@ -1284,7 +1289,7 @@ func show_history() -> void:
   if date_parts.size() > 1: date += " " + date_parts[1].left(5)
   history_cell(grid, date)
   history_cell(grid, RUN_HISTORY.character_text(record))
-  var mode_label := "Infinito" if record.mode == "endless" else "Chefão"
+  var mode_label := "Normal" if record.mode == "endless" else "Boss Rush"
   if not RUN_HISTORY.eligible(record): mode_label += " (debug)"
   history_cell(grid, mode_label)
   history_cell(grid, "%02d:%02d" % [maxi(0, int(record.seconds)) / 60, maxi(0, int(record.seconds)) % 60])
@@ -1576,8 +1581,8 @@ func start_run(mode: String = "bosses") -> void:
  level_healing = 0
  xp = 0
  kills = 0
- damage = 20.0
- attack_delay = 0.65
+ damage = BASE_PLAYER_DAMAGE
+ attack_delay = BASE_ATTACK_DELAY
  shot_count = 1
  speed = BASE_PLAYER_SPEED
  magnet = BASE_COLLECTION_RANGE
@@ -1691,7 +1696,6 @@ func _process(delta: float) -> void:
  if state == "playing":
   update_game(minf(delta, 0.05))
  incoming_damage_feed.refresh(delta, self)
- cards.refresh()
  update_water(minf(delta, 0.05))
  var show_player_bars := run_active or state in ["won", "lost"]
  for item in [health_bar, health_label, xp_bar, xp_label, xp_current_level_label, xp_next_level_label]:
@@ -1716,8 +1720,8 @@ func _process(delta: float) -> void:
  hud.text = "%02d:%02d    ELIMINAÇÕES %s" % [int(elapsed) / 60, int(elapsed) % 60, format_integer(kills)]
  if run_mode == "endless" and state in ["playing", "upgrade", "paused"]:
   var remaining := maxi(0, ceili(next_boss_time - elapsed))
-  hud.text += "\nINFINITO · ONDA %s EM %02d:%02d" % [format_integer(endless_wave + 1), floori(remaining / 60.0), remaining % 60]
- elif run_mode == "bosses" and state in ["playing", "upgrade", "paused"] and boss_stage < 2:
+  hud.text += "\nNORMAL · ONDA %s EM %02d:%02d" % [format_integer(endless_wave + 1), floori(remaining / 60.0), remaining % 60]
+ elif run_mode == "bosses" and state in ["playing", "upgrade", "paused"] and boss_stage < 2 and is_finite(next_boss_time):
   var remaining := maxi(0, ceili(next_boss_time - elapsed))
   hud.text += "\n%s EM %02d:%02d" % ["MINHOCÃO" if boss_stage == 0 else "PAI DO MATO", floori(remaining / 60.0), remaining % 60]
  if not profile_panel: setup_profile_panel()
@@ -1772,13 +1776,13 @@ func _process(delta: float) -> void:
     boss_name = "PAI DO MATO" if enemies.all(func(enemy: Dictionary): return not enemy.boss or enemy.get("species", "") == "pai_do_mato") else "CHEFÕES"
    hud.text += "\n%s x%s" % [boss_name, format_integer(count)]
    if run_mode == "bosses": hud.text += " · " + action
+ cards.refresh()
  queue_redraw()
 
 func update_game(dt: float) -> void:
  cards.tick_effects(dt)
  update_damage_numbers(dt)
  elapsed += dt
- update_minute_buffs()
  if not boss_spawned and run_mode in ["bosses", "endless"]:
   var first_boss_time: float = RUN_SECONDS if run_mode == "bosses" else next_boss_time
   sounds.prepare_boss_music(first_boss_time - elapsed)
@@ -1844,7 +1848,7 @@ func update_game(dt: float) -> void:
    if enemy.phase == "dash" and previous_phase != "dash": sounds.play_boss_dash()
    special_boss_movement = emerged or previous_phase != "exposed" or enemy.phase != "exposed"
    if emerged and player.distance_to(enemy.pos) < MINHOCAO.EMERGENCE_RADIUS + 14:
-    receive_hit(MINHOCAO.EMERGENCE_DAMAGE * float(enemy.get("stat_multiplier", 1.0)), enemy.pos, enemy, "Emergência")
+    receive_hit(MINHOCAO.EMERGENCE_DAMAGE * float(enemy.get("damage_multiplier", 1.0)), enemy.pos, enemy, "Emergência")
     if state != "playing": return
    if not MINHOCAO.vulnerable(enemy): continue
   var toward: Vector2 = player - enemy.pos
@@ -1857,7 +1861,7 @@ func update_game(dt: float) -> void:
   else: pursue_player(enemy_index, dt)
   if invulnerability <= 0 and enemy_overlaps(enemy, player, 14):
    var health_before := health
-   var hit_damage: float = MINHOCAO.DASH_DAMAGE * float(enemy.get("stat_multiplier", 1.0)) if is_worm_dash else enemy.contact
+   var hit_damage: float = MINHOCAO.DASH_DAMAGE * float(enemy.get("damage_multiplier", 1.0)) if is_worm_dash else enemy.contact
    receive_hit(hit_damage, enemy.pos, enemy, "Investida" if is_worm_dash else "Contato")
    if enemy.get("species", "") == "pacu" and health < health_before:
     cards.block_activation()
@@ -1905,7 +1909,9 @@ func update_game(dt: float) -> void:
     if run_mode == "bosses":
      bosses_defeated += 1
      if enemy.get("species", "") == "pai_do_mato": final_boss_defeated = true
-    elif run_mode == "endless": buff_endless_enemies()
+     elif boss_stage == 1 and not is_finite(next_boss_time):
+      next_boss_time = elapsed + FINAL_BOSS_DELAY
+    elif run_mode == "endless": bosses_defeated += 1
    cards.drop(enemy)
    kills += 1
    var enemy_stats := match_enemy_stats(enemy)
@@ -1941,11 +1947,11 @@ func execute_forest_attack(enemy: Dictionary, attack: String) -> void:
   "hand":
    sounds.play_effect("pai_hand", 0.98, 1.02)
    spawn_water_impact(enemy.target, enemy.hand_angle - PI / 2, "hand_impact")
-   if PAI_DO_MATO.hand_hits(enemy, player): receive_hit(PAI_DO_MATO.HAND_DAMAGE * float(enemy.get("stat_multiplier", 1.0)), enemy.target, enemy, "Mãozona")
+   if PAI_DO_MATO.hand_hits(enemy, player): receive_hit(PAI_DO_MATO.HAND_DAMAGE * float(enemy.get("damage_multiplier", 1.0)), enemy.target, enemy, "Mãozona")
   "log":
    sounds.play_effect("pai_log_throw", 1.0, 1.0)
    var hp: float = PAI_DO_MATO.LOG_HEALTH
-   enemies.append({"pos": enemy.pos, "start": enemy.pos, "target": enemy.target, "angle": (Vector2(enemy.target) - Vector2(enemy.pos)).angle(), "shapes": PAI_DO_MATO.log_shapes(log_art), "flight": 0.0, "landed": false, "hp": hp, "max_hp": hp, "radius": PAI_DO_MATO.LOG_SIZE.length() / 2, "speed": 0.0, "contact": 0.0, "flight_damage": PAI_DO_MATO.LOG_DAMAGE * float(enemy.get("stat_multiplier", 1.0)), "attacker": enemy, "flight_hit": false, "boss": false, "tank": false, "species": "tronco", "obstacle": true, "flash": 0.0, "display_name": "Tronco"})
+   enemies.append({"pos": enemy.pos, "start": enemy.pos, "target": enemy.target, "angle": (Vector2(enemy.target) - Vector2(enemy.pos)).angle(), "shapes": PAI_DO_MATO.log_shapes(log_art), "flight": 0.0, "landed": false, "hp": hp, "max_hp": hp, "radius": PAI_DO_MATO.LOG_SIZE.length() / 2, "speed": 0.0, "contact": 0.0, "flight_damage": PAI_DO_MATO.LOG_DAMAGE * float(enemy.get("damage_multiplier", 1.0)), "attacker": enemy, "flight_hit": false, "boss": false, "tank": false, "species": "tronco", "obstacle": true, "flash": 0.0, "display_name": "Tronco"})
 
 func update_log(log: Dictionary, dt: float) -> void:
  if log.landed: return
@@ -2029,7 +2035,8 @@ func hit_with_spear(enemy: Dictionary, amount: float = -1.0) -> void:
  if enemy.hp <= 0 or not enemy_vulnerable(enemy): return
  if amount < 0.0: amount = effective_damage()
  var critical := crit_chance > 0 and rng.randf() < crit_chance / 100.0
- if critical: amount *= 2.0
+ if critical:
+  amount *= 2.0
  match_damage_dealt += minf(maxf(amount, 0.0), maxf(enemy.hp, 0.0))
  enemy.hp -= amount
  add_damage_number(enemy.pos - Vector2(0, enemy.radius + 8), amount, CRITICAL_COLOR if critical else Color(1, 0.88, 0.45), 0.9 if critical else 0.7, 48 if critical else 32, critical)
@@ -2053,8 +2060,8 @@ func spawn_boss_mode_bosses() -> void:
   spawn_enemy(true)
   boss_spawned = true
   boss_stage = 1
-  next_boss_time = FINAL_BOSS_TIME
- if boss_stage == 1 and elapsed >= FINAL_BOSS_TIME:
+  next_boss_time = INF
+ if boss_stage == 1 and elapsed >= next_boss_time:
   spawn_enemy(true, "pai_do_mato")
   boss_stage = 2
   next_boss_time = INF
@@ -2068,47 +2075,17 @@ func spawn_endless_bosses() -> void:
   boss_spawned = true
   next_boss_time += ENDLESS_BOSS_INTERVAL
 
-func buff_endless_enemies() -> void:
- bosses_defeated += 1
- for enemy in enemies:
-  if enemy.hp <= 0 or enemy.get("obstacle", false): continue
-  var health_growth: float = MINHOCAO.ENDLESS_HEALTH_GROWTH if enemy.boss and enemy.get("species", "") != "pai_do_mato" else 1.05
-  enemy.hp *= health_growth
-  enemy.max_hp *= health_growth
-  enemy.speed = minf(enemy.speed * 1.05, fish_speed_cap(enemy))
-  enemy.contact *= 1.05
-  enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * 1.05
-
 func fish_minute_multiplier(species: String = "") -> float:
- return 1.08
+ return 1.0 + ENEMY_GROWTH.minute_bonus(floori(elapsed / 60.0))
 
 func fish_stat_multiplier(species: String = "") -> float:
- return pow(1.08, floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
+ return ENEMY_GROWTH.multiplier(floori(elapsed / 60.0))
 
-func fish_damage_multiplier() -> float:
- return pow(1.04, floori(elapsed / 60.0)) * (pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0)
-
-func fish_speed_cap(enemy: Dictionary) -> float:
- if enemy.get("species", "") == "pai_do_mato": return PAI_DO_MATO.MOVE_SPEED * ENEMY_SPEED_LIMITS.MAX_MULTIPLIER
- if enemy.get("boss", false): return MINHOCAO.SURFACE_SPEED * ENEMY_SPEED_LIMITS.MAX_MULTIPLIER
- var base_speed := 100.0 if enemy.get("species", "") == "dourado" else (80.0 if enemy.get("tank", false) else 125.0)
- return base_speed * ENEMY_SPEED_LIMITS.MAX_MULTIPLIER
+func fish_damage_multiplier(boss: bool = false) -> float:
+ return ENEMY_GROWTH.damage_multiplier(floori(elapsed / 60.0), boss)
 
 func fish_speed_multiplier() -> float:
- return minf(fish_stat_multiplier(), ENEMY_SPEED_LIMITS.MAX_MULTIPLIER)
-
-func update_minute_buffs() -> void:
- var minute := floori(elapsed / 60.0)
- for enemy in enemies:
-  if enemy.boss or enemy.hp <= 0 or enemy.get("obstacle", false): continue
-  var previous := int(enemy.get("buff_minute", minute))
-  if minute <= previous: continue
-  var multiplier := pow(1.08, minute - previous)
-  for stat in ["hp", "max_hp"]: enemy[stat] *= multiplier
-  enemy.speed = minf(enemy.speed * multiplier, fish_speed_cap(enemy))
-  enemy.contact *= pow(1.04, minute - previous)
-  enemy["stat_multiplier"] = float(enemy.get("stat_multiplier", 1.0)) * pow(fish_minute_multiplier(enemy.get("species", "")), minute - previous)
-  enemy.buff_minute = minute
+ return ENEMY_SPEED_LIMITS.minute_multiplier(floori(elapsed / 60.0))
 
 func separation_radius(enemy: Dictionary) -> float:
  # Forest boss sprite is 220 px wide; worm is 140 px; fish use radius * 2.
@@ -2428,6 +2405,8 @@ func receive_hit(amount: float, source: Vector2, attacker: Dictionary = {}, atta
   return
  if invulnerability > 0: return
  amount = roundf(amount)
+ if not attacker.is_empty() and not attacker.get("boss", false):
+  amount = minf(amount, floorf(max_health * 0.9))
  var health_before := health
  var received_damage := minf(maxf(amount, 0.0), maxf(health_before, 0.0))
  match_damage_taken += received_damage
@@ -2565,8 +2544,8 @@ func spawn_enemy(boss: bool, species: String = "", arrival_count: int = 1) -> vo
  var is_pacu := not boss and species == "pacu"
  if is_pacu: tank = false
  if is_dourado: tank = false
- var hp := 200.0 if tank else 20.0
- if boss: hp = PAI_DO_MATO.BASE_HEALTH if species == "pai_do_mato" else 32000.0
+ var hp := 100.0 if tank else 10.0
+ if boss: hp = PAI_DO_MATO.BASE_HEALTH if species == "pai_do_mato" else MINHOCAO.BASE_HEALTH
  var enemy := {"pos": position, "hp": hp, "max_hp": hp, "radius": 38.0 if boss else (44.0 if tank else 13.0), "speed": 120.0 if boss else (80.0 if tank else 125.0), "contact": 60.0 if boss else (20.0 if tank else 10.0), "boss": boss, "tank": tank, "flash": 0.0}
  if is_dourado:
   enemy.species = "dourado"
@@ -2574,35 +2553,34 @@ func spawn_enemy(boss: bool, species: String = "", arrival_count: int = 1) -> vo
   enemy.max_hp = enemy.hp
   enemy.radius = 23.0
   enemy.speed = 100.0
-  enemy.contact = 15.0
+  enemy.contact = 30.0
   DOURADO.initialize(enemy)
  if is_pacu:
   enemy.species = "pacu"
-  enemy.hp = 80.0
+  enemy.hp = 40.0
   enemy.max_hp = enemy.hp
   enemy.radius = 23.0
   enemy.speed = 125.0
-  enemy.contact = 30.0
- var multiplier := pow(1.05, bosses_defeated) if run_mode == "endless" else 1.0
- if not boss:
-  multiplier = fish_stat_multiplier(species)
-  enemy.buff_minute = floori(elapsed / 60.0)
+  enemy.contact = 20.0
+ var multiplier := fish_stat_multiplier(species)
+ # Snapshot growth at spawn; living enemies keep these attributes.
  enemy["stat_multiplier"] = multiplier
- var health_multiplier: float = pow(MINHOCAO.ENDLESS_HEALTH_GROWTH, bosses_defeated) if boss and species != "pai_do_mato" and run_mode == "endless" else multiplier
- for stat in ["hp", "max_hp"]: enemy[stat] *= health_multiplier
- enemy.speed *= multiplier if boss else fish_speed_multiplier()
- enemy.contact *= multiplier if boss else fish_damage_multiplier()
+ enemy["speed_multiplier"] = fish_speed_multiplier()
+ enemy["damage_multiplier"] = fish_damage_multiplier(boss)
+ for stat in ["hp", "max_hp"]: enemy[stat] *= multiplier
+ enemy.speed *= fish_speed_multiplier()
+ enemy.contact *= fish_damage_multiplier(boss)
  if boss:
   if species == "pai_do_mato":
    enemy.species = species
    enemy.display_name = "Pai do Mato"
    enemy.radius = 70.0
-   enemy.speed = minf(PAI_DO_MATO.MOVE_SPEED * multiplier, fish_speed_cap(enemy))
+   enemy.speed = PAI_DO_MATO.MOVE_SPEED * fish_speed_multiplier()
    PAI_DO_MATO.initialize(enemy)
   else:
    enemy.display_name = "Minhocão"
-   enemy.contact = MINHOCAO.CONTACT_DAMAGE * multiplier
-   enemy.speed = ENEMY_SPEED_LIMITS.capped_speed(MINHOCAO.SURFACE_SPEED, multiplier)
+   enemy.contact = MINHOCAO.CONTACT_DAMAGE * fish_damage_multiplier(true)
+   enemy.speed = MINHOCAO.SURFACE_SPEED * fish_speed_multiplier()
    MINHOCAO.initialize(enemy)
  enemies.append(enemy)
  if boss:
@@ -2656,10 +2634,11 @@ func fire() -> void:
  cards.attack_feedback()
  var direction := (nearest - player).normalized()
  if direction.is_zero_approx(): direction = Vector2.RIGHT
+ var projectile_speed := maxf(500.0, effective_speed() * 1.2)
  for i in shot_count:
   var angle := (i - (shot_count - 1) / 2.0) * 0.13
   var piercing: bool = cards.active("perfurante")
-  bullets.append({"pos": player, "velocity": direction.rotated(angle) * 650, "life": ARENA.length() / 650.0 + 0.1 if piercing else 1.6, "piercing": piercing, "base_damage": effective_damage(), "hit_enemies": []})
+  bullets.append({"pos": player, "velocity": direction.rotated(angle) * projectile_speed, "life": ARENA.length() / projectile_speed + 0.1 if piercing else 1.6, "piercing": piercing, "base_damage": effective_damage(), "hit_enemies": []})
 
 func show_upgrades() -> void:
  upgrade_generation += 1
@@ -2804,6 +2783,7 @@ func choose_upgrade(id: String, generation: int = -1) -> void:
  if state != "upgrade" or not upgrade_selection_pending or id not in choices: return
  if generation != -1 and generation != upgrade_generation: return
  # Consume before changing stats or opening another queued level's screen.
+ sounds.play_effect("ui_upgrade_confirm")
  upgrade_selection_pending = false
  for option in upgrade_buttons: option.disabled = true
  _apply_upgrade(id)
@@ -3194,6 +3174,12 @@ func _draw() -> void:
   draw_string(game_font, boss_title_position, boss_title, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_title_size, boss_bar_color)
   draw_rect(Rect2(Vector2(230, viewport.y - 35), Vector2(viewport.x - 460, 14)), Color(0.2, 0.1, 0.25))
   draw_rect(Rect2(Vector2(230, viewport.y - 35), Vector2((viewport.x - 460) * boss_health / boss_max_health, 14)), boss_bar_color)
+  var boss_hp_text := "%s / %s HP" % [format_integer(ceili(boss_health)), format_integer(roundi(boss_max_health))]
+  var boss_hp_size := 20
+  var boss_hp_width := game_font.get_string_size(boss_hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_hp_size).x
+  var boss_hp_position := Vector2((viewport.x - boss_hp_width) / 2, viewport.y - 20).round()
+  draw_string_outline(game_font, boss_hp_position, boss_hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_hp_size, 4, Color(0.05, 0.02, 0.08))
+  draw_string(game_font, boss_hp_position, boss_hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_hp_size, Color.WHITE)
  var number_font: Font = game_font
  for number in damage_numbers:
   if not visible_world.grow(80).has_point(number.pos): continue
@@ -3288,8 +3274,8 @@ func render_legends() -> void:
  version_picker.item_selected.connect(choose_legends_version.bind(versions))
  choices_row.add_child(version_picker)
  var mode_picker := OptionButton.new()
- mode_picker.add_item("Infinito")
- mode_picker.add_item("Chefões")
+ mode_picker.add_item("Normal")
+ mode_picker.add_item("Boss Rush")
  mode_picker.select(0 if legends_mode == "endless" else 1)
  mode_picker.item_selected.connect(choose_legends_mode)
  choices_row.add_child(mode_picker)

@@ -6,7 +6,7 @@ const DASH_BASE_DISTANCE := 159.705
 const RECOVERY_TIME := 0.75
 const DASH_SPEED := 1400.0
 const PREDICTION_TIME := 0.5
-const BASE_HEALTH := 200.0
+const BASE_HEALTH := 100.0
 
 static func initialize(enemy: Dictionary) -> void:
  enemy.phase = "approach"
@@ -16,7 +16,7 @@ static func initialize(enemy: Dictionary) -> void:
  enemy.erase("dash_remaining")
 
 static func dash_speed(enemy: Dictionary) -> float:
- return DASH_SPEED
+ return DASH_SPEED * float(enemy.get("speed_multiplier", 1.0))
 
 static func dash_range(enemy: Dictionary) -> float:
  return DASH_BASE_DISTANCE * float(enemy.get("stat_multiplier", 1.0))
@@ -41,7 +41,7 @@ static func update(enemy: Dictionary, dt: float, player: Vector2, arena: Vector2
     enemy.phase = "dash"
     enemy.dash_remaining = float(enemy.get("dash_distance", dash_range(enemy)))
   "dash":
-   var step := minf(DASH_SPEED * dt, enemy.dash_remaining)
+   var step := minf(dash_speed(enemy) * dt, enemy.dash_remaining)
    enemy.pos += enemy.dash_direction * step
    enemy.dash_remaining -= step
    if enemy.dash_remaining <= 0:

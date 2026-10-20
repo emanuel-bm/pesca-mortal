@@ -4,46 +4,43 @@ func _initialize() -> void:
  call_deferred("run")
 
 func run() -> void:
+ root.set_meta("offline_session", true)
  var game: Node = load("res://main.tscn").instantiate()
  root.add_child(game)
  await process_frame
  game.set_process(false)
- game.start_run("endless")
- game.spawn_enemy(false, "dourado")
- var fish: Dictionary = game.enemies.back()
- fish.hp = 100.0
- game.spawn_enemy(true)
- var boss: Dictionary = game.enemies.back()
- game.elapsed = 59.99
- game.update_minute_buffs()
- assert(fish.hp == 100 and fish.speed == 100)
- game.elapsed = 60
- game.update_minute_buffs()
- assert(is_equal_approx(fish.hp, 108) and is_equal_approx(fish.max_hp, 216))
- assert(is_equal_approx(fish.speed, 108) and is_equal_approx(fish.contact, 15.6))
- assert(is_equal_approx(game.DOURADO.dash_range(fish), game.DOURADO.DASH_BASE_DISTANCE * 1.08))
- assert(is_equal_approx(game.DOURADO.dash_speed(fish), 1400.0), "Minute buffs keep dash speed fixed")
- assert(boss.hp == 32000, "Minute buffs apply only to fish")
- game.update_minute_buffs()
- assert(is_equal_approx(fish.hp, 108), "Same minute must not buff twice")
- game.elapsed = 180
- game.update_minute_buffs()
- assert(is_equal_approx(fish.hp, 100 * pow(1.08, 3)))
- game.buff_endless_enemies()
- game.spawn_enemy(false, "dourado")
- var fresh: Dictionary = game.enemies.back()
- assert(is_equal_approx(fresh.max_hp, fish.max_hp) and is_equal_approx(fresh.speed, fish.speed))
- assert(is_equal_approx(fresh.contact, 15 * pow(1.04, 3) * 1.05) and is_equal_approx(fresh.contact, fish.contact))
- assert(is_equal_approx(fresh.stat_multiplier, pow(1.08, 3) * 1.05))
- assert(is_equal_approx(game.DOURADO.dash_range(fresh), game.DOURADO.dash_range(fish)))
- assert(game.enemy_xp_reward(fresh) == 8)
- game.state = "paused"
- game._process(60)
- assert(game.elapsed == 180)
+ for mode in ["endless", "bosses", "training"]:
+  game.start_run(mode)
+  game.spawn_timer = INF
+  game.attack_timer = INF
+  game.next_boss_time = INF
+  game.spawn_enemy(false, "dourado")
+  var survivor: Dictionary = game.enemies.back()
+  survivor.hp = 50.0
+  for sample in [[59.99, 1.0], [60.0, 1.2], [120.0, 1.4], [180.0, 1.5], [1200.0, 2.52], [1800.0, 3.12]]:
+   game.elapsed = sample[0]
+   game.update_game(0.0)
+   assert(is_equal_approx(survivor.hp, 50.0))
+   assert(is_equal_approx(survivor.max_hp, 100.0))
+   assert(is_equal_approx(survivor.speed, 100.0))
+   assert(is_equal_approx(survivor.contact, 30.0))
+   assert(is_equal_approx(game.DOURADO.dash_range(survivor), game.DOURADO.DASH_BASE_DISTANCE))
+   assert(is_equal_approx(game.DOURADO.dash_speed(survivor), game.DOURADO.DASH_SPEED))
+   game.spawn_enemy(false, "dourado")
+   var fresh: Dictionary = game.enemies.back()
+   assert(is_equal_approx(fresh.max_hp, 100.0 * sample[1]))
+   assert(is_equal_approx(fresh.speed, 100.0 * sample[1]))
+   assert(is_equal_approx(fresh.contact, 30.0 * minf(sample[1], 3.0)))
+   assert(is_equal_approx(game.DOURADO.dash_range(fresh), game.DOURADO.DASH_BASE_DISTANCE * sample[1]))
+   assert(game.enemy_xp_reward(fresh) == 20)
+   game.enemies.erase(fresh)
+  game.state = "paused"
+  game._process(60)
+  assert(game.elapsed == 1800.0)
  game.start_run("training")
- game.elapsed = 120
+ game.elapsed = 120.0
  game.training.act("pintado")
- assert(is_equal_approx(game.enemies.back().speed, 80 * pow(1.08, 2)))
- assert(is_equal_approx(game.enemies.back().max_hp, 200 * pow(1.08, 2)))
- print("MINUTE BUFF PASS: boundaries, compounding, wounded HP ratio, new fish, boss stacking, XP, pause and training")
+ assert(is_equal_approx(game.enemies.back().speed, 80.0 * 1.4))
+ assert(is_equal_approx(game.enemies.back().max_hp, 100.0 * 1.4))
+ print("MINUTE BUFF PASS: spawn-only growth, minute boundaries, wounded HP, dash attributes, damage cap, XP, pause and training")
  quit()
