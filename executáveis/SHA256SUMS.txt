@@ -1,0 +1,4 @@
+460a67ab7d7c82917637f671cfed28a7b3b0fc516b3a5a36f8470da6280b1be4  pesca-mortal-festival-windows-v0.5.0.exe
+94cb4d5d1d79b25249f15f19aa623162611acdedf87036ea2490856669c9743c  pesca-mortal-festival-linux-v0.5.0.x86_64
+2b887e720a9217b351fd7b2ff0624a21863740fba0731016e88259557c5a30e1  pesca-mortal-festival-linux-v0.5.0.tar.gz
+e5b291c449ce91f59d7ea5093ec213bf98da52fc4c8e71e6b3dc9aaf0047e0eb  pesca-mortal-festival-macos-arm64-v0.5.0.zip

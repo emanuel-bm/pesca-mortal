@@ -1,0 +1,20 @@
+FESTIVAL HIGH TECH MT - BASE 0.5.0
+
+IMPORTANTE: o servico online publicado atualmente nao reconhece o festival.
+Para ativar o envio de resultados desta edicao:
+1. Na planilha existente, abra Extensoes > Apps Script.
+2. Substitua Code.gs pelo Code.gs desta pasta.
+3. Execute setupFestival. Reexecutar preserva os resultados existentes.
+4. Em Implantar > Gerenciar implantacoes, atualize a implantacao existente
+   com uma nova versao, mantendo a mesma URL e configuracoes de acesso.
+
+NAO execute iniciarNovaVersaoCompetitiva para ativar o festival.
+A temporada global 0.5 ja foi ativada. O festival continua em sua propria aba.
+Os resultados antigos do festival sao preservados.
+
+Windows: execute o .exe diretamente.
+Linux: extraia o .tar.gz e execute o arquivo .x86_64 (chmod +x se necessario).
+Mac: extraia o ZIP e abra o aplicativo. Pacote apenas para Apple Silicon (M1 e posteriores),
+com assinatura ad-hoc e sem notarizacao Apple.
+
+Distribuicao interna. Nenhuma release ou tag foi publicada no GitHub.

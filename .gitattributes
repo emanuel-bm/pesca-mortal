@@ -1,0 +1,4 @@
+executáveis/*.exe filter=lfs diff=lfs merge=lfs -text
+executáveis/*.x86_64 filter=lfs diff=lfs merge=lfs -text
+executáveis/*.zip filter=lfs diff=lfs merge=lfs -text
+executáveis/*.tar.gz filter=lfs diff=lfs merge=lfs -text
