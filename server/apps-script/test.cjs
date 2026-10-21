@@ -55,6 +55,9 @@ function tests() {
   assert.equal(api.sheets.get('Festival High Tech MT').getLastRow(), 3, 'Setup retries preserve scores');
   assert.equal(api.call({...event, action: 'ranking', competitive_version: '0.4'}).rankings.endless[0].nickname, 'João Silva');
   assert.equal(api.call({...event, action: 'ranking'}).rankings.endless.length, 2);
+  assert.equal(api.sheets.get('Festival High Tech MT').data[1][8], 'pesca-1', 'Keep the original ruleset on older festival scores');
+  assert.equal(submitFestival({...festivalRecord, run_id: 'f'.repeat(32), competitive_version: '0.5', ruleset: 'pesca-2', seconds: 30, kills: 1, level: 4}).updated, true);
+  assert.equal(api.call({...event, action: 'ranking', competitive_version: '0.5'}).rankings.endless.length, 3, 'Festival keeps old entries alongside valid 0.5 results');
   assert.equal(api.call({action: 'ranking'}).rankings.endless.length, 0);
   const token = 'a'.repeat(64), otherToken = 'b'.repeat(64);
   const account = api.call({action: 'register', nickname: 'Pescador', token});
@@ -141,7 +144,7 @@ function tests() {
   api.properties.set('TRANSITION_VERSION', '1.0');
   api.context.activateCompetitiveVersion_('1.0');
   assert.equal(api.properties.has('TRANSITION_VERSION'), false);
-  assert.equal(api.call({...event, action: 'ranking'}).rankings.endless.length, 2, 'Global season changes preserve the festival');
+  assert.equal(api.call({...event, action: 'ranking'}).rankings.endless.length, 3, 'Global season changes preserve the festival');
   assert.equal(submitFestival({...festivalRecord, run_id: 'c'.repeat(32)}).updated, true, 'Festival does not close with global seasons');
   // Release 0.5: use current spawn/XP rules and the real administrative entry point.
   const season = backend();

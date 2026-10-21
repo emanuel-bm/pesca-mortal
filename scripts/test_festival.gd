@@ -27,7 +27,7 @@ func run() -> void:
  assert(client.nickname() == "Festival Hightech" and not client.profile.has("token"))
  client.set_nickname("Nome que não deve substituir o perfil automático")
  assert(client.nickname() == "Festival Hightech")
- var record := {"mode": "endless", "seconds": 60.0, "kills": 10, "level": 1, "character": "Pescador", "reason": "death", "run_id": "a".repeat(32), "record_valid": true, "competitive_version": "0.4"}
+ var record := {"mode": "endless", "seconds": 60.0, "kills": 10, "level": 1, "character": "Pescador", "reason": "death", "run_id": "a".repeat(32), "record_valid": true, "competitive_version": ONLINE.HISTORY.competitive_version()}
  client.queue_record(record)
  assert(client.pending.is_empty(), "Festival cannot publish through the global account flow")
  assert(not client.queue_festival_record(record, ""))
@@ -147,6 +147,26 @@ func run() -> void:
  await game.exit_festival_result()
  assert(game.state == "festival_debug_notice", "Debug must explain that it did not publish, rather than silently imitate saving")
  assert(game.online.pending.is_empty())
+ game.online.competitive_build = true
+ game.start_run("bosses")
+ game.elapsed = 150.0
+ game.kills = 2
+ game.finish(false)
+ assert(game.festival_result.is_empty() and game.online.pending.is_empty(), "Boss Rush defeats never enter the festival ranking")
+ for duration in [150.0, 180.0]:
+  game.start_run("bosses")
+  game.elapsed = duration
+  game.kills = 2
+  game.finish(true)
+  assert(game.festival_result.reason == "won" and game.festival_result.mode == "bosses")
+  game.festival_result.debug_run = false
+  game.festival_result.record_valid = true
+  game.festival_name_edit.text = "Vitoria_%d" % int(duration)
+  await game.exit_festival_result()
+  assert(game.state == "menu" and game.online.pending.is_empty(), game.online.status)
+ assert(game.online.rankings.bosses.size() == 2, "Both Boss Rush victories publish, including the slower one")
+ assert(game.online.rankings.bosses[0].seconds == 150.0 and game.online.rankings.bosses[1].seconds == 180.0)
+ print("FESTIVAL BOSS RUSH PASS: defeats excluded; two victories sent through exit and returned by HTTP ranking")
  game.queue_free()
  DirAccess.remove_absolute(client.storage_path)
  client.queue_free()

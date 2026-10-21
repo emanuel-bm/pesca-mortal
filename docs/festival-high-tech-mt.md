@@ -19,3 +19,14 @@ O festival reúne todos os dias, sem filtro de data, e não é encerrado pela mu
 ## Verificação
 
 `node server/apps-script/test.cjs` valida os dois rankings e sua separação. Para o teste HTTP, deixe `node server/apps-script/test.cjs --serve` em um terminal e execute Godot headless com `--script res://scripts/test_festival.gd -- --festival`. O teste do festival usa arquivos temporários e o servidor local, sem publicar na planilha real. Builds de debug não publicam resultados reais: ao tentar salvar, uma mensagem explícita informa que nada foi enviado. Para validar a gravação na planilha, use o executável Windows exportado em release. O campo vazio não exibe cursor e não recebe foco automaticamente ao terminar a partida. O ranking do festival aceita cada partida confirmada, mesmo abaixo de um resultado anterior; ele não consulta o recorde pessoal global.
+
+
+## Pacotes internos 0.5.0
+
+A edição incorpora a main 0.5.0 e mantém o perfil automático, as abas Festival e Global e o envio opcional ao sair. No Boss Rush, apenas vitórias entram no ranking; derrotas ficam fora. O teste de integração confirma o envio de duas vitórias, inclusive uma mais lenta que a anterior.
+
+Os presets Festival geram Windows x86_64, Linux x86_64 e macOS Apple Silicon (ARM64). Não há pacote Intel para Mac nesta distribuição. As notas internas estão em `docs/releases/0.5.0-festival.md`; os pacotes não criam release nem tag no GitHub.
+
+Para o envio real, use o `server/apps-script/Code.gs` desta branch, com as regras `pesca-2` da versão 0.5 e os comandos do festival. Uma implantação contendo apenas o script da main não reconhece o identificador do evento. Atualize a implantação existente mantendo a URL, execute `setupFestival` se necessário e não reinicie a temporada global. Resultados anteriores do festival com as regras `pesca-1` continuam disponíveis.
+
+O ZIP de Mac deve ser extraído antes de abrir `Pesca Mortal Festival.app`. O pacote usa assinatura ad-hoc, sem notarização Apple. No Linux, o `.tar.gz` conserva a permissão de execução. Compare os arquivos com `SHA256SUMS.txt` após copiar ou baixar; valide a extração do ZIP no arquivo entregue, além do arquivo original de exportação.
