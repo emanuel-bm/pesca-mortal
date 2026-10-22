@@ -10,6 +10,7 @@ const ENEMY_SPEED_LIMITS = preload("res://scripts/enemy_speed_limits.gd")
 const ENEMY_GROWTH = preload("res://scripts/enemy_growth.gd")
 const ENEMY_SPAWN_DISTANCE := 680.0
 const MAX_HEALTH := 100.0
+const HEALTH_UPGRADE_AMOUNT := 50.0
 const BASE_PLAYER_DAMAGE := 10.0
 const DAMAGE_UPGRADE_AMOUNT := 10.0
 const BASE_ATTACK_RATE := 1.0
@@ -25,7 +26,7 @@ const KNOCKBACK_SPEED_PER_DAMAGE := 5.0
 const KNOCKBACK_DECELERATION := 1800.0
 const MOVEMENT_MULTIPLIER := 1.2
 const FASTEST_ENEMY_SPEED := 125.0
-const BASE_PLAYER_SPEED := 180.0
+const BASE_PLAYER_SPEED := 175.0
 const MINHOCAO = preload("res://scripts/minhocao.gd")
 const PAI_DO_MATO = preload("res://scripts/pai_do_mato.gd")
 const DOURADO = preload("res://scripts/dourado.gd")
@@ -38,8 +39,8 @@ const LABELS := {
  "damage": ["Impacto", "+10 de dano"],
  "rate": ["Ritmo", "+0,5 ataque por segundo"],
  "shots": ["Rajada", "+1 projétil por disparo"],
- "speed": ["Velocidade", "+20 de velocidade"],
- "max_health": ["Vitalidade", "+20% da vida máxima base"],
+ "speed": ["Velocidade", "+25 de velocidade"],
+ "max_health": ["Vitalidade", "+50 de vida máxima"],
  "xp_bonus": ["Aprendizado", "+20% de ganho de XP"],
  "luck": ["Sorte", "+10% de drop de cartas"],
  "persistence": ["Persistência", "+10% de duração das cartas"],
@@ -643,6 +644,8 @@ func collect_menu_controls(parent: Node) -> void:
    collect_menu_controls(child)
 
 func focus_menu_hover(item: Control) -> void:
+ # Name entry requires a click or deliberate keyboard navigation, never hover.
+ if item == festival_name_edit: return
  if menu_mouse_navigation: item.grab_focus()
 
 func setup_menu_navigation() -> void:
@@ -694,6 +697,42 @@ func move_menu_focus(direction: int) -> void:
  var index := enabled.find(get_viewport().gui_get_focus_owner())
  if index < 0: index = -1 if direction > 0 else 0
  enabled[posmod(index + direction, enabled.size())].grab_focus()
+
+func move_result_focus(key: Key) -> bool:
+ # Horizontal containers form rows; vertical arrows move between rows.
+ var rows: Array = []
+ for item in menu_controls:
+  if not is_instance_valid(item) or not item.is_visible_in_tree(): continue
+  if item is BaseButton and item.disabled: continue
+  if not rows.is_empty() and item.get_parent() is HBoxContainer and rows[-1][0].get_parent() == item.get_parent():
+   rows[-1].append(item)
+  else:
+   rows.append([item])
+ if rows.is_empty(): return false
+ var focused := get_viewport().gui_get_focus_owner()
+ var row_index := -1
+ var column := -1
+ for index in rows.size():
+  if focused in rows[index]:
+   row_index = index
+   column = rows[index].find(focused)
+   break
+ if row_index < 0:
+  rows[0][0].grab_focus()
+  return true
+ if key in [KEY_LEFT, KEY_RIGHT]:
+  if focused is LineEdit: return false
+  var row: Array = rows[row_index]
+  row[posmod(column + (1 if key == KEY_RIGHT else -1), row.size())].grab_focus()
+ else:
+  var next_row: Array = rows[posmod(row_index + (1 if key == KEY_DOWN else -1), rows.size())]
+  var target: Control = next_row[0]
+  var center: float = focused.get_global_rect().get_center().x
+  for item: Control in next_row:
+   if absf(item.get_global_rect().get_center().x - center) < absf(target.get_global_rect().get_center().x - center):
+    target = item
+  target.grab_focus()
+ return true
 
 func clear_panel() -> void:
  notes_history_panel.hide()
@@ -838,8 +877,8 @@ func projected_stats(id: String = "") -> Dictionary:
   "damage": values.damage = damage + DAMAGE_UPGRADE_AMOUNT
   "rate": values.rate = 1.0 / attack_delay + ATTACK_RATE_UPGRADE_AMOUNT
   "shots": values.shots = shot_count + 1
-  "speed": values.speed = speed + 20.0
-  "max_health": values.max_health = max_health + MAX_HEALTH * 0.20
+  "speed": values.speed = speed + 25.0
+  "max_health": values.max_health = max_health + HEALTH_UPGRADE_AMOUNT
   "xp_bonus": values.xp_bonus = xp_bonus + 20
   "luck": values.luck = luck + 10
   "persistence": values.persistence = persistence + 10
@@ -1622,7 +1661,6 @@ func _input(event: InputEvent) -> void:
   get_viewport().set_input_as_handled()
   return
  if demo_active and state == "upgrade": return
-
  if event is InputEventMouseMotion:
   menu_mouse_navigation = true
  elif event is InputEventKey and event.pressed:
@@ -1633,6 +1671,10 @@ func _input(event: InputEvent) -> void:
   if state == "settings" and is_instance_valid(fullscreen_toggle): fullscreen_toggle.button_pressed = fullscreen
   get_viewport().set_input_as_handled()
   return
+ if overlay.visible and state in ["lost", "won"] and event is InputEventKey and event.pressed and event.keycode in [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]:
+  if move_result_focus(event.keycode):
+   get_viewport().set_input_as_handled()
+   return
  if overlay.visible and state != "upgrade" and event is InputEventKey and event.pressed:
   var focused := get_viewport().gui_get_focus_owner()
   var popup_open: bool = focused is OptionButton and focused.get_popup().visible
@@ -2869,10 +2911,10 @@ func finish(won: bool) -> void:
  queue_redraw()
 
 func show_festival_submission() -> void:
- festival_name_edit = LineEdit.new()
+ festival_name_edit = preload("res://scripts/festival_name_input.gd").new()
  festival_name_edit.max_length = 30
  festival_name_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
- festival_name_edit.placeholder_text = "Seu nome ou apelido (opcional, salva no ranking)"
+ festival_name_edit.placeholder_text = "Seu nome sem acentos (opcional, salva no ranking)"
  festival_name_edit.add_theme_font_size_override("font_size", 16)
  festival_name_edit.text = festival_name_draft
  update_festival_name(festival_name_draft)
@@ -2887,10 +2929,7 @@ func show_festival_submission() -> void:
 
 func update_festival_name(value: String) -> void:
  festival_name_draft = value
- if value.is_empty():
-  festival_name_edit.add_theme_color_override("caret_color", Color.TRANSPARENT)
- else:
-  festival_name_edit.remove_theme_color_override("caret_color")
+
 
 func exit_festival_result() -> void:
  if state == "festival_saving": return

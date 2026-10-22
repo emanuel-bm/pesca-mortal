@@ -97,13 +97,14 @@ func run() -> void:
  game.kills = 7
  game.finish(false)
  assert(game.festival_name_edit.text.is_empty(), "Never carry a previous participant's name")
- assert(game.festival_name_edit.placeholder_text == "Seu nome ou apelido (opcional, salva no ranking)")
+ assert(game.festival_name_edit.placeholder_text == "Seu nome sem acentos (opcional, salva no ranking)")
  assert(game.festival_name_edit.get_theme_font_size("font_size") == 16)
  assert(not game.festival_message.visible)
  await process_frame
  assert(not game.festival_name_edit.has_focus(), "No automatic focus on the name field after a run")
  game.festival_name_edit.grab_focus()
- assert(game.festival_name_edit.get_theme_color("caret_color").a == 0.0, "An empty field keeps its focus border but hides the caret")
+ assert(game.festival_name_edit.caret_force_displayed and game.festival_name_edit.caret_blink, "Focused empty field shows a blinking caret")
+ assert(game.festival_name_edit.placeholder_text.is_empty(), "Focus hides the placeholder")
  game.festival_name_edit.text = "Maria"
  game.festival_name_edit.text_changed.emit("Maria")
  assert(not game.festival_name_edit.has_theme_color_override("caret_color"), "Typing restores the normal caret")

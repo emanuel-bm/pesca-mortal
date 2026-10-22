@@ -18,9 +18,9 @@ func run() -> void:
  await process_frame
  game.start_run()
  for i in 5: game._apply_upgrade("speed")
- assert(is_equal_approx(game.speed, 280.0))
+ assert(is_equal_approx(game.speed, 300.0))
  game.start_run()
- assert(is_equal_approx(game.speed, 180.0))
+ assert(is_equal_approx(game.speed, 175.0))
  game.elapsed = 300
  game.update_game(0.01)
  assert(game.boss_spawned and game.enemies.size() > 1, "Boss must spawn alongside the current horde")
