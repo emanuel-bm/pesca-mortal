@@ -116,6 +116,8 @@ var boss_arrival_label: Label
 var boss_arrival_timer := 0.0
 var boss_shake_timer := 0.0
 var state := "menu"
+var demo_active := false
+var demo_pilot = preload("res://scripts/festival_autopilot.gd").new()
 var run_mode := "bosses"
 var run_active := false
 var run_recorded := false
@@ -905,6 +907,7 @@ func setup_profile_panel() -> void:
  column.add_child(profile_label)
 
 func show_menu() -> void:
+ demo_active = false
  reset_damage_flash()
  sounds.start_calm_music()
  record_run("menu")
@@ -923,6 +926,7 @@ func show_menu() -> void:
  if bool(get_tree().get_meta("offline_session", false)): title("Jogando offline", 18)
 
  button("Jogar", start_run.bind("endless"))
+ if online.festival_mode: button("Demo", show_festival_demo)
  button("Boss Rush", start_run.bind("bosses"))
  controls_help_button = button("Controle" if controller_input.using_controller else "Teclado", open_controls_help)
  button("Sala de treino", start_run.bind("training"))
@@ -934,6 +938,13 @@ func show_menu() -> void:
  button("Fechar jogo", quit_game)
  online.synchronize()
  if is_instance_valid(festival_global): festival_global.synchronize()
+
+func show_festival_demo() -> void:
+ if not online.festival_mode: return
+ record_run("menu")
+ demo_active = true
+ demo_pilot = preload("res://scripts/festival_autopilot.gd").new()
+ start_run("endless")
 
 func update_controls_button() -> void:
  if state == "menu" and is_instance_valid(controls_help_button):
@@ -1536,7 +1547,7 @@ func start_run(mode: String = "bosses") -> void:
  run_mode = mode
  run_active = true
  run_recorded = false
- test_run = mode == "training"
+ test_run = mode == "training" or demo_active
  bosses_defeated = 0
  next_boss_time = RUN_SECONDS if mode == "bosses" else ENDLESS_FIRST_BOSS_TIME
  endless_wave = 0
@@ -1606,6 +1617,12 @@ func start_run(mode: String = "bosses") -> void:
   training.reset()
 
 func _input(event: InputEvent) -> void:
+ if demo_active and event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+  show_menu()
+  get_viewport().set_input_as_handled()
+  return
+ if demo_active and state == "upgrade": return
+
  if event is InputEventMouseMotion:
   menu_mouse_navigation = true
  elif event is InputEventKey and event.pressed:
@@ -1673,6 +1690,7 @@ func xp_needed() -> int:
  return ceili((5 + (level - 1) * 3) * pow(XP_GROWTH_PER_LEVEL, level - 1))
 
 func movement() -> Vector2:
+ if demo_active: return demo_pilot.direction
  var direction := Vector2.ZERO
  if Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT): direction.x -= 1
  if Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT): direction.x += 1
@@ -1685,6 +1703,7 @@ func update_cursor_visibility() -> void:
  if Input.mouse_mode != desired: Input.mouse_mode = desired
 
 func _process(delta: float) -> void:
+ if demo_active: demo_pilot.tick(self, delta)
  if window_focus_lost:
   update_window_pause()
  if version_badge: version_badge.visible = state in ["menu", "nickname"]
@@ -1718,6 +1737,7 @@ func _process(delta: float) -> void:
  health_bar.max_value = max_health
  health_label.text = "%s / %s HP" % [format_integer(maxi(0, int(health))), format_integer(roundi(max_health))]
  hud.text = "%02d:%02d    ELIMINAÇÕES %s" % [int(elapsed) / 60, int(elapsed) % 60, format_integer(kills)]
+ if demo_active: hud.text = "DEMO · IA · Esc: voltar ao menu\n" + hud.text
  if run_mode == "endless" and state in ["playing", "upgrade", "paused"]:
   var remaining := maxi(0, ceili(next_boss_time - elapsed))
   hud.text += "\nNORMAL · ONDA %s EM %02d:%02d" % [format_integer(endless_wave + 1), floori(remaining / 60.0), remaining % 60]
