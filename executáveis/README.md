@@ -1,3 +1,5 @@
+**Atualização: [Linux — Dia 3](LINUX-DIA-3.md)**. Use esse pacote para o terceiro dia. Os pacotes e as instruções abaixo são da edição anterior.
+
 # Executáveis — Festival High Tech MT 0.5.0
 
 Pacotes internos da branch `codex/festival-hightech`, baseados na main 0.5.0.
