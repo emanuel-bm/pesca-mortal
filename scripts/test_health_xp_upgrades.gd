@@ -7,6 +7,7 @@ func run() -> void:
  await process_frame
  game.set_process(false)
  game.start_run()
+ assert(is_equal_approx(game.speed, 175.0))
  game.update_stats_preview()
  assert(game.stat_names.speed.text == "Velocidade")
  game._apply_upgrade("speed")
@@ -16,7 +17,7 @@ func run() -> void:
  game._apply_upgrade("speed")
  game.update_stats_preview()
  assert(game.stat_names.speed.text == "Velocidade (3)")
- assert(is_equal_approx(game.speed, 220.0))
+ assert(is_equal_approx(game.speed, 225.0))
  var initial_damage: float = game.damage
  game._apply_upgrade("damage")
  assert(is_equal_approx(game.damage, initial_damage + 10.0))
@@ -31,10 +32,10 @@ func run() -> void:
  assert(is_equal_approx(1.0 / game.attack_delay, 6.0))
  game.health = 40
  game._apply_upgrade("max_health")
- assert(is_equal_approx(game.max_health, game.MAX_HEALTH * 1.20))
- assert(is_equal_approx(game.health, 40 + game.MAX_HEALTH * 0.20))
+ assert(is_equal_approx(game.max_health, game.MAX_HEALTH + 50.0))
+ assert(is_equal_approx(game.health, 40 + 50.0))
  for rank in 20: game._apply_upgrade("max_health")
- assert(is_equal_approx(game.max_health, game.MAX_HEALTH * (1.0 + 0.20 * 21)))
+ assert(is_equal_approx(game.max_health, game.MAX_HEALTH + 50.0 * 21))
  game._apply_upgrade("xp_bonus")
  game.collect_xp(1)
  assert(is_equal_approx(game.current_xp(), 1.2))
@@ -73,6 +74,7 @@ func run() -> void:
  game.update_game(0)
  assert(game.health == game.max_health)
  game.start_run()
+ assert(is_equal_approx(game.speed, 175.0))
  assert(game.max_health == game.MAX_HEALTH and game.health == game.MAX_HEALTH and game.xp_bonus == 0 and game.xp_remainder == 0)
  assert(game.damage == 10.0 and game.projected_stats("damage").damage == 20.0)
  assert(game.attack_delay == 1.0)

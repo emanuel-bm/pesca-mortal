@@ -10,6 +10,7 @@ const ENEMY_SPEED_LIMITS = preload("res://scripts/enemy_speed_limits.gd")
 const ENEMY_GROWTH = preload("res://scripts/enemy_growth.gd")
 const ENEMY_SPAWN_DISTANCE := 680.0
 const MAX_HEALTH := 100.0
+const HEALTH_UPGRADE_AMOUNT := 50.0
 const BASE_PLAYER_DAMAGE := 10.0
 const DAMAGE_UPGRADE_AMOUNT := 10.0
 const BASE_ATTACK_RATE := 1.0
@@ -25,7 +26,7 @@ const KNOCKBACK_SPEED_PER_DAMAGE := 5.0
 const KNOCKBACK_DECELERATION := 1800.0
 const MOVEMENT_MULTIPLIER := 1.2
 const FASTEST_ENEMY_SPEED := 125.0
-const BASE_PLAYER_SPEED := 180.0
+const BASE_PLAYER_SPEED := 175.0
 const MINHOCAO = preload("res://scripts/minhocao.gd")
 const PAI_DO_MATO = preload("res://scripts/pai_do_mato.gd")
 const DOURADO = preload("res://scripts/dourado.gd")
@@ -38,8 +39,8 @@ const LABELS := {
  "damage": ["Impacto", "+10 de dano"],
  "rate": ["Ritmo", "+0,5 ataque por segundo"],
  "shots": ["Rajada", "+1 projétil por disparo"],
- "speed": ["Velocidade", "+20 de velocidade"],
- "max_health": ["Vitalidade", "+20% da vida máxima base"],
+ "speed": ["Velocidade", "+25 de velocidade"],
+ "max_health": ["Vitalidade", "+50 de vida máxima"],
  "xp_bonus": ["Aprendizado", "+20% de ganho de XP"],
  "luck": ["Sorte", "+10% de drop de cartas"],
  "persistence": ["Persistência", "+10% de duração das cartas"],
@@ -813,8 +814,8 @@ func projected_stats(id: String = "") -> Dictionary:
   "damage": values.damage = damage + DAMAGE_UPGRADE_AMOUNT
   "rate": values.rate = 1.0 / attack_delay + ATTACK_RATE_UPGRADE_AMOUNT
   "shots": values.shots = shot_count + 1
-  "speed": values.speed = speed + 20.0
-  "max_health": values.max_health = max_health + MAX_HEALTH * 0.20
+  "speed": values.speed = speed + 25.0
+  "max_health": values.max_health = max_health + HEALTH_UPGRADE_AMOUNT
   "xp_bonus": values.xp_bonus = xp_bonus + 20
   "luck": values.luck = luck + 10
   "persistence": values.persistence = persistence + 10

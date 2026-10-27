@@ -1,9 +1,14 @@
 [
   {
+    "tag_name": "v0.5.1",
+    "name": "Pesca Mortal 0.5.1 — Ajustes de velocidade e Vitalidade",
+    "published_at": "2026-10-27T17:59:02Z",
+    "body": "# Pesca Mortal 0.5.1 — Ajustes de velocidade e Vitalidade\n\nEsta atualização valoriza as melhorias de velocidade e sobrevivência. A canoa começa um pouco mais lenta, mas cada escolha de Velocidade oferece um ganho maior.\n\n## Velocidade\n\n- Velocidade base da canoa: 180 → 175 pixels/s, antes do multiplicador de movimento.\n- Cada melhoria de Velocidade: +20 → +25 pixels/s, sem limite de escolhas.\n- Com uma melhoria, o atributo continua em 200; com duas, passa de 220 → 225.\n\n## Vitalidade\n\n- Cada melhoria aumenta a vida máxima em +20 → +50 pontos.\n- A recuperação de vida ao escolher Vitalidade também passa de +20 → +50 pontos.\n- A vida máxima inicial continua em 100 pontos.\n"
+  },
+  {
     "tag_name": "v0.5.0",
     "name": "Pesca Mortal 0.5.0 — Nova temporada, controles e balanceamento",
-    "published_at": "2026-10-20T18:26:30Z",
-    "body": "# Pesca Mortal 0.5.0 — Nova temporada, controles e balanceamento\n\nA temporada competitiva 0.5 começa com novos recordes, suporte a controle e uma revisão da progressão dos inimigos e das melhorias. Os resultados da temporada 0.4 ficam preservados em Lendas.\n\n## Nova temporada\n\n- Recordes globais e pessoais separados na versão competitiva 0.5.\n- A classificação anterior permanece disponível em Lendas; as partidas pessoais continuam no histórico.\n\n## Controles e modos\n\n- Suporte a controle, com navegação nos menus e guias visuais dos comandos de controle e teclado.\n- Modos identificados como Normal e Boss Rush na interface.\n- No Boss Rush, o Pai do Mato chega 30 segundos após a derrota do Minhocão.\n\n## Progressão e combate\n\n- Atributos dos inimigos calculados somente ao nascer: inimigos vivos mantêm seus valores, mesmo na virada do minuto.\n- Progressão por minutos completos: +20%, +20%, +10% e depois +6% por minuto, somados sobre os atributos base.\n- Dano dos peixes comuns limitado a três vezes a base. Cada golpe comum também respeita o teto de 90% da vida máxima do jogador; chefões e seus ataques não recebem esse teto.\n- Vida base reduzida para piranha 10, pintado 100, pacu 40, dourado 100, Minhocão 20.000 e Pai do Mato 150.000.\n- Melhorias com incrementos fixos: Impacto +10 de dano, Vitalidade +20 de vida, Velocidade +20 pixels/s e Ritmo +0,5 ataque/s por escolha.\n- Persistência acrescenta 10 pontos percentuais por escolha; Crítico avança em passos de 10% até 100%.\n- Intangível tem duração base de três segundos. Fúria e Perfurante mantêm seis segundos.\n- Chances base de drop: piranha 0,5%, pintado e pacu 2,5%, dourado 5%. A cada minuto completo, a chance é multiplicada por 0,9; Sorte continua aplicada ao resultado.\n- Novos sons de bloqueio do escudo e confirmação de melhoria.\n\nComparação completa: https://github.com/emanuel-bm/pesca-mortal/compare/v0.4.5...v0.5.0\n"
+    "published_at": "2026-10-20T18:26:30Z"
   },
   {
     "tag_name": "v0.4.5",

@@ -158,8 +158,8 @@ func run() -> void:
  game.player = floor_position
  game.update_game(0.0)
  assert(game.cards.pickups.is_empty() and game.cards.active("furia"))
- assert(game.speed == 180.0 and game.damage == 10.0 and game.attack_delay == 1.0)
- assert(is_equal_approx(game.effective_speed(), 216.0))
+ assert(game.speed == 175.0 and game.damage == 10.0 and game.attack_delay == 1.0)
+ assert(is_equal_approx(game.effective_speed(), 210.0))
  assert(is_equal_approx(game.effective_damage(), 15.0))
  assert(is_equal_approx(game.effective_attack_delay(), 1.0 / 1.5))
  game.cards.activate("perfurante")

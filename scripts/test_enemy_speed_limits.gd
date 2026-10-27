@@ -67,7 +67,7 @@ func run() -> void:
  game.bosses_defeated += 1
  assert(is_equal_approx(worm.speed, 100.0 * 2.52))
  for index in 30: game._apply_upgrade("speed")
- assert(is_equal_approx(game.speed, 180.0 + 20.0 * 30))
+ assert(is_equal_approx(game.speed, 175.0 + 25.0 * 30))
  assert(game.speed > 300.0 and not game.format_stat("speed", game.speed).contains("MAX"))
  game.speed = 1.0
  var fish: Dictionary = game.enemies.back()

@@ -1,6 +1,6 @@
 # Pesca Mortal — protótipo
 
-Beta atual: **0.5.0**. Código, arte, áudio, scripts de servidor e testes estão
+Beta atual: **0.5.1**. Código, arte, áudio, scripts de servidor e testes estão
 incluídos no projeto. Ferramentas locais, caches e builds exportadas ficam
 fora do Git; pacotes para jogar são distribuídos pelas Releases.
 
@@ -208,7 +208,7 @@ emergência, exposição por 3 s e investida em linha anunciada por 0,9 s.
 A investida atravessa o trajeto em 0,5 s; movimento à superfície de 54.
 Enterrado, não recebe dano nem atrai disparos. Emergência causa 60 de dano
 na área anunciada; contato mantém a invulnerabilidade de 0,8 s do jogador.
-Velocidade inicial do jogador: 180; cada melhoria soma 20, sem teto.
+Velocidade inicial do jogador: 175; cada melhoria soma 25, sem teto.
 Peixes usam sua própria velocidade, sem limite baseado na velocidade do jogador.
 Piranhas e pacus se movem a 125 pixels/s, pintados a 80 pixels/s e dourados
 a 100 pixels/s. Atributos são definidos no nascimento, usando os minutos completos:
@@ -231,9 +231,9 @@ O Minhocão aguarda submerso por 0,5 segundo antes de mostrar o aviso, sem fase
 oculta de rastreamento. Avisos mantêm sua variação de ±30%; a investida percorre
 até 500 pixels, encurtados nas bordas, controlada por distância restante.
 Emergência produz ondas e partículas; investida deixa rastro e onda no ponto final.
-Melhorias usam incrementos fixos: dano inicial de 10 e Impacto soma 10 de dano por escolha; Vitalidade soma 20 de vida
-máxima (+20% de 100). Frequência inicial: 1 ataque/s; Ritmo soma 0,5 ataque/s por escolha, sem teto.
-Dez escolhas de Impacto levam o dano de 10 a 110; dez de Vitalidade levam a vida de 100 a 300.
+Melhorias usam incrementos fixos: dano inicial de 10 e Impacto soma 10 de dano por escolha; Vitalidade soma 50 de vida
+máxima e recupera 50 de vida. Frequência inicial: 1 ataque/s; Ritmo soma 0,5 ataque/s por escolha, sem teto.
+Dez escolhas de Impacto levam o dano de 10 a 110; dez de Vitalidade levam a vida de 100 a 600.
 Valores exibidos são arredondados para inteiros; cálculos mantêm a precisão.
 O alcance de coleta de XP é fixo em 180, sem melhoria e oculto nos atributos do pescador.
 Aprendizado aumenta o bônus de ganho de XP em 20 pontos percentuais por escolha, sem limite máximo.
