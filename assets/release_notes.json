@@ -2,7 +2,7 @@
   {
     "tag_name": "v0.5.1",
     "name": "Pesca Mortal 0.5.1 — Ajustes de velocidade e Vitalidade",
-    "published_at": "2026-10-27T17:59:02Z",
+    "published_at": "2026-10-27T18:01:23Z",
     "body": "# Pesca Mortal 0.5.1 — Ajustes de velocidade e Vitalidade\n\nEsta atualização valoriza as melhorias de velocidade e sobrevivência. A canoa começa um pouco mais lenta, mas cada escolha de Velocidade oferece um ganho maior.\n\n## Velocidade\n\n- Velocidade base da canoa: 180 → 175 pixels/s, antes do multiplicador de movimento.\n- Cada melhoria de Velocidade: +20 → +25 pixels/s, sem limite de escolhas.\n- Com uma melhoria, o atributo continua em 200; com duas, passa de 220 → 225.\n\n## Vitalidade\n\n- Cada melhoria aumenta a vida máxima em +20 → +50 pontos.\n- A recuperação de vida ao escolher Vitalidade também passa de +20 → +50 pontos.\n- A vida máxima inicial continua em 100 pontos.\n"
   },
   {
