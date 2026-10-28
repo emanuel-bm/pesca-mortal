@@ -2,7 +2,7 @@
   {
     "tag_name": "v0.5.2",
     "name": "Pesca Mortal 0.5.2 — Ranking online atualizado",
-    "published_at": "2026-10-28T01:58:14Z",
+    "published_at": "2026-10-28T02:02:31Z",
     "body": "# Pesca Mortal 0.5.2 — Ranking online atualizado\n\nO ranking online passa a usar o novo serviço do jogo. As contas e os resultados da planilha exportada foram preservados, mantendo a temporada competitiva 0.5.\n\n## Ranking e contas\n\n- Cadastro, consulta e envio de recordes passam a usar o novo serviço.\n- Nomes e credenciais das contas migradas são preservados.\n- Os resultados históricos e as Lendas continuam disponíveis.\n- Recordes de partidas offline continuam aguardando sincronização quando a conexão retorna.\n"
   },
   {
