@@ -1,6 +1,6 @@
 # Pesca Mortal — protótipo
 
-Beta atual: **0.5.1**. Código, arte, áudio, scripts de servidor e testes estão
+Beta atual: **0.5.2**. Código, arte, áudio, scripts de servidor e testes estão
 incluídos no projeto. Ferramentas locais, caches e builds exportadas ficam
 fora do Git; pacotes para jogar são distribuídos pelas Releases.
 
@@ -61,14 +61,19 @@ minutos e permanecem nesses valores depois. Sorte multiplica essas chances.
 A opção começa desligada e volta a ficar desligada ao reiniciar o treino.
 
 Protótipo 2D em Godot 4.7.2. O título é provisório.
-O ranking global usa uma planilha privada com Apps Script. Cadastro de nickname
+O ranking global usa uma API Node.js na Fly.io com MongoDB Atlas. Cadastro de nickname
 único, edição do nome, consulta manual e envio apenas de novos recordes pessoais
-estão preparados. Para ativar, publique o backend e configure `online.cfg` conforme
+estão disponíveis. O endereço público fica em `online.cfg` conforme
 o [guia de configuração](docs/ranking-global-configuracao.md). O primeiro cadastro
 exige conexão com o serviço; depois disso, recordes offline aguardam sincronização.
 Sem a URL de implantação, o cadastro global permanece indisponível.
 Fonte global: Perfect DOS VGA 437 Win, incluindo interface e números de dano.
 Créditos e autorização do autor preservados em `assets/fonts`.
+
+O backend com MongoDB está em `server/mongodb`. O
+[guia de migração](docs/guia-migracao-mongodb.md) descreve exportação,
+importação, publicação e compatibilidade com o Festival 0.5.0. Sua preparação
+local foi concluída; a API publicada usa o banco de produção `pesca_mortal`.
 
 ## Executar no Windows
 

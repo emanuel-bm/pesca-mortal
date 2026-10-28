@@ -1,0 +1,106 @@
+{
+  "format": "pesca-sheets-v1",
+  "exported_at": "2026-10-21T00:00:00.000Z",
+  "source_id": "SYNTHETIC-EXAMPLE-DO-NOT-IMPORT-IN-PRODUCTION",
+  "active_version": "0.5",
+  "sheets": {
+    "Players": [
+      [
+        "player_id",
+        "nickname",
+        "nickname_key",
+        "token_hash"
+      ],
+      [
+        "example-player",
+        "Exemplo",
+        "exemplo",
+        "ffe054fe7ae0cb6dc65c3af9b61d5209f439851db43d0ba5997337df154668eb"
+      ]
+    ],
+    "Records": [
+      [
+        "player_id",
+        "mode",
+        "seconds",
+        "kills",
+        "level",
+        "character",
+        "reason",
+        "ruleset",
+        "run_id",
+        "updated_at",
+        "competitive_version"
+      ],
+      [
+        "example-player",
+        "endless",
+        60,
+        10,
+        1,
+        "Pescador",
+        "death",
+        "pesca-2",
+        "11111111111111111111111111111111",
+        "2026-10-21T00:00:00.000Z",
+        "0.5"
+      ]
+    ],
+    "Seasons": [
+      [
+        "version",
+        "closed_at"
+      ],
+      [
+        "0.4",
+        "2026-10-20T00:00:00.000Z"
+      ]
+    ],
+    "Festival High Tech MT": [
+      [
+        "run_id",
+        "nickname",
+        "mode",
+        "seconds",
+        "kills",
+        "level",
+        "character",
+        "reason",
+        "ruleset",
+        "submitted_at"
+      ],
+      [
+        "11111111111111111111111111111111",
+        "João Exemplo",
+        "endless",
+        60,
+        10,
+        1,
+        "Pescador",
+        "death",
+        "pesca-2",
+        "2026-10-21T00:00:00.000Z"
+      ]
+    ],
+    "Lendas_0_4": [
+      [
+        "mode",
+        "position",
+        "nickname",
+        "seconds",
+        "kills",
+        "level",
+        "player_id"
+      ],
+      [
+        "endless",
+        1,
+        "NomeAntigo",
+        70,
+        10,
+        1,
+        "example-player"
+      ]
+    ]
+  }
+}

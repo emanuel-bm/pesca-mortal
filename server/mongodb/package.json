@@ -1,0 +1,16 @@
+{
+  "name": "pesca-mortal-ranking",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "test": "node --test --test-concurrency=1 test/*.test.js",
+    "admin": "node --env-file-if-exists=.env tools/admin.js",
+    "import": "node --env-file-if-exists=.env tools/import.js",
+    "backup": "node --env-file-if-exists=.env tools/backup.js"
+  },
+  "dependencies": { "mongodb": "^6.21.0" },
+  "devDependencies": { "mongodb-memory-server": "^10.3.0" }
+}
